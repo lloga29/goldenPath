@@ -1,26 +1,38 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.22-alpine AS builder
+
+ARG VERSION=dev
+ARG BUILD_TIME=unknown
+ARG GIT_COMMIT=unknown
 
 WORKDIR /app
 
 # Instalar dependencias del sistema
-RUN apk add --no-cache git ca-certificates
+RUN apk add --no-cache git ca-certificates tzdata
 
 # Copiar go.mod y go.sum primero para cache de dependencias
-COPY go.mod go.sum ./
+COPY go.mod go.sum* ./
 RUN go mod download
 
 # Copiar código fuente
 COPY . .
 
-# Build binario estático
+# Build binario estático con información de versión
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-    -ldflags="-w -s" \
+    -ldflags="-w -s -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME} -X main.GitCommit=${GIT_COMMIT}" \
     -o /app/server \
     ./cmd/main.go
 
-# Runtime stage
-FROM scratch
+# Runtime stage - usando distroless para mejor seguridad
+FROM gcr.io/distroless/static-debian12:nonroot
+
+# Labels para trazabilidad
+LABEL org.opencontainers.image.source="https://github.com/org/{{ project_name }}"
+LABEL org.opencontainers.image.description="{{ description }}"
+LABEL org.opencontainers.image.version="${VERSION}"
+
+# Copiar zona horaria
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
 # Copiar certificados CA
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
@@ -28,14 +40,13 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # Copiar binario
 COPY --from=builder /app/server /server
 
-# Usuario no-root
-USER 1000:1000
+# Usuario no-root (ya definido en nonroot image)
+USER nonroot:nonroot
 
 # Puerto de la aplicación
-EXPOSE 8080
+EXPOSE {{ port }}
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["/server", "-health-check"] || exit 1
+# Health check nativo de Kubernetes (usar probes en deployment)
+# No usar HEALTHCHECK de Docker en Kubernetes
 
 ENTRYPOINT ["/server"]
