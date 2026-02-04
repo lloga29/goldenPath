@@ -1,13 +1,23 @@
 #!/bin/bash
 # Script para hacer rollback de un servicio a una versión anterior
 # Uso: ./rollback.sh <team> <service> <env> [commits-back]
+#
+# Opciones:
+#   EMERGENCY=true  - Rollback directo sin PR (solo emergencias)
 
 set -euo pipefail
+
+# Colores
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
 TEAM=${1:-}
 SERVICE=${2:-}
 ENV=${3:-}
 COMMITS_BACK=${4:-1}
+EMERGENCY=${EMERGENCY:-false}
 
 if [[ -z "$TEAM" || -z "$SERVICE" || -z "$ENV" ]]; then
     echo "Uso: $0 <team> <service> <env> [commits-back]"

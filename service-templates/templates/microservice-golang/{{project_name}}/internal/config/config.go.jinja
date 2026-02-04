@@ -1,0 +1,51 @@
+// Package config gestiona la configuración del servicio
+package config
+
+import (
+	"os"
+	"strconv"
+)
+
+// Config estructura de configuración
+type Config struct {
+	Port        string
+	Environment string
+	LogLevel    string
+{% if has_database %}
+	DatabaseURL string
+{% endif %}
+{% if has_cache %}
+	RedisURL    string
+{% endif %}
+}
+
+// Load carga la configuración desde variables de entorno
+func Load() *Config {
+	return &Config{
+		Port:        getEnv("PORT", "{{ port }}"),
+		Environment: getEnv("ENVIRONMENT", "development"),
+		LogLevel:    getEnv("LOG_LEVEL", "info"),
+{% if has_database %}
+		DatabaseURL: getEnv("DATABASE_URL", ""),
+{% endif %}
+{% if has_cache %}
+		RedisURL:    getEnv("REDIS_URL", ""),
+{% endif %}
+	}
+}
+
+func getEnv(key, defaultValue string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return defaultValue
+}
+
+func getEnvAsInt(key string, defaultValue int) int {
+	if value, exists := os.LookupEnv(key); exists {
+		if i, err := strconv.Atoi(value); err == nil {
+			return i
+		}
+	}
+	return defaultValue
+}

@@ -4,13 +4,15 @@
 # Variables
 APP_NAME := {{ project_name }}
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_TIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 REGISTRY := ghcr.io/org
 IMAGE := $(REGISTRY)/$(APP_NAME):$(VERSION)
 
 # Go variables
 GO := go
 GOFLAGS := -v
-LDFLAGS := -ldflags "-X main.Version=$(VERSION) -w -s"
+LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.GitCommit=$(GIT_COMMIT) -X main.BuildTime=$(BUILD_TIME) -w -s"
 
 all: lint test build
 

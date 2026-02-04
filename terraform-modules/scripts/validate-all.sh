@@ -13,6 +13,40 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+# Verificar dependencias
+check_dependencies() {
+    echo -e "${YELLOW}=== Verificando dependencias ===${NC}"
+
+    if ! command -v terraform &> /dev/null; then
+        echo -e "${RED}ERROR: terraform no está instalado${NC}"
+        echo "Instalar: https://developer.hashicorp.com/terraform/downloads"
+        exit 1
+    fi
+    echo -e "${GREEN}✓ terraform $(terraform version -json | jq -r '.terraform_version')${NC}"
+
+    if command -v tflint &> /dev/null; then
+        echo -e "${GREEN}✓ tflint instalado${NC}"
+    else
+        echo -e "${YELLOW}⚠ tflint no instalado (opcional)${NC}"
+    fi
+
+    if command -v checkov &> /dev/null; then
+        echo -e "${GREEN}✓ checkov instalado${NC}"
+    else
+        echo -e "${YELLOW}⚠ checkov no instalado (opcional)${NC}"
+    fi
+
+    echo ""
+}
+
+check_dependencies
+
+# Colores (redefinidos para compatibilidad)
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
 ERRORS=0
 
 echo -e "${GREEN}=== Validando módulos Terraform ===${NC}"
