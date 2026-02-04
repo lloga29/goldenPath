@@ -1,0 +1,49 @@
+# ApplicationSet para componentes de plataforma
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform-applications
+  namespace: argocd
+spec:
+  goTemplate: true
+
+  generators:
+    - list:
+        elements:
+          - env: dev
+            cluster: https://dev-cluster.example.com
+            valuesFile: values-dev.yaml
+          - env: staging
+            cluster: https://staging-cluster.example.com
+            valuesFile: values-staging.yaml
+          - env: prod
+            cluster: https://prod-cluster.example.com
+            valuesFile: values-prod.yaml
+
+  template:
+    metadata:
+      name: 'platform-{{.env}}'
+      labels:
+        component: platform
+        environment: '{{.env}}'
+
+    spec:
+      project: platform
+
+      source:
+        repoURL: git@github.com:org/gitops-config.git
+        targetRevision: HEAD
+        path: 'platform/overlays/{{.env}}'
+
+      destination:
+        server: '{{.cluster}}'
+        namespace: platform
+
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true

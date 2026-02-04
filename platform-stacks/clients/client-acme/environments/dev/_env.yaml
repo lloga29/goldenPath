@@ -1,0 +1,31 @@
+# Metadata del Entorno: Dev
+
+environment:
+  name: dev
+  type: development
+  auto_approve: true
+
+resources:
+  eks:
+    enabled: false
+    node_count: 2
+    instance_type: t3.medium
+
+  rds:
+    enabled: false
+    instance_class: db.t3.micro
+    engine: postgres
+    version: "15"
+
+  redis:
+    enabled: false
+    node_type: cache.t3.micro
+
+settings:
+  debug: true
+  log_level: debug
+  retention_days: 7
+
+cost_limits:
+  monthly_budget: 500
+  alert_threshold: 80

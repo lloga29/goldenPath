@@ -1,0 +1,61 @@
+# Proyecto Argo CD para equipo de pagos
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: payments
+  namespace: argocd
+spec:
+  description: Aplicaciones del equipo de pagos
+
+  sourceRepos:
+    - git@github.com:org/team-payments-gitops.git
+    - git@github.com:org/gitops-config.git
+
+  destinations:
+    - namespace: payments-*
+      server: https://dev-cluster.example.com
+    - namespace: payments-*
+      server: https://staging-cluster.example.com
+    - namespace: payments-*
+      server: https://prod-cluster.example.com
+
+  # Solo recursos de namespace (sin cluster-wide)
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: ConfigMap
+    - group: ''
+      kind: Secret
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment
+    - group: apps
+      kind: StatefulSet
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+    - group: policy
+      kind: PodDisruptionBudget
+    - group: networking.k8s.io
+      kind: Ingress
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+    - group: monitoring.coreos.com
+      kind: ServiceMonitor
+
+  roles:
+    - name: admin
+      description: Administradores del equipo payments
+      policies:
+        - p, proj:payments:admin, applications, *, payments/*, allow
+      groups:
+        - team-payments
+
+    - name: deployer
+      description: Puede hacer sync de aplicaciones
+      policies:
+        - p, proj:payments:deployer, applications, sync, payments/*, allow
+        - p, proj:payments:deployer, applications, get, payments/*, allow
+      groups:
+        - team-payments-deployers

@@ -1,0 +1,47 @@
+# Metadata del Cliente: ACME Corporation
+# Este archivo define la configuración del cliente
+
+client:
+  name: acme
+  display_name: "ACME Corporation"
+  created_at: "2024-01-15"
+  owner: platform@acme.com
+  cost_center: cc-acme-001
+
+cloud:
+  provider: aws
+  region: us-east-1
+  account_id: "123456789012"
+
+environments:
+  - name: dev
+    auto_approve: true
+    retention_days: 7
+  - name: staging
+    auto_approve: true
+    retention_days: 30
+  - name: prod
+    auto_approve: false
+    retention_days: 365
+    requires_approval:
+      - platform-team
+      - sre-team
+
+teams:
+  - name: payments
+    owner: payments@acme.com
+  - name: orders
+    owner: orders@acme.com
+
+contacts:
+  primary: platform@acme.com
+  security: security@acme.com
+  billing: billing@acme.com
+
+compliance:
+  - pci-dss
+  - soc2
+
+tags:
+  BusinessUnit: "Technology"
+  Department: "Engineering"

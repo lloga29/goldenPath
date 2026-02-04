@@ -1,0 +1,93 @@
+# Pipeline de Terraform Apply
+# Ejecuta apply en merge a main
+
+name: Terraform Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'clients/**'
+      - 'teams/**'
+
+concurrency:
+  group: terraform-apply
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: "1.6.0"
+  TF_IN_AUTOMATION: "true"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # ============================================
+  # DETECTAR CAMBIOS
+  # ============================================
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      stacks: ${{ steps.changes.outputs.stacks }}
+      has_changes: ${{ steps.changes.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detectar stacks modificados
+        id: changes
+        run: |
+          CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD)
+
+          STACKS=$(echo "$CHANGED_FILES" | \
+            grep -E "^(clients|teams)/" | \
+            grep -E "\.(tf|tfvars)$" | \
+            xargs -I {} dirname {} | \
+            sort -u | \
+            jq -R -s -c 'split("\n") | map(select(length > 0))')
+
+          echo "stacks=$STACKS" >> $GITHUB_OUTPUT
+          echo "has_changes=$([ "$STACKS" != "[]" ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+
+  # ============================================
+  # TERRAFORM APPLY
+  # ============================================
+  apply:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack: ${{ fromJson(needs.detect-changes.outputs.stacks) }}
+      max-parallel: 1
+    environment:
+      name: ${{ contains(matrix.stack, 'prod') && 'production' || (contains(matrix.stack, 'staging') && 'staging' || 'development') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ${{ matrix.stack }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -input=false
+        working-directory: ${{ matrix.stack }}
+        timeout-minutes: 30
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "::error::Terraform apply failed for ${{ matrix.stack }}"

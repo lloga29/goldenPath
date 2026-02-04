@@ -1,0 +1,25 @@
+# CODEOWNERS para GitOps Config
+
+# Default
+*                               @org/platform-team
+
+# Argo CD config requiere platform team
+argocd/                         @org/platform-team
+
+# Clusters
+clusters/prod/                  @org/platform-team @org/sre-team
+clusters/staging/               @org/platform-team
+clusters/dev/                   @org/platform-team
+
+# Platform components
+platform/                       @org/platform-team
+
+# Políticas requieren security review
+policies/                       @org/platform-team @org/security-team
+
+# Apps por equipo
+apps/team-payments/             @org/team-payments @org/platform-team
+apps/team-orders/               @org/team-orders @org/platform-team
+
+# Producción requiere múltiples aprobaciones
+apps/*/overlays/prod/           @org/platform-team @org/sre-team

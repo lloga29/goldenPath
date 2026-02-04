@@ -1,0 +1,13 @@
+# Constraint que requiere límites de recursos en containers
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sContainerLimits
+metadata:
+  name: require-container-limits
+spec:
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+  parameters:
+    cpu: "2000m"
+    memory: "4Gi"

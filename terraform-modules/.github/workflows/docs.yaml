@@ -1,0 +1,67 @@
+# Documentación automática para Terraform Modules
+# Genera documentación con terraform-docs
+
+name: Generate Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'modules/**/*.tf'
+      - 'patterns/**/*.tf'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Setup terraform-docs
+        run: |
+          curl -sSLo terraform-docs.tar.gz https://github.com/terraform-docs/terraform-docs/releases/download/v0.17.0/terraform-docs-v0.17.0-linux-amd64.tar.gz
+          tar -xzf terraform-docs.tar.gz
+          chmod +x terraform-docs
+          sudo mv terraform-docs /usr/local/bin/
+
+      - name: Generate docs for all modules
+        run: |
+          # Generar docs para cada módulo
+          find modules -name "*.tf" -exec dirname {} \; | sort -u | while read dir; do
+            if [ -f "$dir/main.tf" ]; then
+              echo "Generando documentación para: $dir"
+              terraform-docs markdown table --output-file README.md --output-mode inject "$dir" || true
+            fi
+          done
+
+          # Generar docs para patterns
+          find patterns -name "*.tf" -exec dirname {} \; | sort -u | while read dir; do
+            if [ -f "$dir/main.tf" ]; then
+              echo "Generando documentación para: $dir"
+              terraform-docs markdown table --output-file README.md --output-mode inject "$dir" || true
+            fi
+          done
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit changes
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs: auto-generate module documentation"
+          git push

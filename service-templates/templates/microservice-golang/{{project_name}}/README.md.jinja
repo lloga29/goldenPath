@@ -1,0 +1,79 @@
+# {{ project_name }}
+
+{{ description }}
+
+## Equipo
+
+- **Team:** {{ team }}
+- **Owner:** {{ owner_email }}
+
+## Requisitos
+
+- Go {{ go_version }}+
+- Docker
+- Make
+
+## Desarrollo Local
+
+```bash
+# Instalar dependencias
+go mod download
+
+# Ejecutar tests
+make test
+
+# Ejecutar localmente
+make run
+
+# Build
+make build
+```
+
+## Endpoints
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| /health  | GET    | Health check |
+| /ready   | GET    | Readiness check |
+| /metrics | GET    | Métricas Prometheus |
+| /api/v1/ | *      | API principal |
+
+## Configuración
+
+Variables de entorno:
+
+| Variable | Descripción | Default |
+|----------|-------------|---------|
+| PORT | Puerto HTTP | {{ port }} |
+| LOG_LEVEL | Nivel de logs | info |
+| OTEL_EXPORTER_OTLP_ENDPOINT | Endpoint de traces | - |
+
+## Docker
+
+```bash
+# Build imagen
+make docker-build
+
+# Push a registry
+make docker-push
+```
+
+## CI/CD
+
+El pipeline de CI ejecuta automáticamente:
+1. Lint (golangci-lint)
+2. Tests unitarios
+3. Scan de seguridad (Trivy)
+4. Build y push de imagen Docker
+
+## Arquitectura
+
+```
+cmd/
+  main.go           # Punto de entrada
+internal/
+  handlers/         # HTTP handlers
+  middleware/       # Middlewares
+  config/           # Configuración
+pkg/                # Paquetes públicos
+```
