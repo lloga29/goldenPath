@@ -1,0 +1,71 @@
+# ApplicationSet para aplicaciones de equipos
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: team-applications
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+
+  generators:
+    - matrix:
+        generators:
+          # Equipos
+          - list:
+              elements:
+                - team: payments
+                  repo: git@github.com:org/team-payments-gitops.git
+                - team: orders
+                  repo: git@github.com:org/team-orders-gitops.git
+
+          # Entornos
+          - list:
+              elements:
+                - env: dev
+                  cluster: https://dev-cluster.example.com
+                  autoSync: true
+                  prune: true
+                - env: staging
+                  cluster: https://staging-cluster.example.com
+                  autoSync: true
+                  prune: false
+                - env: prod
+                  cluster: https://prod-cluster.example.com
+                  autoSync: false
+                  prune: false
+
+  template:
+    metadata:
+      name: '{{.team}}-{{.env}}'
+      labels:
+        team: '{{.team}}'
+        environment: '{{.env}}'
+
+    spec:
+      project: '{{.team}}'
+
+      source:
+        repoURL: '{{.repo}}'
+        targetRevision: HEAD
+        path: 'apps/overlays/{{.env}}'
+
+      destination:
+        server: '{{.cluster}}'
+        namespace: '{{.team}}-{{.env}}'
+
+      syncPolicy:
+        automated:
+          prune: '{{.prune}}'
+          selfHeal: true
+
+        syncOptions:
+          - CreateNamespace=true
+          - PrunePropagationPolicy=foreground
+
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

@@ -1,0 +1,35 @@
+# CODEOWNERS para Terraform Modules
+# Estos equipos serán automáticamente asignados como reviewers
+
+# Default owners para todo el repositorio
+*                               @org/platform-team
+
+# Módulos de networking
+modules/networking/             @org/platform-team @org/network-team
+
+# Módulos de seguridad - requieren aprobación de security
+modules/security/               @org/platform-team @org/security-team
+
+# Módulos de compute
+modules/compute/                @org/platform-team
+
+# Módulos de storage
+modules/storage/                @org/platform-team @org/data-team
+
+# Módulos de observabilidad
+modules/observability/          @org/platform-team @org/sre-team
+
+# Módulos de datos
+modules/data/                   @org/platform-team @org/data-team
+
+# Patterns requieren revisión adicional
+patterns/                       @org/platform-team @org/architecture-team
+
+# Documentación
+docs/                          @org/platform-team
+
+# CI/CD workflows
+.github/                       @org/platform-team
+
+# Scripts
+scripts/                       @org/platform-team

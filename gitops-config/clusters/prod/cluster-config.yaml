@@ -1,0 +1,26 @@
+# Configuración del cluster de producción
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-config
+  namespace: kube-system
+data:
+  environment: prod
+  cluster-name: prod-cluster
+  region: us-east-1
+  log-level: info
+  
+  # Configuración de recursos por defecto (más altos para prod)
+  default-cpu-request: "200m"
+  default-memory-request: "256Mi"
+  default-cpu-limit: "1000m"
+  default-memory-limit: "1Gi"
+  
+  # Configuración de auto-scaling
+  hpa-min-replicas: "2"
+  hpa-max-replicas: "20"
+  
+  # URLs de servicios
+  prometheus-url: http://prometheus.observability:9090
+  loki-url: http://loki.observability:3100
+  tempo-url: http://tempo.observability:4317

@@ -1,0 +1,97 @@
+// {{ project_name }} - {{ description }}
+// Equipo: {{ team }}
+package main
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+)
+
+const (
+	defaultPort = "{{ port }}"
+)
+
+func main() {
+	// Configurar logger estructurado
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	slog.SetDefault(logger)
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = defaultPort
+	}
+
+	// Router principal
+	mux := http.NewServeMux()
+
+	// Health checks
+	mux.HandleFunc("/health", healthHandler)
+	mux.HandleFunc("/ready", readyHandler)
+
+	// Métricas Prometheus
+	mux.Handle("/metrics", promhttp.Handler())
+
+	// API endpoints
+	mux.HandleFunc("/api/v1/", apiHandler)
+
+	// Servidor HTTP
+	server := &http.Server{
+		Addr:         ":" + port,
+		Handler:      mux,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// Graceful shutdown
+	go func() {
+		slog.Info("Iniciando servidor", "port", port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("Error en servidor", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Esperar señal de terminación
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	slog.Info("Apagando servidor...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		slog.Error("Error en shutdown", "error", err)
+	}
+
+	slog.Info("Servidor apagado correctamente")
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, "OK")
+}
+
+func readyHandler(w http.ResponseWriter, r *http.Request) {
+	// Verificar dependencias (DB, cache, etc.)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, "Ready")
+}
+
+func apiHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"service": "{{ project_name }}", "status": "running"}`)
+}

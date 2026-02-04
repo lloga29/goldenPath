@@ -1,0 +1,18 @@
+# Constraint que requiere labels obligatorios
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequiredLabels
+metadata:
+  name: require-standard-labels
+spec:
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "StatefulSet"]
+      - apiGroups: [""]
+        kinds: ["Service"]
+  parameters:
+    labels:
+      - key: app.kubernetes.io/name
+      - key: app.kubernetes.io/component
+      - key: team
+      - key: environment

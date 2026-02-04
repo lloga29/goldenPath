@@ -1,0 +1,65 @@
+# Configuración del template de microservicio Go
+_min_copier_version: "9.0.0"
+
+_envops:
+  autoescape: false
+  keep_trailing_newline: true
+
+project_name:
+  type: str
+  help: "Nombre del servicio (lowercase, con guiones)"
+  validator: "{% if not project_name | regex_search('^[a-z][a-z0-9-]{2,28}[a-z0-9]$') %}Nombre inválido: debe ser 4-30 caracteres, minúsculas con guiones{% endif %}"
+
+team:
+  type: str
+  help: "Nombre del equipo"
+
+description:
+  type: str
+  help: "Descripción corta del servicio"
+
+port:
+  type: int
+  default: 8080
+  help: "Puerto HTTP del servicio"
+
+has_database:
+  type: bool
+  default: false
+  help: "¿El servicio necesita base de datos?"
+
+database_type:
+  type: str
+  default: "postgres"
+  choices:
+    - postgres
+    - mysql
+    - mongodb
+  when: "{{ has_database }}"
+
+has_cache:
+  type: bool
+  default: false
+  help: "¿El servicio necesita Redis cache?"
+
+enable_grpc:
+  type: bool
+  default: false
+  help: "¿Habilitar servidor gRPC?"
+
+owner_email:
+  type: str
+  help: "Email del equipo/owner para alertas"
+
+go_version:
+  type: str
+  default: "1.21"
+  choices:
+    - "1.21"
+    - "1.22"
+  help: "Versión de Go"
+
+_tasks:
+  - "git init"
+  - "go mod tidy"
+  - "pre-commit install"
