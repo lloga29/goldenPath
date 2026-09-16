@@ -92,12 +92,17 @@ jobs:
     env:
       KUSTOMIZE_VERSION: '5.8.1'
       CONFTEST_VERSION: '0.45.0'
+      HELM_VERSION: '4.3.0'
+      HELM_LINUX_AMD64_SHA256: '86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb'
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
 
       - name: Install policy dependencies
         run: python3 -m pip install --disable-pip-version-check 'PyYAML==6.0.2'
+
+      - name: Validate Argo CD platform contract
+        run: python3 scripts/validate-gitops-contract.py
 
       - name: Install Kustomize
         shell: bash
@@ -115,6 +120,19 @@ jobs:
             echo "Building $dir"
             kustomize build "$dir" >/dev/null
           done < <(find gitops-config/apps gitops-config/platform gitops-config/policies -name kustomization.yaml -exec dirname {} \; | sort -u)
+
+      - name: Install pinned Helm
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSLo helm.tar.gz "https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz"
+          echo "${HELM_LINUX_AMD64_SHA256}  helm.tar.gz" | sha256sum -c -
+          tar -xzf helm.tar.gz
+          sudo install -m 0755 linux-amd64/helm /usr/local/bin/helm
+          helm version --short
+
+      - name: Render platform Helm add-ons
+        run: ./scripts/validate-platform-helm.sh
 
       - name: Install Conftest
         shell: bash
