@@ -1,7 +1,9 @@
 name: Rebuild logo asset
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - fix/readme-logo-loki-pattern
 
 permissions:
   contents: write
@@ -10,4 +12,46 @@ jobs:
   rebuild-logo:
     runs-on: ubuntu-24.04
     steps:
-      - run: echo 'Temporarily paused while the staged PNG payload is refreshed.'
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/readme-logo-loki-pattern
+          fetch-depth: 0
+
+      - name: Rebuild and validate PNG
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .tmp/logo.part1.b64 .tmp/logo.part2.b64 .tmp/logo.part3.b64 \
+            | tr -d '\r\n ' \
+            | base64 --decode \
+            > docs/assets/branding/goldenpath-logo.png
+          echo 'ac040c8e8aa8409a505826de1b98072c4b51528db324f74e86aefa1f1dde1721  docs/assets/branding/goldenpath-logo.png' | sha256sum -c -
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+
+          data = Path('docs/assets/branding/goldenpath-logo.png').read_bytes()
+          if data[:8] != b'\x89PNG\r\n\x1a\n':
+              raise SystemExit('Invalid PNG signature')
+          width, height, bit_depth, color_type = struct.unpack('>IIBB', data[16:26])
+          if (width, height, bit_depth, color_type) != (420, 315, 8, 6):
+              raise SystemExit(f'Unexpected PNG metadata: {width}x{height}, depth={bit_depth}, color_type={color_type}')
+          if len(data) != 7098:
+              raise SystemExit(f'Unexpected PNG size: {len(data)} bytes')
+          print('Validated GoldenPath logo: 420x315, 8-bit RGBA, 7098 bytes')
+          PY
+
+      - name: Commit rebuilt asset when changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- docs/assets/branding/goldenpath-logo.png; then
+            echo 'Logo asset already matches the validated PNG.'
+            exit 0
+          fi
+          git config user.name 'Juan Gallo'
+          git config user.email 'lloga29@gmail.com'
+          git add docs/assets/branding/goldenpath-logo.png
+          git commit -m 'fix: rebuild GoldenPath logo as validated RGBA PNG'
+          git push origin HEAD:fix/readme-logo-loki-pattern
