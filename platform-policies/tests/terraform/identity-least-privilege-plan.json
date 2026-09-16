@@ -1,0 +1,21 @@
+{
+  "resource_changes": [
+    {
+      "address": "google_project_iam_binding.owner",
+      "mode": "managed",
+      "type": "google_project_iam_binding",
+      "name": "owner",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "role": "roles/owner",
+          "members": [
+            "serviceAccount:app@example.iam.gserviceaccount.com"
+          ]
+        }
+      }
+    }
+  ]
+}

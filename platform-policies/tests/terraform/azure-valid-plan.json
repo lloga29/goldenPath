@@ -1,0 +1,72 @@
+{
+  "resource_changes": [
+    {
+      "address": "azurerm_storage_container.assets",
+      "mode": "managed",
+      "type": "azurerm_storage_container",
+      "name": "assets",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "name": "assets",
+          "storage_account_name": "goldenpathsecure",
+          "container_access_type": "private"
+        }
+      }
+    },
+    {
+      "address": "azurerm_storage_account.assets",
+      "mode": "managed",
+      "type": "azurerm_storage_account",
+      "name": "assets",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "public_network_access_enabled": false,
+          "tags": {
+            "Environment": "prod",
+            "Team": "platform",
+            "CostCenter": "cc-platform",
+            "Owner": "platform@example.com"
+          }
+        }
+      }
+    },
+    {
+      "address": "azurerm_network_security_rule.internal_ssh",
+      "mode": "managed",
+      "type": "azurerm_network_security_rule",
+      "name": "internal_ssh",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "direction": "Inbound",
+          "access": "Allow",
+          "source_address_prefix": "10.0.0.0/8",
+          "destination_port_range": "22"
+        }
+      }
+    },
+    {
+      "address": "azurerm_role_assignment.storage_reader",
+      "mode": "managed",
+      "type": "azurerm_role_assignment",
+      "name": "storage_reader",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "scope": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-app/providers/Microsoft.Storage/storageAccounts/goldenpathsecure",
+          "role_definition_name": "Storage Blob Data Reader"
+        }
+      }
+    }
+  ]
+}

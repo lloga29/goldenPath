@@ -1,0 +1,14 @@
+version: 1
+enforcement:
+  conftest: scoped-exceptions
+  gatekeeper: strict
+exceptions:
+  - id: EXC-2026-915
+    policy: terraform.identity.least_privilege
+    resource: google_project_iam_binding.owner
+    reason: "Fixture proves exact provider-native identity exception behavior."
+    owner: "platform@example.com"
+    approved_by: "security-test"
+    tracking_issue: "#15"
+    created: "2026-09-16"
+    expires: "2099-01-01"
