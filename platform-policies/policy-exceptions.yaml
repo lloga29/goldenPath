@@ -1,32 +1,28 @@
-# Excepciones de Políticas
-# Cada excepción debe tener:
-# - Justificación técnica
-# - Owner responsable
-# - Fecha de expiración
-# - Issue de seguimiento
+# Governed policy exception registry.
+#
+# This file is validated for structure and expiry, but it does NOT currently
+# bypass Conftest or Gatekeeper decisions. Active exception enforcement is
+# tracked in repository issue #14 to avoid introducing an implicit bypass.
+version: 1
 
-exceptions:
-  # Ejemplo de excepción
-  # - policy: no_latest_tag
-  #   resource: deployment/legacy-app
-  #   namespace: legacy-system
-  #   reason: "App legacy que requiere migración. Tracking: JIRA-1234"
-  #   owner: "team-legacy@company.com"
-  #   expires: "2024-06-01"
-  #   approved_by: "security-team"
+exceptions: []
 
-  # Excepción temporal para migraciones
-  # - policy: required_resources
-  #   resource: deployment/migration-job
-  #   namespace: migrations
-  #   reason: "Job de migración temporal con recursos variables"
-  #   owner: "platform@company.com"
-  #   expires: "2024-03-01"
+# Example only; keep examples commented so no exception is accidentally active.
+# exceptions:
+#   - id: EXC-2026-001
+#     policy: kubernetes.images
+#     resource: deployment/legacy-api
+#     namespace: legacy-system
+#     reason: "Migration requires a temporary compatibility image reference."
+#     owner: "team-legacy@example.com"
+#     approved_by: "security-team"
+#     tracking_issue: "#123"
+#     created: "2026-09-16"
+#     expires: "2026-10-01"
 
-# Políticas deshabilitadas globalmente (usar con extrema precaución)
-disabled_policies: []
-
-# Namespaces excluidos de políticas (solo sistema)
+# Admission/system namespaces that may require separate platform policies.
+# This list is reference data until issue #14 integrates exception data with
+# enforcement. It must not be interpreted as an automatic bypass today.
 excluded_namespaces:
   - kube-system
   - kube-public

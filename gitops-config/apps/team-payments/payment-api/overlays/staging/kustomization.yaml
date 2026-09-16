@@ -9,10 +9,9 @@ resources:
 commonLabels:
   environment: staging
 
-# Imagen con tag inmutable (SHA o semver, NO latest)
 images:
   - name: ghcr.io/org/payment-api
-    newTag: "v1.0.0"  # Actualizar via PR de promoción
+    newTag: "v1.0.0"
 
 replicas:
   - name: payment-api

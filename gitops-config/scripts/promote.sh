@@ -22,7 +22,6 @@ ensure_git_identity() {
     local actual_name actual_email
     actual_name=$(git config user.name || true)
     actual_email=$(git config user.email || true)
-
     [[ "$actual_name" == "$EXPECTED_GIT_NAME" ]] || fail "git user.name must be '$EXPECTED_GIT_NAME' (found '${actual_name:-unset}')."
     [[ "$actual_email" == "$EXPECTED_GIT_EMAIL" ]] || fail "git user.email must be '$EXPECTED_GIT_EMAIL' (found '${actual_email:-unset}')."
 }

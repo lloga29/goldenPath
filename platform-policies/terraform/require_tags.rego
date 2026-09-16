@@ -1,19 +1,16 @@
-# Política: Requerir tags obligatorios
-# Descripción: Todos los recursos deben tener tags de governance
+# Require ownership, environment, and cost-allocation tags on supported AWS resources.
 package terraform.compliance
 
 import future.keywords.in
 
-# Tags requeridos
 required_tags := {"Environment", "Team", "CostCenter", "Owner"}
 
-# Recursos que requieren tags
 taggable_types := {
     "aws_instance",
     "aws_vpc",
     "aws_subnet",
     "aws_security_group",
-    "aws_rds_instance",
+    "aws_db_instance",
     "aws_rds_cluster",
     "aws_s3_bucket",
     "aws_lambda_function",
@@ -28,49 +25,48 @@ taggable_types := {
     "aws_dynamodb_table"
 }
 
-# Denegar recursos sin tags requeridos
 deny[msg] {
     resource := input.resource_changes[_]
     resource.type in taggable_types
     resource.change.actions[_] in ["create", "update"]
-    
     tags := object.get(resource.change.after, "tags", {})
-    missing := required_tags - {k | tags[k]}
+    present := {key | tags[key]; tags[key] != ""}
+    missing := required_tags - present
     count(missing) > 0
-    
-    msg := sprintf("Recurso '%s' no tiene los tags requeridos: %v", [resource.address, missing])
+    msg := sprintf("Terraform resource '%s' is missing required tags: %v", [resource.address, missing])
 }
 
-# Validar valores de Environment
 deny[msg] {
     resource := input.resource_changes[_]
     resource.type in taggable_types
+    resource.change.actions[_] in ["create", "update"]
     tags := object.get(resource.change.after, "tags", {})
-    env := tags.Environment
+    env := object.get(tags, "Environment", "")
+    env != ""
     not valid_environment(env)
-    msg := sprintf("Recurso '%s' tiene Environment '%s' inválido. Valores permitidos: dev, staging, prod, ephemeral", [resource.address, env])
+    msg := sprintf("Terraform resource '%s' has invalid Environment tag '%s'. Allowed values: dev, staging, prod, ephemeral.", [resource.address, env])
 }
 
 valid_environment(env) {
     env in ["dev", "staging", "prod", "ephemeral"]
 }
 
-# Validar formato de CostCenter
 warn[msg] {
     resource := input.resource_changes[_]
     resource.type in taggable_types
     tags := object.get(resource.change.after, "tags", {})
-    cc := tags.CostCenter
-    not re_match(`^cc-[0-9]{3,6}$`, cc)
-    msg := sprintf("Recurso '%s' tiene CostCenter '%s' con formato incorrecto. Use formato: cc-XXX", [resource.address, cc])
+    cost_center := object.get(tags, "CostCenter", "")
+    cost_center != ""
+    not re_match(`^cc-[a-z0-9]+(-[a-z0-9]+)*$`, cost_center)
+    msg := sprintf("Terraform resource '%s' has CostCenter '%s' with an invalid format. Use cc-<segment>[-<segment>...].", [resource.address, cost_center])
 }
 
-# Validar formato de Owner (email)
 warn[msg] {
     resource := input.resource_changes[_]
     resource.type in taggable_types
     tags := object.get(resource.change.after, "tags", {})
-    owner := tags.Owner
+    owner := object.get(tags, "Owner", "")
+    owner != ""
     not re_match(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`, owner)
-    msg := sprintf("Recurso '%s' tiene Owner '%s' que no parece un email válido", [resource.address, owner])
+    msg := sprintf("Terraform resource '%s' has Owner '%s', which is not a valid email address.", [resource.address, owner])
 }

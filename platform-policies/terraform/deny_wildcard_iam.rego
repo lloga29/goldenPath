@@ -1,82 +1,98 @@
-# Política: Denegar wildcards en IAM
-# Descripción: Prohibe el uso de wildcards en políticas IAM (principio de least privilege)
+# Reject dangerous wildcard IAM permissions for supported inline/managed AWS policies.
 package terraform.security
 
 import future.keywords.in
 
-# Denegar políticas IAM con Action: *
-deny[msg] {
-    resource := input.resource_changes[_]
-    resource.type == "aws_iam_policy"
-    policy := json.unmarshal(resource.change.after.policy)
-    statement := policy.Statement[_]
-    statement.Effect == "Allow"
-    statement.Action[_] == "*"
-    msg := sprintf("IAM policy '%s' contiene Action: '*'. Use acciones específicas", [resource.address])
+iam_policy_types := {"aws_iam_policy", "aws_iam_role_policy", "aws_iam_user_policy", "aws_iam_group_policy"}
+
+has_full_wildcard_action(statement) {
+    is_string(statement.Action)
+    statement.Action == "*"
 }
 
-deny[msg] {
-    resource := input.resource_changes[_]
-    resource.type == "aws_iam_role_policy"
-    policy := json.unmarshal(resource.change.after.policy)
-    statement := policy.Statement[_]
-    statement.Effect == "Allow"
+has_full_wildcard_action(statement) {
+    is_array(statement.Action)
     statement.Action[_] == "*"
-    msg := sprintf("IAM role policy '%s' contiene Action: '*'. Use acciones específicas", [resource.address])
 }
 
-# Denegar Resource: * para acciones sensibles
-deny[msg] {
-    resource := input.resource_changes[_]
-    resource.type == "aws_iam_policy"
-    policy := json.unmarshal(resource.change.after.policy)
-    statement := policy.Statement[_]
-    statement.Effect == "Allow"
+has_wildcard_resource(statement) {
+    is_string(statement.Resource)
     statement.Resource == "*"
-    has_sensitive_action(statement.Action)
-    msg := sprintf("IAM policy '%s' tiene Resource: '*' con acciones sensibles", [resource.address])
 }
 
-# Acciones sensibles que no deberían tener Resource: *
-sensitive_actions := {
-    "iam:*",
-    "iam:CreateUser",
-    "iam:DeleteUser",
-    "iam:AttachUserPolicy",
-    "iam:PutUserPolicy",
-    "sts:AssumeRole",
-    "kms:*",
-    "kms:Decrypt",
-    "secretsmanager:GetSecretValue",
-    "ssm:GetParameter"
+has_wildcard_resource(statement) {
+    is_array(statement.Resource)
+    statement.Resource[_] == "*"
 }
 
-has_sensitive_action(actions) {
-    action := actions[_]
-    action in sensitive_actions
-}
-
-has_sensitive_action(actions) {
-    action := actions[_]
+sensitive_action(action) {
     startswith(action, "iam:")
 }
 
-# Advertir sobre NotAction
-warn[msg] {
-    resource := input.resource_changes[_]
-    resource.type == "aws_iam_policy"
-    policy := json.unmarshal(resource.change.after.policy)
-    statement := policy.Statement[_]
-    statement.NotAction
-    msg := sprintf("IAM policy '%s' usa NotAction, lo cual puede ser peligroso. Revise cuidadosamente", [resource.address])
+sensitive_action(action) {
+    startswith(action, "kms:")
 }
 
-# Advertir sobre NotResource
+sensitive_action(action) {
+    action in {"sts:AssumeRole", "secretsmanager:GetSecretValue", "ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"}
+}
+
+has_sensitive_action(statement) {
+    is_string(statement.Action)
+    sensitive_action(statement.Action)
+}
+
+has_sensitive_action(statement) {
+    is_array(statement.Action)
+    action := statement.Action[_]
+    sensitive_action(action)
+}
+
+deny[msg] {
+    resource := input.resource_changes[_]
+    resource.type in iam_policy_types
+    resource.change.actions[_] in ["create", "update"]
+    policy_json := object.get(resource.change.after, "policy", "")
+    policy_json != ""
+    policy := json.unmarshal(policy_json)
+    statement := policy.Statement[_]
+    statement.Effect == "Allow"
+    has_full_wildcard_action(statement)
+    msg := sprintf("IAM policy resource '%s' contains Allow Action '*'. Use explicit actions.", [resource.address])
+}
+
+deny[msg] {
+    resource := input.resource_changes[_]
+    resource.type in iam_policy_types
+    resource.change.actions[_] in ["create", "update"]
+    policy_json := object.get(resource.change.after, "policy", "")
+    policy_json != ""
+    policy := json.unmarshal(policy_json)
+    statement := policy.Statement[_]
+    statement.Effect == "Allow"
+    has_wildcard_resource(statement)
+    has_sensitive_action(statement)
+    msg := sprintf("IAM policy resource '%s' grants a sensitive action against Resource '*'. Scope the resource explicitly.", [resource.address])
+}
+
 warn[msg] {
     resource := input.resource_changes[_]
-    resource.type == "aws_iam_policy"
-    policy := json.unmarshal(resource.change.after.policy)
+    resource.type in iam_policy_types
+    policy_json := object.get(resource.change.after, "policy", "")
+    policy_json != ""
+    policy := json.unmarshal(policy_json)
     statement := policy.Statement[_]
-    statement.NotResource
-    msg := sprintf("IAM policy '%s' usa NotResource, lo cual puede ser peligroso. Revise cuidadosamente", [resource.address])
+    object.get(statement, "NotAction", null) != null
+    msg := sprintf("IAM policy resource '%s' uses NotAction and requires explicit security review.", [resource.address])
+}
+
+warn[msg] {
+    resource := input.resource_changes[_]
+    resource.type in iam_policy_types
+    policy_json := object.get(resource.change.after, "policy", "")
+    policy_json != ""
+    policy := json.unmarshal(policy_json)
+    statement := policy.Statement[_]
+    object.get(statement, "NotResource", null) != null
+    msg := sprintf("IAM policy resource '%s' uses NotResource and requires explicit security review.", [resource.address])
 }

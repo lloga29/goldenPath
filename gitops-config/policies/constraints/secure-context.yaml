@@ -1,8 +1,8 @@
-# Require CPU and memory requests/limits at admission time.
+# Enforce non-root execution and disabled privilege escalation at admission time.
 apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: K8sContainerResources
+kind: K8sSecureContext
 metadata:
-  name: require-container-resources
+  name: require-secure-container-context
   annotations:
     argocd.argoproj.io/sync-wave: "20"
 spec:

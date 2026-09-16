@@ -1,18 +1,29 @@
-# Constraint que requiere labels obligatorios
+# Require the standard Golden Path labels on application resources.
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: K8sRequiredLabels
 metadata:
   name: require-standard-labels
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
 spec:
   match:
+    excludedNamespaces:
+      - kube-system
+      - kube-public
+      - gatekeeper-system
+      - argocd
     kinds:
       - apiGroups: ["apps"]
-        kinds: ["Deployment", "StatefulSet"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet"]
       - apiGroups: [""]
         kinds: ["Service"]
+      - apiGroups: ["networking.k8s.io"]
+        kinds: ["Ingress"]
   parameters:
     labels:
       - key: app.kubernetes.io/name
       - key: app.kubernetes.io/component
+      - key: app.kubernetes.io/part-of
       - key: team
       - key: environment
+        allowedRegex: "^(dev|staging|prod|ephemeral)$"

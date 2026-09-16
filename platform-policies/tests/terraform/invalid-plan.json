@@ -1,0 +1,34 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_s3_bucket.bad",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "bad",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "bucket": "golden-path-example-public",
+          "acl": "public-read",
+          "tags": {
+            "Environment": "production",
+            "Team": "platform",
+            "CostCenter": "bad-format"
+          }
+        }
+      }
+    },
+    {
+      "address": "aws_iam_policy.bad",
+      "mode": "managed",
+      "type": "aws_iam_policy",
+      "name": "bad",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"*\",\"Resource\":\"*\"}]}"
+        }
+      }
+    }
+  ]
+}

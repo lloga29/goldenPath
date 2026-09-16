@@ -2,46 +2,79 @@
 
 This guide describes the current policy-as-code baseline and how to operate it safely.
 
-## Terraform policies
+## Terraform controls
+
+The executable Terraform policy bundle is currently AWS-specific. Multi-provider policy parity is tracked in issue #15.
 
 ### Public access
 
-Prevent unintended Internet exposure for supported resource types. Review any intentionally public endpoint through an explicit architecture/security decision rather than a permanent broad bypass.
+- Reject public S3 ACLs.
+- Require a matching S3 public-access-block companion resource and all four protection flags.
+- Reject public sensitive-port ingress for supported AWS security-group representations.
+- Reject publicly accessible RDS and Redshift instances/clusters.
 
 ### Encryption
 
-Require encryption for supported storage/database resource types where the provider exposes the setting. Prefer organization-managed key policy when compliance requires it.
+- Require EBS encryption.
+- Require RDS instance/cluster storage encryption.
+- Require a matching S3 server-side-encryption companion resource.
+- Require ElastiCache at-rest and in-transit encryption.
 
 ### Required metadata
 
-Require ownership/environment/cost metadata so findings and spend can be routed to responsible teams.
+Supported taggable resources must carry `Environment`, `Team`, `CostCenter`, and `Owner`. Environment values are constrained to `dev`, `staging`, `prod`, or `ephemeral`.
 
 ### IAM wildcard restrictions
 
-Reject broad wildcard permissions when more specific actions/resources can be used. Treat identity policies as code that requires review and tests.
+Managed and inline IAM policy resources reject `Action: "*"` and reject sensitive IAM/KMS/secret-access actions against `Resource: "*"`. `NotAction` and `NotResource` generate review warnings.
 
-## Kubernetes policies
+## Kubernetes controls
 
-The current baseline checks workload security properties, required labels, resource requests/limits, security context, and immutable image-tag behavior.
+The policy bundle evaluates the rendered desired state and checks:
 
-## Local execution
+- explicit immutable image tags or SHA-256 digests;
+- required application/ownership/environment labels;
+- CPU and memory requests and limits;
+- non-root execution;
+- `allowPrivilegeEscalation=false`;
+- privileged container and host namespace restrictions;
+- advisory read-only-root-filesystem, dropped-capability, and probe guidance.
+
+## Positive and negative fixtures
+
+Every blocking policy change must preserve a passing fixture and at least one deliberately failing fixture. Run:
 
 ```bash
-conftest test tfplan.json --policy platform-policies/terraform/
-conftest test deployment.yaml --policy platform-policies/kubernetes/
+./platform-policies/scripts/test-policies.sh
 ```
 
-## Severity and enforcement
-
-- `deny`: intended to block when the active integration propagates the failure.
-- `warn`: advisory feedback that does not block.
-
-Do not describe a policy as enforced when its workflow uses `continue-on-error` or suppresses the command's exit code.
+A test suite that only proves invalid input fails is insufficient; it must also prove the paved-road input remains valid.
 
 ## Exceptions
 
-Use the governed exception model instead of undocumented skip comments. If an external scanner requires an inline suppression, include a tracked exception identifier and expiry/owner in the authoritative exception process.
+The exception registry is validated independently:
+
+```bash
+python3 platform-policies/scripts/validate-exceptions.py \
+  platform-policies/policy-exceptions.yaml
+```
+
+Each active exception must have a stable ID, policy/resource scope, technical reason, owner email, approver, tracking issue, creation date, and expiry date. Expired exceptions fail validation. The registry cannot globally disable policies.
+
+The registry is **not yet consumed as a bypass** by Conftest/Gatekeeper. Issue #14 tracks that implementation so the bypass semantics can be designed explicitly and audited.
+
+## Gatekeeper
+
+Gatekeeper templates/constraints under `gitops-config/policies/` provide admission-time defense in depth for selected Kubernetes controls. CI remains responsible for the full policy bundle. Admission resources must be validated together with their `ConstraintTemplate`; a constraint without its template is an invalid baseline.
 
 ## Rollout
 
-For new blocking rules on existing estates, inventory violations first, run in audit/advisory mode, remediate, then enable enforcement with rollback and owner communication.
+For a new blocking rule on an existing estate:
+
+1. inventory violations;
+2. add positive/negative fixtures;
+3. run advisory/audit evaluation;
+4. remediate the paved road and existing workloads;
+5. enable blocking enforcement;
+6. monitor denial volume and rollback criteria;
+7. use a governed exception only when remediation cannot meet the required deadline.
