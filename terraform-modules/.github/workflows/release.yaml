@@ -1,169 +1,58 @@
-# Release Pipeline para Terraform Modules
-# Crea releases semánticos automáticamente en merge a main
+# Release blueprint for a standalone Terraform modules repository.
+# Releases are published from an existing, human-authored version tag and this workflow creates no commits.
 
 name: Release
 
 on:
   push:
-    branches: [main]
+    tags:
+      - 'v*.*.*'
   workflow_dispatch:
-    inputs:
-      version_bump:
-        description: 'Tipo de bump de versión'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
 
 permissions:
   contents: write
-  pull-requests: read
 
 jobs:
-  # ============================================
-  # DETERMINAR VERSIÓN
-  # ============================================
-  version:
+  verify-and-release:
     runs-on: ubuntu-latest
-    outputs:
-      new_version: ${{ steps.version.outputs.new_version }}
-      changelog: ${{ steps.changelog.outputs.changelog }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Obtener versión actual
-        id: current
+      - name: Verify semantic version tag
+        shell: bash
         run: |
-          CURRENT=$(cat VERSION 2>/dev/null || echo "0.0.0")
-          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          TAG="${GITHUB_REF_NAME}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag must match vMAJOR.MINOR.PATCH. Received: $TAG"
+            exit 1
+          fi
 
-      - name: Determinar tipo de bump
-        id: bump_type
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "type=${{ inputs.version_bump }}" >> $GITHUB_OUTPUT
-          else
-            # Determinar por commits convencionales
-            COMMITS=$(git log --oneline $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")..HEAD)
-
-            if echo "$COMMITS" | grep -qE "BREAKING CHANGE|!:"; then
-              echo "type=major" >> $GITHUB_OUTPUT
-            elif echo "$COMMITS" | grep -qE "^feat"; then
-              echo "type=minor" >> $GITHUB_OUTPUT
-            else
-              echo "type=patch" >> $GITHUB_OUTPUT
+          if [ -f VERSION ]; then
+            VERSION=$(tr -d '[:space:]' < VERSION)
+            if [ "v$VERSION" != "$TAG" ]; then
+              echo "VERSION ($VERSION) does not match release tag ($TAG)."
+              exit 1
             fi
           fi
 
-      - name: Calcular nueva versión
-        id: version
+      - name: Build release notes
+        id: notes
+        shell: bash
         run: |
-          CURRENT="${{ steps.current.outputs.current }}"
-          TYPE="${{ steps.bump_type.outputs.type }}"
-
-          IFS='.' read -ra VERSION <<< "$CURRENT"
-          MAJOR=${VERSION[0]}
-          MINOR=${VERSION[1]}
-          PATCH=${VERSION[2]}
-
-          case $TYPE in
-            major)
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              ;;
-            minor)
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              ;;
-            patch)
-              PATCH=$((PATCH + 1))
-              ;;
-          esac
-
-          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "Nueva versión: $NEW_VERSION"
-
-      - name: Generar changelog
-        id: changelog
-        run: |
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -z "$LAST_TAG" ]; then
-            COMMITS=$(git log --pretty=format:"- %s (%h)" HEAD~10..HEAD)
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          if [ -n "$PREVIOUS_TAG" ]; then
+            git log --pretty=format:'- %s (%h)' "$PREVIOUS_TAG..${GITHUB_REF_NAME}" > release-notes.md
           else
-            COMMITS=$(git log --pretty=format:"- %s (%h)" $LAST_TAG..HEAD)
+            git log --pretty=format:'- %s (%h)' "${GITHUB_REF_NAME}" > release-notes.md
           fi
 
-          # Escapar para GitHub output
-          COMMITS="${COMMITS//'%'/'%25'}"
-          COMMITS="${COMMITS//$'\n'/'%0A'}"
-          COMMITS="${COMMITS//$'\r'/'%0D'}"
-
-          echo "changelog=$COMMITS" >> $GITHUB_OUTPUT
-
-  # ============================================
-  # CREAR RELEASE
-  # ============================================
-  release:
-    needs: version
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Actualizar VERSION file
-        run: |
-          echo "${{ needs.version.outputs.new_version }}" > VERSION
-
-      - name: Actualizar CHANGELOG
-        run: |
-          DATE=$(date +%Y-%m-%d)
-          NEW_ENTRY="## [${{ needs.version.outputs.new_version }}] - $DATE
-
-          ${{ needs.version.outputs.changelog }}
-
-          "
-
-          if [ -f CHANGELOG.md ]; then
-            # Insertar después del header
-            sed -i "0,/^## /s//$(printf '%s\n\n' "$NEW_ENTRY" | sed 's/[&/\]/\\&/g')&/" CHANGELOG.md
-          else
-            echo "# Changelog
-
-          $NEW_ENTRY" > CHANGELOG.md
-          fi
-
-      - name: Commit y tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add VERSION CHANGELOG.md
-          git commit -m "chore: release v${{ needs.version.outputs.new_version }}"
-          git tag -a "v${{ needs.version.outputs.new_version }}" -m "Release v${{ needs.version.outputs.new_version }}"
-          git push origin main --tags
-
-      - name: Crear GitHub Release
-        uses: softprops/action-gh-release@v1
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.version.outputs.new_version }}
-          name: Release v${{ needs.version.outputs.new_version }}
-          body: |
-            ## Cambios en esta versión
-
-            ${{ needs.version.outputs.changelog }}
-
-            ## Uso
-
-            ```hcl
-            module "example" {
-              source = "git::https://github.com/${{ github.repository }}.git//modules/MODULE_NAME?ref=v${{ needs.version.outputs.new_version }}"
-            }
-            ```
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body_path: release-notes.md
           draft: false
           prerelease: false

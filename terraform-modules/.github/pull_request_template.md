@@ -1,61 +1,50 @@
-## Descripción
+## Summary
 
-<!-- Describe brevemente los cambios realizados -->
+<!-- Explain the change and why it is needed. -->
 
-## Tipo de cambio
+## Change type
 
-- [ ] Nueva funcionalidad (feature)
-- [ ] Corrección de bug (fix)
-- [ ] Cambio que rompe compatibilidad (breaking change)
-- [ ] Documentación
-- [ ] Refactoring
-- [ ] Otros (especificar)
+- [ ] Feature
+- [ ] Bug fix
+- [ ] Breaking change
+- [ ] Documentation
+- [ ] Refactor
+- [ ] Security
+- [ ] Maintenance
 
-## Módulo(s) afectado(s)
+## Affected module(s)
 
-<!-- Lista los módulos modificados -->
 - `modules/...`
 
-## Checklist
+## Validation
 
-### Código
-- [ ] He seguido los estándares de código del repositorio
-- [ ] He añadido/actualizado validaciones en variables
-- [ ] He actualizado los outputs necesarios
-- [ ] El código es compatible con AWS/Azure/GCP (si aplica)
+### Code
+- [ ] Terraform formatting passes.
+- [ ] Inputs/validation are updated where required.
+- [ ] Outputs are updated where required.
+- [ ] Provider-specific behavior is documented.
 
 ### Tests
-- [ ] He añadido/actualizado tests unitarios (`.tftest.hcl`)
-- [ ] Los tests pasan localmente (`terraform test`)
-- [ ] He probado los ejemplos
+- [ ] Terraform-native tests were added/updated where applicable.
+- [ ] `terraform test` passes for the affected module(s).
+- [ ] Examples were validated.
+- [ ] Any real-cloud integration test is clearly identified.
 
-### Documentación
-- [ ] He actualizado el README.md del módulo
-- [ ] He actualizado el CHANGELOG.md
-- [ ] He ejecutado `terraform-docs` para actualizar la documentación
-- [ ] Los ejemplos están actualizados
+### Documentation
+- [ ] Module README/reference output is current.
+- [ ] CHANGELOG/release impact is documented when required.
+- [ ] Examples and upgrade notes are current.
 
-### Seguridad
-- [ ] No hay credenciales hardcodeadas
-- [ ] Los recursos siguen el principio de least privilege
-- [ ] Los checks de Checkov/TFSec pasan
+### Security
+- [ ] No credentials or secret values are committed.
+- [ ] IAM follows least privilege.
+- [ ] Security/static-analysis findings are resolved or linked to an approved exception.
+- [ ] State, public exposure, encryption, and deletion impact were considered.
 
-## Ejemplos de uso
+## Rollout / compatibility
 
-<!-- Proporciona un ejemplo de cómo usar los cambios -->
+<!-- Describe consumer impact, migration steps, and rollback if applicable. -->
 
-```hcl
-module "example" {
-  source = "./modules/..."
+## Additional notes
 
-  # ...
-}
-```
-
-## Notas adicionales
-
-<!-- Cualquier información adicional relevante -->
-
-## Screenshots (si aplica)
-
-<!-- Añade capturas de pantalla del plan de Terraform si son relevantes -->
+<!-- Add relevant plan excerpts or evidence without exposing sensitive values. -->

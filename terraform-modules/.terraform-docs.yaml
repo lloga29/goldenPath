@@ -1,8 +1,6 @@
-# Configuración de terraform-docs
-# Genera documentación automática para módulos
+# terraform-docs configuration for reusable modules.
 
 formatter: markdown table
-
 version: "0.17"
 
 header-from: docs/header.md
@@ -19,13 +17,13 @@ sections:
 content: |-
   {{ .Header }}
 
-  ## Uso
+  ## Usage
 
   ```hcl
   module "{{ .Module.Name }}" {
-    source = "git::https://github.com/org/terraform-modules.git//{{ .Module.Source }}?ref=vX.X.X"
+    source = "git::https://github.com/example/platform-terraform-modules.git//{{ .Module.Source }}?ref=vX.X.X"
 
-    # Variables requeridas
+    # Required inputs.
     {{- range .Module.Inputs }}
     {{- if .Required }}
     {{ .Name }} = {{ if eq .Type "string" }}"value"{{ else if eq .Type "bool" }}true{{ else if eq .Type "number" }}1{{ else }}{}{{ end }}

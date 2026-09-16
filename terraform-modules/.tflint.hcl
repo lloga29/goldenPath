@@ -1,33 +1,32 @@
-# Configuración de TFLint para Terraform Modules
+# TFLint configuration for Terraform modules.
 
 config {
-  # Módulo de base
   module = true
   force  = false
 }
 
-# Plugin de AWS
+# AWS ruleset.
 plugin "aws" {
   enabled = true
   version = "0.29.0"
   source  = "github.com/terraform-linters/tflint-ruleset-aws"
 }
 
-# Plugin de Azure
+# Azure ruleset.
 plugin "azurerm" {
   enabled = true
   version = "0.25.1"
   source  = "github.com/terraform-linters/tflint-ruleset-azurerm"
 }
 
-# Plugin de GCP
+# Google Cloud ruleset.
 plugin "google" {
   enabled = true
   version = "0.27.0"
   source  = "github.com/terraform-linters/tflint-ruleset-google"
 }
 
-# Reglas de Terraform
+# Terraform language rules.
 rule "terraform_required_version" {
   enabled = true
 }
@@ -69,7 +68,7 @@ rule "terraform_unused_required_providers" {
   enabled = true
 }
 
-# Reglas específicas de AWS
+# AWS-specific rules.
 rule "aws_resource_missing_tags" {
   enabled = true
   tags    = ["Environment", "Team", "CostCenter"]
