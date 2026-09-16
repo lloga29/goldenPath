@@ -1,0 +1,29 @@
+{
+  "architecture": {
+    "schemaVersion": "goldenpath.architecture/v1",
+    "service": {
+      "name": "orders-api",
+      "owner": "orders-team",
+      "serviceType": "api",
+      "dataSensitivity": "confidential",
+      "dependencies": [
+        "postgres",
+        "identity-api"
+      ],
+      "runtime": "kubernetes",
+      "sloTier": "tier2",
+      "deploymentUnit": "helm",
+      "riskClass": "R1"
+    }
+  },
+  "change": {
+    "changeType": "architecture",
+    "touchesProduction": false,
+    "changesPolicy": false,
+    "changesArchitecture": true,
+    "changesDesiredState": true,
+    "changesIdentity": false,
+    "changesNetwork": false,
+    "changesData": false
+  }
+}
