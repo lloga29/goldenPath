@@ -2,7 +2,10 @@ package goldenpath.exceptionlib
 
 import rego.v1
 
-compiled_registry := object.get(object.get(data, "goldenpath", {}), "policy_exceptions", {})
+# The compiled registry is injected as base data at this exact path. Keep this
+# reference static so OPA does not traverse sibling virtual documents under
+# data.goldenpath and introduce policy recursion.
+compiled_registry := data.goldenpath.policy_exceptions
 exceptions := object.get(compiled_registry, "exceptions", [])
 
 kubernetes_matches(policy, resource) := [exception |
