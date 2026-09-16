@@ -1,6 +1,10 @@
 # Terraform-native tests for the AWS branch of the VPC reference module.
 # Run with: terraform test
 
+mock_provider "aws" {}
+mock_provider "azurerm" {}
+mock_provider "google" {}
+
 variables {
   name           = "test-vpc"
   cidr_block     = "10.0.0.0/16"

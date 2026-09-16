@@ -1,0 +1,151 @@
+name: Repository validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      docs: ${{ steps.domains.outputs.docs }}
+      terraform: ${{ steps.domains.outputs.terraform }}
+      gitops: ${{ steps.domains.outputs.gitops }}
+      policies: ${{ steps.domains.outputs.policies }}
+      templates: ${{ steps.domains.outputs.templates }}
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed validation domains
+        id: domains
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: python3 scripts/detect-ci-domains.py "$BASE_SHA" "$HEAD_SHA" >> "$GITHUB_OUTPUT"
+
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install structured-file parser
+        run: python3 -m pip install --disable-pip-version-check 'PyYAML==6.0.2'
+
+      - name: Enforce English-only content
+        run: python3 scripts/check-english-only.py
+
+      - name: Validate YAML and JSON syntax
+        run: python3 scripts/check-structured-files.py
+
+      - name: Validate shell syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' script; do
+            bash -n "$script"
+          done < <(find . -type f -name '*.sh' -not -path './.git/*' -print0)
+
+  documentation:
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Validate local Markdown links
+        run: python3 scripts/check-markdown-links.py
+
+  terraform:
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: '1.16.2'
+          terraform_wrapper: false
+
+      - name: Validate Terraform modules and tests
+        run: ./terraform-modules/scripts/validate-all.sh
+
+      - name: Validate executable platform stacks
+        run: ./scripts/validate-platform-stacks.sh
+
+  gitops-policy:
+    needs: changes
+    if: needs.changes.outputs.gitops == 'true' || needs.changes.outputs.policies == 'true'
+    runs-on: ubuntu-latest
+    env:
+      KUSTOMIZE_VERSION: '5.8.1'
+      CONFTEST_VERSION: '0.45.0'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install policy dependencies
+        run: python3 -m pip install --disable-pip-version-check 'PyYAML==6.0.2'
+
+      - name: Install Kustomize
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSLo kustomize.tar.gz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          tar -xzf kustomize.tar.gz
+          sudo install -m 0755 kustomize /usr/local/bin/kustomize
+
+      - name: Build GitOps Kustomize targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r dir; do
+            echo "Building $dir"
+            kustomize build "$dir" >/dev/null
+          done < <(find gitops-config/apps gitops-config/platform gitops-config/policies -name kustomization.yaml -exec dirname {} \; | sort -u)
+
+      - name: Install Conftest
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSLo conftest.tar.gz "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+          tar -xzf conftest.tar.gz
+          sudo install -m 0755 conftest /usr/local/bin/conftest
+
+      - name: Run policy fixtures
+        run: ./platform-policies/scripts/test-policies.sh
+
+      - name: Validate policy exception registry
+        run: python3 platform-policies/scripts/validate-exceptions.py platform-policies/policy-exceptions.yaml
+
+  service-template:
+    needs: changes
+    if: needs.changes.outputs.templates == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+          cache: false
+
+      - name: Install safe Copier baseline
+        run: python3 -m pip install --disable-pip-version-check 'copier==9.15.2'
+
+      - name: Render and validate Go paved-road template
+        run: ./service-templates/scripts/render-go-template-smoke-test.sh

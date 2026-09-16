@@ -16,6 +16,7 @@ Use short, descriptive branches with a conventional prefix:
 - `refactor/<area>`
 - `chore/<maintenance>`
 - `security/<control>`
+- `ci/<validation-or-delivery-change>`
 
 Do not use agent or tool names as branch prefixes.
 
@@ -79,15 +80,30 @@ A capability is incomplete when its documentation is missing. New platform capab
 Before requesting review, run the relevant checks for the changed area. Typical examples include:
 
 ```bash
+python3 scripts/check-english-only.py
+python3 scripts/check-markdown-links.py
 terraform fmt -check -recursive
 terraform validate
 terraform test
 conftest test <input> --policy platform-policies/
 kustomize build <overlay>
-go test ./...
+./service-templates/scripts/render-go-template-smoke-test.sh
 ```
 
 The exact set depends on the repository area. Do not mark a validation as successful if the required tool, cloud credential, cluster, or dependency was unavailable.
+
+## Root CI contract
+
+`.github/workflows/repository-validation.yaml` is the active validation contract for this consolidated repository. It always validates repository language, YAML/JSON syntax, and shell syntax, then runs domain-specific jobs when relevant paths change:
+
+- documentation: local Markdown links;
+- Terraform: reusable modules/tests and executable platform stacks;
+- GitOps/policy: Kustomize builds, Conftest fixtures, and exception-registry validation;
+- service templates: a real Copier render followed by Go format/vet/test/build checks.
+
+Domain detection is implemented by `scripts/detect-ci-domains.py`. Changes to the root CI workflow or root validation scripts deliberately execute every domain so CI changes validate themselves.
+
+Nested workflows under component directories remain reference blueprints unless they are copied into standalone repositories. A green nested blueprint is not a substitute for this root CI contract.
 
 ## Security exceptions
 
