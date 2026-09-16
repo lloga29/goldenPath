@@ -1,5 +1,5 @@
-# Entorno Production para ACME
-# Infraestructura de producción - CRÍTICO
+# ACME production environment reference stack.
+# Production controls must be implemented and validated before this example is used for real workloads.
 
 terraform {
   required_version = ">= 1.5.0, < 2.0.0"
@@ -28,18 +28,12 @@ provider "aws" {
   }
 }
 
-# ============================================
-# VARIABLES
-# ============================================
 variable "aws_region" {
-  description = "Región de AWS"
+  description = "AWS region."
   type        = string
   default     = "us-east-1"
 }
 
-# ============================================
-# DATA SOURCES
-# ============================================
 data "terraform_remote_state" "networking" {
   backend = "s3"
 
@@ -50,9 +44,6 @@ data "terraform_remote_state" "networking" {
   }
 }
 
-# ============================================
-# LOCALS
-# ============================================
 locals {
   environment = "prod"
   client      = "acme"
@@ -72,22 +63,19 @@ locals {
   public_subnet_ids  = data.terraform_remote_state.networking.outputs.public_subnet_ids.prod
 }
 
-# ============================================
-# RECURSOS DE PRODUCCIÓN
-# ============================================
-# Producción tiene alta disponibilidad y protección contra eliminación
+# Add highly available, deletion-protected production resources only through reviewed, version-pinned modules.
 
-# ============================================
-# OUTPUTS
-# ============================================
 output "environment" {
-  value = local.environment
+  description = "Environment name."
+  value       = local.environment
 }
 
 output "vpc_id" {
-  value = local.vpc_id
+  description = "Production VPC ID."
+  value       = local.vpc_id
 }
 
 output "private_subnet_ids" {
-  value = local.private_subnet_ids
+  description = "Production private subnet IDs."
+  value       = local.private_subnet_ids
 }

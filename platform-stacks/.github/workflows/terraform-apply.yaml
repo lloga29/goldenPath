@@ -1,14 +1,12 @@
-# Pipeline de Terraform Apply
-# Ejecuta apply en merge a main
+# Apply blueprint for a standalone Platform Stacks repository.
+# GitHub environment protection must be configured separately for production approval.
 
 name: Terraform Apply
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'clients/**'
-      - 'teams/**'
+    paths: ['clients/**', 'teams/**']
 
 concurrency:
   group: terraform-apply
@@ -23,9 +21,6 @@ permissions:
   contents: read
 
 jobs:
-  # ============================================
-  # DETECTAR CAMBIOS
-  # ============================================
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
@@ -33,61 +28,37 @@ jobs:
       has_changes: ${{ steps.changes.outputs.has_changes }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Detectar stacks modificados
+        with: { fetch-depth: 2 }
+      - name: Detect changed stacks
         id: changes
+        shell: bash
         run: |
           CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD)
+          STACKS=$(echo "$CHANGED_FILES" | grep -E "^(clients|teams)/" | grep -E "\.(tf|tfvars)$" | xargs -r -I {} dirname {} | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "stacks=$STACKS" >> "$GITHUB_OUTPUT"
+          echo "has_changes=$([ "$STACKS" != "[]" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
-          STACKS=$(echo "$CHANGED_FILES" | \
-            grep -E "^(clients|teams)/" | \
-            grep -E "\.(tf|tfvars)$" | \
-            xargs -I {} dirname {} | \
-            sort -u | \
-            jq -R -s -c 'split("\n") | map(select(length > 0))')
-
-          echo "stacks=$STACKS" >> $GITHUB_OUTPUT
-          echo "has_changes=$([ "$STACKS" != "[]" ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
-
-  # ============================================
-  # TERRAFORM APPLY
-  # ============================================
   apply:
     needs: detect-changes
     if: needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        stack: ${{ fromJson(needs.detect-changes.outputs.stacks) }}
       max-parallel: 1
+      matrix: { stack: "${{ fromJson(needs.detect-changes.outputs.stacks) }}" }
     environment:
       name: ${{ contains(matrix.stack, 'prod') && 'production' || (contains(matrix.stack, 'staging') && 'staging' || 'development') }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Terraform Init
-        run: terraform init
+      - uses: aws-actions/configure-aws-credentials@v4
+        with: { role-to-assume: "${{ secrets.AWS_ROLE_ARN }}", aws-region: us-east-1 }
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "${{ env.TF_VERSION }}" }
+      - run: terraform init -input=false
         working-directory: ${{ matrix.stack }}
-
-      - name: Terraform Apply
+      - name: Terraform apply
         run: terraform apply -auto-approve -input=false
         working-directory: ${{ matrix.stack }}
         timeout-minutes: 30
-
-      - name: Notify on Failure
+      - name: Report failure
         if: failure()
-        run: |
-          echo "::error::Terraform apply failed for ${{ matrix.stack }}"
+        run: echo "::error::Terraform apply failed for ${{ matrix.stack }}"

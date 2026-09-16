@@ -1,5 +1,5 @@
-# Bootstrap para Cliente: ACME
-# Crea los recursos iniciales para Terraform state
+# Reference AWS bootstrap for the fictional ACME client.
+# Creates Terraform state resources and a narrowly scoped GitHub Actions identity baseline.
 
 terraform {
   required_version = ">= 1.5.0, < 2.0.0"
@@ -11,7 +11,7 @@ terraform {
     }
   }
 
-  # Backend local para bootstrap (migrar después)
+  # Bootstrap starts with local state; migrate only after the remote backend is verified.
   # backend "s3" {}
 }
 
@@ -27,9 +27,6 @@ provider "aws" {
   }
 }
 
-# ============================================
-# S3 BUCKET PARA TERRAFORM STATE
-# ============================================
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "client-acme-terraform-state"
 
@@ -79,9 +76,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "terraform_state" {
   }
 }
 
-# ============================================
-# DYNAMODB TABLE PARA STATE LOCKING
-# ============================================
 resource "aws_dynamodb_table" "terraform_locks" {
   name         = "client-acme-terraform-locks"
   billing_mode = "PAY_PER_REQUEST"
@@ -105,14 +99,9 @@ resource "aws_dynamodb_table" "terraform_locks" {
   }
 }
 
-# ============================================
-# OIDC PROVIDER PARA GITHUB ACTIONS
-# ============================================
 resource "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com"
-
   client_id_list = ["sts.amazonaws.com"]
-
   thumbprint_list = [
     "6938fd4d98bab03faadb97b34396831e3780aea1",
     "1c58a3a8518e8759bf075b76b750d4f2df264fcd"
@@ -123,31 +112,26 @@ resource "aws_iam_openid_connect_provider" "github" {
   }
 }
 
-# ============================================
-# IAM ROLE PARA CI/CD
-# ============================================
 resource "aws_iam_role" "terraform_cicd" {
   name = "acme-terraform-cicd"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Federated = aws_iam_openid_connect_provider.github.arn
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Federated = aws_iam_openid_connect_provider.github.arn
+      }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
         }
-        Action = "sts:AssumeRoleWithWebIdentity"
-        Condition = {
-          StringEquals = {
-            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          }
-          StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:org/platform-stacks:*"
-          }
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = "repo:org/platform-stacks:ref:refs/heads/main"
         }
       }
-    ]
+    }]
   })
 
   tags = {
@@ -155,7 +139,7 @@ resource "aws_iam_role" "terraform_cicd" {
   }
 }
 
-# Política para acceso a state
+# State access only. Add separately reviewed, stack-specific infrastructure permissions before using this role for plan/apply.
 resource "aws_iam_role_policy" "terraform_state" {
   name = "terraform-state-access"
   role = aws_iam_role.terraform_cicd.id
@@ -165,12 +149,7 @@ resource "aws_iam_role_policy" "terraform_state" {
     Statement = [
       {
         Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject",
-          "s3:ListBucket"
-        ]
+        Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
         Resource = [
           aws_s3_bucket.terraform_state.arn,
           "${aws_s3_bucket.terraform_state.arn}/*"
@@ -178,19 +157,14 @@ resource "aws_iam_role_policy" "terraform_state" {
       },
       {
         Effect = "Allow"
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:DeleteItem"
-        ]
+        Action = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"]
         Resource = aws_dynamodb_table.terraform_locks.arn
       }
     ]
   })
 }
 
-# Política administrativa (para gestionar infraestructura)
-resource "aws_iam_role_policy_attachment" "admin" {
-  role       = aws_iam_role.terraform_cicd.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+output "terraform_cicd_role_arn" {
+  description = "Reference CI/CD IAM role ARN. Add least-privilege infrastructure policies outside this bootstrap before use."
+  value       = aws_iam_role.terraform_cicd.arn
 }

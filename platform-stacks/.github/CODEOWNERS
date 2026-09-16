@@ -1,32 +1,14 @@
-# CODEOWNERS para Platform Stacks
-# Define quién debe aprobar cambios en cada área
-
-# Default - Platform Team
+# CODEOWNERS blueprint for a standalone Platform Stacks repository.
+# Replace placeholder organization teams before production use.
 *                                   @org/platform-team
-
-# Bootstrap requiere aprobación especial
 clients/*/bootstrap/                @org/platform-team @org/security-team
-
-# Producción requiere múltiples aprobaciones
 clients/*/environments/prod/        @org/platform-team @org/sre-team
 teams/*/prod/                       @org/platform-team @org/sre-team
-
-# Staging
 clients/*/environments/staging/     @org/platform-team
 teams/*/staging/                    @org/platform-team
-
-# Dev - más permisivo
 clients/*/environments/dev/         @org/platform-team
 teams/*/dev/                        @org/platform-team
-
-# Shared configs
 shared/                             @org/platform-team @org/security-team
-
-# Templates
 _templates/                         @org/platform-team
-
-# Scripts
 scripts/                            @org/platform-team
-
-# Workflows
 .github/                            @org/platform-team

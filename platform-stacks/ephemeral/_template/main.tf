@@ -1,11 +1,11 @@
-# Template para Entornos Efímeros (PR Preview)
-# Estos entornos se crean automáticamente para cada PR
+# Pull-request ephemeral environment reference template.
+# CI/CD is responsible for supplying a unique backend and destroying the stack before or at TTL expiry.
 
 terraform {
   required_version = ">= 1.5.0, < 2.0.0"
 
   backend "s3" {
-    # Configurado dinámicamente por CI/CD
+    # Configured dynamically by the ephemeral-environment workflow.
   }
 
   required_providers {
@@ -24,57 +24,46 @@ provider "aws" {
   }
 }
 
-# ============================================
-# VARIABLES
-# ============================================
 variable "aws_region" {
-  description = "Región de AWS"
+  description = "AWS region."
   type        = string
   default     = "us-east-1"
 }
 
 variable "pr_number" {
-  description = "Número del Pull Request"
+  description = "Pull request number."
   type        = string
 }
 
 variable "branch_name" {
-  description = "Nombre de la rama"
+  description = "Source branch name."
   type        = string
 }
 
 variable "ttl_hours" {
-  description = "Tiempo de vida en horas"
+  description = "Requested environment lifetime in hours."
   type        = number
   default     = 24
 }
 
-# ============================================
-# LOCALS
-# ============================================
 locals {
   environment = "ephemeral"
   name_prefix = "pr-${var.pr_number}"
 
   common_tags = {
-    Environment   = local.environment
-    ManagedBy     = "terraform"
-    PRNumber      = var.pr_number
-    Branch        = var.branch_name
-    TTL           = var.ttl_hours
-    ExpiresAt     = timeadd(timestamp(), "${var.ttl_hours}h")
-    AutoCleanup   = "true"
+    Environment = local.environment
+    ManagedBy   = "terraform"
+    PRNumber    = var.pr_number
+    Branch      = var.branch_name
+    TTL         = var.ttl_hours
+    ExpiresAt   = timeadd(timestamp(), "${var.ttl_hours}h")
+    AutoCleanup = "true"
   }
 }
 
-# ============================================
-# RECURSOS EFÍMEROS
-# ============================================
-# Crear solo los recursos mínimos necesarios para testing
+# Add only the minimum isolated resources required by the preview workload.
+# A separate cleanup controller/workflow is required; tags alone do not enforce TTL deletion.
 
-# ============================================
-# OUTPUTS
-# ============================================
 output "environment_name" {
   value = local.name_prefix
 }

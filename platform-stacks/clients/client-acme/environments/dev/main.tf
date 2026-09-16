@@ -1,5 +1,4 @@
-# Entorno Development para ACME
-# Infraestructura de aplicaciones en dev
+# ACME development environment reference stack.
 
 terraform {
   required_version = ">= 1.5.0, < 2.0.0"
@@ -28,18 +27,12 @@ provider "aws" {
   }
 }
 
-# ============================================
-# VARIABLES
-# ============================================
 variable "aws_region" {
-  description = "Región de AWS"
+  description = "AWS region."
   type        = string
   default     = "us-east-1"
 }
 
-# ============================================
-# DATA SOURCES
-# ============================================
 data "terraform_remote_state" "networking" {
   backend = "s3"
 
@@ -50,9 +43,6 @@ data "terraform_remote_state" "networking" {
   }
 }
 
-# ============================================
-# LOCALS
-# ============================================
 locals {
   environment = "dev"
   client      = "acme"
@@ -70,36 +60,20 @@ locals {
   public_subnet_ids  = data.terraform_remote_state.networking.outputs.public_subnet_ids.dev
 }
 
-# ============================================
-# EKS CLUSTER (Placeholder)
-# ============================================
-# module "eks" {
-#   source = "git::https://github.com/org/terraform-modules.git//modules/compute/kubernetes-cluster?ref=v1.0.0"
-#
-#   name           = "${local.client}-${local.environment}"
-#   environment    = local.environment
-#   cloud_provider = "aws"
-#
-#   vpc_id     = local.vpc_id
-#   subnet_ids = local.private_subnet_ids
-#
-#   tags = local.common_tags
-# }
+# Compute/Kubernetes provisioning is intentionally not implemented in this reference stack.
+# Add an explicitly versioned, validated module before production adoption.
 
-# ============================================
-# OUTPUTS
-# ============================================
 output "environment" {
-  description = "Entorno"
+  description = "Environment name."
   value       = local.environment
 }
 
 output "vpc_id" {
-  description = "ID de la VPC"
+  description = "Development VPC ID."
   value       = local.vpc_id
 }
 
 output "private_subnet_ids" {
-  description = "IDs de subnets privadas"
+  description = "Development private subnet IDs."
   value       = local.private_subnet_ids
 }
