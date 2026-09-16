@@ -19,7 +19,7 @@ For each platform dependency:
 |---|---|---:|---|---|
 | cert-manager | `quay.io/jetstack/charts` OCI | `v1.21.2` | Refreshed to the current supported release and recommended OCI source | Helm rendering only; issuer/Gateway/certificate runtime not proven |
 | External Secrets Operator | `https://charts.external-secrets.io` | `2.10.0` | Refreshed to the current supported minor; repository examples use the stable v1 API | Helm rendering only; secret backend integration not proven |
-| kube-prometheus-stack | `https://prometheus-community.github.io/helm-charts` | `56.6.2` | Refresh pending under #25 | Monitoring runtime not proven |
+| kube-prometheus-stack | `https://prometheus-community.github.io/helm-charts` | `91.4.1` | Refreshed to the current chart / Prometheus Operator baseline | Helm rendering only; CRD upgrade and monitoring runtime not proven |
 | Loki | `https://grafana-community.github.io/helm-charts` | `18.13.1` | Migrated to the current OSS community distribution path | Helm rendering only; storage/runtime not proven |
 | Tempo | `https://grafana-community.github.io/helm-charts` | `3.0.0` | Migrated to the current community single-binary chart | Helm rendering only; trace storage/runtime not proven |
 | Gatekeeper | `https://open-policy-agent.github.io/gatekeeper/charts` | `3.14.0` | Refresh pending under #25 | Admission runtime not proven |
@@ -29,33 +29,45 @@ For each platform dependency:
 
 The selected cert-manager release is `v1.21.2`, published on September 11, 2026. The cert-manager project currently supports the 1.21 and 1.20 release lines; for 1.21 its published support matrix covers Kubernetes `1.33` through `1.36` and tests the same range.
 
-The Helm chart itself declares `kubeVersion: >=1.22.0-0`. That chart constraint is broader than the project's current support policy and must not be interpreted as a production support promise. A production adopter using cert-manager 1.21 should run a Kubernetes version in the project's supported range unless it has a separate supported/LTS arrangement.
-
-GoldenPath uses the upstream-recommended OCI distribution path `quay.io/jetstack/charts/cert-manager`. The chart deprecates `installCRDs`; GoldenPath uses `crds.enabled: true` and `crds.keep: true` while preserving the existing replica/resource and ServiceMonitor settings.
+The Helm chart itself declares `kubeVersion: >=1.22.0-0`. That chart constraint is broader than the project's current support policy and must not be interpreted as a production support promise. GoldenPath uses the upstream-recommended OCI distribution path `quay.io/jetstack/charts/cert-manager`, with current `crds.enabled` / `crds.keep` values instead of deprecated `installCRDs`.
 
 Root CI proves chart/value rendering only. It does not prove ACME reachability, issuer credentials, Gateway API certificate issuance, DNS propagation, webhook availability, or certificate renewal in a real cluster.
 
 ### cert-manager upgrade and rollback boundary
 
-cert-manager owns CRDs and admission webhooks, so a production upgrade must follow the upstream upgrade instructions and verify CRD compatibility before controller rollout. Never treat a Helm render as evidence that an in-place downgrade of CRDs is safe. Preserve the previous desired-state revision and validate issuer/renewal behavior before closing the rollback window.
+cert-manager owns CRDs and admission webhooks, so a production upgrade must follow the upstream upgrade instructions and verify CRD compatibility before controller rollout. Never treat a Helm render as evidence that an in-place downgrade of CRDs is safe.
 
 ## External Secrets Operator refresh
 
-The selected External Secrets Operator chart is `2.10.0`, released on August 28, 2026. ESO's support policy supports only the current minor; 2.10 is tested on Kubernetes `1.36`. The chart's `kubeVersion` constraint is broader (`>=1.19.0-0`) than the project's tested/support matrix, so a successful render on an older Kubernetes version is not equivalent to supported runtime operation.
+The selected External Secrets Operator chart is `2.10.0`, released on August 28, 2026. ESO supports only its current minor; 2.10 is tested on Kubernetes `1.36`. The chart's `kubeVersion >=1.19` constraint is broader than the project's tested/support matrix and must not be interpreted as equivalent support.
 
-ESO explicitly recommends upgrading one minor version at a time. GoldenPath's move from the old `0.9.11` reference pin to `2.10.0` is therefore a **fresh-install/reference baseline update**, not an instruction for an existing production cluster to jump directly from 0.9 to 2.10. Existing installations must follow the upstream sequential upgrade guidance and review every intervening release for CRD/API/provider changes.
+ESO explicitly recommends upgrading one minor version at a time. GoldenPath's move from `0.9.11` to `2.10.0` is therefore a fresh-install/reference baseline update, not an instruction for an existing production cluster to jump directly between those versions. ESO 2.x uses `external-secrets.io/v1`; GoldenPath's non-reconciled Vault example now uses that stable API instead of v1beta1.
 
-ESO 2.x uses `external-secrets.io/v1` as the stable API. Its chart no longer serves v1beta1 by default. GoldenPath's non-reconciled Vault `ClusterSecretStore` example is updated from `v1beta1` to `v1` so copied examples do not teach a deprecated API.
-
-The existing `installCRDs`, replica/resource, and ServiceMonitor values remain valid under chart 2.10. Root CI proves chart/value rendering and example syntax only. It does not prove authentication to Vault or any cloud secret manager, provider permissions, secret rotation, webhook health, or recovery behavior.
+Root CI proves chart/value rendering and repository example syntax only. It does not prove authentication to a real secret backend, provider permissions, rotation, webhook health, secret refresh, or recovery behavior.
 
 ### ESO upgrade and rollback boundary
 
-For existing environments, upgrade minor-by-minor in development/staging first and confirm all persisted ExternalSecret, SecretStore, ClusterSecretStore, PushSecret, generator, and provider resources are stored/served in APIs supported by the target release. Do not rely on a chart downgrade as a CRD rollback strategy. Preserve the previous desired-state revision and export critical custom resources before crossing API/storage migrations.
+Existing environments should upgrade minor-by-minor in development/staging first and confirm persisted custom resources are stored and served in APIs supported by each target release. Do not rely on a chart downgrade as a CRD rollback strategy.
+
+## kube-prometheus-stack refresh
+
+The selected `kube-prometheus-stack` chart is `91.4.1`, published on September 16, 2026. It carries Prometheus Operator `v0.94.0` and declares Kubernetes `>=1.25.0-0`. The chart also bundles current Grafana, kube-state-metrics, node-exporter, and Prometheus Operator CRD dependencies.
+
+GoldenPath preserves its existing repository-owned Prometheus retention/resources, ServiceMonitor/PodMonitor selection semantics, Grafana persistence, and Alertmanager resource envelope. The refresh intentionally does not add unrelated monitoring features or tune application SLOs.
+
+This is a fresh-install/reference baseline update. The upstream chart documents that CRD changes drive major chart versions and that existing installations must explicitly upgrade Prometheus Operator CRDs. Recent chart versions provide an optional `crds.upgradeJob`, but GoldenPath does not silently enable a privileged CRD mutation job as part of a static reference refresh. A real operator must choose and validate the CRD upgrade path for the target cluster.
+
+Root CI renders the chart with `--include-crds`; this proves template compatibility with the committed values. It does not prove that an existing Prometheus, Alertmanager, Grafana, or Prometheus Operator state can be upgraded in place, nor that dashboards, rules, storage, retention, alerts, or scrape targets behave correctly in a live cluster.
+
+The upstream release also publishes a `.tgz.prov` provenance file. GoldenPath records that capability but does not yet claim Helm provenance verification in root CI; artifact verification remains a separate supply-chain maturity item.
+
+### kube-prometheus-stack upgrade and rollback boundary
+
+For an existing environment, review every relevant major-version section in upstream `UPGRADE.md`, update CRDs using the approved cluster procedure before controllers depend on new schemas, and test Prometheus/Alertmanager storage compatibility in staging. Keep a backup/recovery plan for monitoring data and configuration; a Helm downgrade is not a CRD or persisted-data rollback strategy.
 
 ## Loki OSS migration
 
-The Grafana Loki project moved the OSS Helm chart to the `grafana-community/helm-charts` project in 2026. The selected community chart `18.13.1` declares Loki `3.7.7` and Kubernetes `>=1.25.0-0`. GoldenPath explicitly selects Monolithic mode, disables the Simple Scalable targets, uses TSDB schema v13, and keeps local filesystem storage explicit.
+The selected community Loki chart `18.13.1` declares Loki `3.7.7` and Kubernetes `>=1.25.0-0`. GoldenPath explicitly selects Monolithic mode, disables the Simple Scalable targets, uses TSDB schema v13, and keeps local filesystem storage explicit.
 
 Filesystem storage is deliberately **not** presented as a production storage recommendation. A production adopter must select and validate a durable object store, retention policy, backup/recovery model, capacity, credentials/identity path, and failure behavior.
 
@@ -67,7 +79,7 @@ Do not perform an in-place chart downgrade after changing persisted schema/stora
 
 The selected Grafana Community `tempo` chart `3.0.0` declares Tempo `3.0.3` and Kubernetes `^1.25.0-0`. It remains the single-binary/monolithic chart; Kafka is not required for this deployment mode.
 
-Tempo 3 replaces the Tempo 2.x ingester with live-store for recent traces and changes the compactor/backend path. GoldenPath's prior values did not override the removed fields, so no repository-owned configuration required translation. The chart HTTP API default is port `3200`; the repository contains no hard-coded `tempo:3100` dependency.
+Tempo 3 replaces the Tempo 2.x ingester with live-store for recent traces and changes the compactor/backend path. The chart HTTP API default is port `3200`; the repository contains no hard-coded `tempo:3100` dependency.
 
 Local trace storage is deliberately **not** presented as production-ready. A real adopter must validate durable trace storage, retention, persistence, recovery, encryption, identity/credentials, capacity, and failure behavior.
 
@@ -77,7 +89,7 @@ Tempo 3 changes persisted/runtime behavior. Test data compatibility before promo
 
 ## Remaining refresh work
 
-Issue #25 remains open until the remaining platform dependencies have an evidence-backed current support baseline. kube-prometheus-stack, Gatekeeper, and Envoy Gateway remain separate review units because each has different CRD/API, Kubernetes-version, or runtime migration concerns.
+Issue #25 remains open until the remaining platform dependencies have an evidence-backed current support baseline. Gatekeeper and Envoy Gateway remain separate review units because admission-policy runtime and Gateway API/controller compatibility require their own evidence.
 
 ## Upstream references
 
@@ -86,9 +98,9 @@ Issue #25 remains open until the remaining platform dependencies have an evidenc
 - [cert-manager upgrade documentation](https://cert-manager.io/docs/installation/upgrade/)
 - [External Secrets support policy](https://external-secrets.io/latest/introduction/stability-support/)
 - [External Secrets documentation](https://external-secrets.io/)
+- [kube-prometheus-stack chart](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack)
+- [kube-prometheus-stack upgrade guide](https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/UPGRADE.md)
 - [Grafana Community Helm charts - Loki](https://github.com/grafana-community/helm-charts/tree/main/charts/loki)
-- [Loki Helm installation documentation](https://grafana.com/docs/loki/latest/setup/install/helm/)
 - [Loki deployment modes](https://grafana.com/docs/loki/latest/get-started/deployment-modes/)
 - [Grafana Community Helm charts - Tempo](https://github.com/grafana-community/helm-charts/tree/main/charts/tempo)
-- [Tempo 3.0 release notes](https://grafana.com/docs/tempo/latest/release-notes/v3-0/)
 - [Tempo 3 migration guide](https://grafana.com/docs/tempo/latest/set-up-for-tracing/setup-tempo/migrate-to-3/)
