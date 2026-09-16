@@ -108,3 +108,9 @@ Nested workflows under component directories remain reference blueprints unless 
 ## Security exceptions
 
 Security or policy exceptions must be narrowly scoped, time-bounded, owned, justified, and tracked. See [Policy Exceptions](docs/governance/policy-exceptions.md).
+
+## Licensing of contributions
+
+GoldenPath is licensed under the [Apache License 2.0](LICENSE). Unless explicitly stated otherwise in writing, contributions intentionally submitted for inclusion in this repository are provided under the same Apache-2.0 terms, consistent with Section 5 of the license.
+
+Contributors must only submit material they have the right to license and must preserve applicable copyright, attribution, and third-party license notices.
