@@ -1,49 +1,44 @@
 #!/bin/bash
-# Script para generar documentación de todos los módulos
-# Uso: ./scripts/generate-docs.sh
+# Generate terraform-docs output for all implemented modules and patterns.
+# Usage: ./scripts/generate-docs.sh
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Colores para output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-echo -e "${GREEN}=== Generando documentación de módulos ===${NC}"
+echo -e "${GREEN}=== Generating Terraform module documentation ===${NC}"
 
-# Verificar que terraform-docs está instalado
 if ! command -v terraform-docs &> /dev/null; then
-    echo -e "${RED}Error: terraform-docs no está instalado${NC}"
-    echo "Instalar con: brew install terraform-docs"
+    echo -e "${RED}ERROR: terraform-docs is not installed${NC}"
+    echo "Install it from: https://terraform-docs.io/user-guide/installation/"
     exit 1
 fi
 
-# Función para generar docs de un directorio
 generate_docs() {
     local dir=$1
     if [ -f "$dir/main.tf" ]; then
-        echo -e "${YELLOW}Procesando: $dir${NC}"
+        echo -e "${YELLOW}Processing: $dir${NC}"
         terraform-docs markdown table \
             --output-file README.md \
             --output-mode inject \
-            "$dir" 2>/dev/null || echo -e "${RED}  Error en $dir${NC}"
+            "$dir"
     fi
 }
 
-# Generar docs para módulos
-echo -e "\n${GREEN}Procesando módulos...${NC}"
-find "$ROOT_DIR/modules" -type d | while read -r dir; do
+echo -e "\n${GREEN}Processing modules...${NC}"
+while IFS= read -r dir; do
     generate_docs "$dir"
-done
+done < <(find "$ROOT_DIR/modules" -name "main.tf" -exec dirname {} \; | sort -u)
 
-# Generar docs para patterns
-echo -e "\n${GREEN}Procesando patterns...${NC}"
-find "$ROOT_DIR/patterns" -type d | while read -r dir; do
+echo -e "\n${GREEN}Processing patterns...${NC}"
+while IFS= read -r dir; do
     generate_docs "$dir"
-done
+done < <(find "$ROOT_DIR/patterns" -name "main.tf" -exec dirname {} \; | sort -u)
 
-echo -e "\n${GREEN}=== Documentación generada exitosamente ===${NC}"
+echo -e "\n${GREEN}=== Documentation generated successfully ===${NC}"

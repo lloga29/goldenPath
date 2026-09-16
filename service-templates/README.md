@@ -1,72 +1,36 @@
 # Service Templates - Golden Path
 
-Templates oficiales para crear nuevos servicios siguiendo los estándares de la plataforma.
+Golden service templates provide the fastest supported path from a new repository to an operable service.
 
-## Templates Disponibles
+## Implemented templates
 
-| Template | Descripción | Lenguaje |
-|----------|-------------|----------|
-| microservice-golang | Microservicio HTTP/gRPC | Go |
-| microservice-python | Microservicio FastAPI | Python |
-| terraform-stack | Stack de Terraform | HCL |
+| Template | Status | Language / workload |
+|---|---|---|
+| `microservice-golang` | Implemented baseline | Go HTTP service |
+| `microservice-python` | Roadmap | Not present in the repository |
+| `terraform-stack` | Roadmap | Not present in the repository |
 
-## Uso
+Documentation must not present roadmap templates as available until executable template content and validation exist.
 
-### Crear nuevo servicio
+## Generate a Go service
 
 ```bash
-# Instalar Copier
 pip install copier
-
-# Crear servicio desde template
-copier copy gh:org/service-templates/templates/microservice-golang my-new-service
-
-# O desde directorio local
-copier copy ./templates/microservice-golang my-new-service
+copier copy ./templates/microservice-golang ./my-service
 ```
 
-### Actualizar servicio existente
+Review the generated repository, then run its local validation commands before the first commit.
 
-```bash
-# Actualizar a última versión del template
-copier update my-existing-service
-```
+## Go template baseline
 
-## Características Incluidas
+The current template includes a structured Go project, health/readiness handlers, logging/configuration scaffolding, a multi-stage/distroless container build, pre-commit configuration, Makefile commands, and a GitHub Actions CI blueprint.
 
-### microservice-golang
+See [Service Templates](../docs/platform/service-templates.md) for the full template contract.
 
-- Servidor HTTP con graceful shutdown
-- Health checks (/health, /ready)
-- Métricas Prometheus (/metrics)
-- Logging estructurado (slog)
-- OpenTelemetry tracing
-- Dockerfile multi-stage optimizado
-- CI/CD pipeline (GitHub Actions)
-- Pre-commit hooks
+## Updating generated services
 
-### microservice-python
+Copier can support template updates, but upgrades should be versioned, tested, and reviewed like dependency changes. Do not automatically overwrite team-specific service code.
 
-- FastAPI con async
-- Health checks
-- Métricas Prometheus
-- Logging estructurado
-- OpenTelemetry tracing
-- Dockerfile optimizado
-- CI/CD pipeline
-- Tests con pytest
+## Adding a template
 
-### terraform-stack
-
-- Estructura estándar de Terraform
-- Backend remoto configurado
-- Variables tipadas con validaciones
-- Outputs documentados
-
-## Personalización
-
-Ver [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) para guías de personalización.
-
-## Contribuir
-
-Ver [docs/TEMPLATE_GUIDE.md](docs/TEMPLATE_GUIDE.md) para crear nuevos templates.
+A new language template is complete only when generated output builds/tests successfully and includes the same ownership, security, observability, delivery, and support contract as the existing paved road.

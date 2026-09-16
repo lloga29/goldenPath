@@ -1,58 +1,57 @@
-# Variables comunes para todos los stacks
-# Importar en cada stack con: locals { common = file("../../shared/common-variables.tf") }
+# Common variable and metadata conventions for composed stacks.
+# Terraform does not import this file automatically; reuse these declarations deliberately in each stack or package them as a module.
 
 variable "environment" {
-  description = "Entorno de deployment"
+  description = "Deployment environment."
   type        = string
 
   validation {
     condition     = contains(["dev", "staging", "prod", "ephemeral"], var.environment)
-    error_message = "El entorno debe ser: dev, staging, prod, ephemeral."
+    error_message = "environment must be one of: dev, staging, prod, ephemeral."
   }
 }
 
 variable "client" {
-  description = "Nombre del cliente"
+  description = "Client identifier."
   type        = string
 
   validation {
     condition     = can(regex("^[a-z][a-z0-9-]{2,28}[a-z0-9]$", var.client))
-    error_message = "El nombre del cliente debe ser lowercase, alfanumérico con guiones."
+    error_message = "client must be lowercase alphanumeric with hyphens and start with a letter."
   }
 }
 
 variable "project" {
-  description = "Nombre del proyecto"
+  description = "Project identifier."
   type        = string
   default     = "platform"
 }
 
 variable "owner" {
-  description = "Email del owner/equipo responsable"
+  description = "Owner/team contact email."
   type        = string
 
   validation {
     condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.owner))
-    error_message = "Debe ser un email válido."
+    error_message = "owner must be a valid email address."
   }
 }
 
 variable "cost_center" {
-  description = "Centro de costos para billing"
+  description = "Cost-center identifier used for allocation/billing."
   type        = string
 
   validation {
     condition     = can(regex("^cc-[a-z0-9-]+$", var.cost_center))
-    error_message = "El cost center debe seguir el formato: cc-XXX."
+    error_message = "cost_center must use the cc-<identifier> format."
   }
 }
 
 variable "team" {
-  description = "Equipo responsable"
+  description = "Owning team identifier."
   type        = string
 }
 
-# Tags comunes calculados
 locals {
   common_tags = {
     Environment = var.environment

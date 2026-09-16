@@ -1,26 +1,30 @@
 # Changelog
 
-Todos los cambios notables en este proyecto serán documentados en este archivo.
+All notable changes to the Terraform module baseline are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and uses Semantic Versioning principles.
 
-El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
-y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
+## [Unreleased]
+
+### Changed
+- Standardized module documentation and repository text on English.
+- Clarified the currently implemented module set versus original roadmap intent.
 
 ## [0.1.0] - 2024-01-15
 
-### Añadido
-- Estructura inicial del repositorio
-- Módulo `networking/vpc` - VPC cloud-agnostic (AWS/Azure/GCP)
-- Módulo `security/iam-role` - Roles IAM para AWS
-- Módulo `security/github-oidc` - Federación OIDC para GitHub Actions
-- Módulo `storage/object-storage` - Almacenamiento de objetos cloud-agnostic
-- Módulo `compute/kubernetes-cluster` - Cluster Kubernetes (EKS/AKS/GKE)
-- Pattern `three-tier-app` - Arquitectura de 3 capas
-- Workflows de CI/CD para validación y releases
-- Documentación inicial y guías de contribución
-- Pre-commit hooks configurados
-- Tests unitarios con Terraform native testing
+### Added
+- Initial repository structure.
+- `networking/vpc` multi-provider network reference.
+- `security/iam-role` AWS IAM role reference.
+- `security/github-oidc` AWS GitHub Actions federation reference.
+- `storage/object-storage` multi-provider object storage reference.
+- `patterns/three-tier-app` reference pattern.
+- CI/CD workflow blueprints for validation and releases.
+- Initial documentation and contribution guidance.
+- Pre-commit configuration.
+- Terraform-native test examples.
 
-### Seguridad
-- Validaciones de seguridad con Checkov y TFSec
-- Políticas de tags obligatorios
-- Encryption por defecto en todos los recursos
+### Security
+- Checkov and tfsec workflow references.
+- Required metadata/tag policy intent.
+- Secure-default guidance for encryption and public access.
+
+> The original roadmap also described additional compute, database, cache, KMS, WAF, observability, and data modules. Those capabilities must not be treated as implemented unless executable module code exists in the current tree.

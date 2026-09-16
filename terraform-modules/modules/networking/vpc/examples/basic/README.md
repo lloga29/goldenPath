@@ -1,25 +1,26 @@
-# Ejemplo Básico - Módulo VPC
+# Basic VPC Example
 
-Este ejemplo muestra cómo crear una VPC básica en AWS con subnets públicas y privadas.
+This example plans an AWS VPC reference with public and private subnets.
 
-## Uso
+## Usage
 
 ```bash
 terraform init
 terraform plan
-terraform apply
 ```
 
-## Recursos Creados
+Only run `terraform apply` in a disposable/test account after reviewing the plan and cleanup path.
 
-- 1 VPC con CIDR 10.0.0.0/16
-- 2 Subnets privadas
-- 2 Subnets públicas
-- 1 Internet Gateway
-- Flow Logs habilitados
+## Planned resources
 
-## Requisitos
+- One VPC using `10.0.0.0/16`.
+- Two private subnets.
+- Two public subnets.
+- One Internet Gateway.
+- VPC Flow Logs when `enable_flow_logs` remains enabled.
 
-- Terraform >= 1.5.0
-- AWS Provider configurado
-- Credenciales AWS con permisos para crear VPCs
+## Requirements
+
+- Terraform 1.5 or later within the module constraint.
+- AWS provider credentials for any real plan/apply that requires provider API access.
+- IAM permissions appropriate to the resources being tested.

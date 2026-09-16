@@ -1,13 +1,9 @@
+<!-- This content is inserted after terraform-docs generated sections. -->
 
-## Contribuir
+## Contributing
 
-Ver [CONTRIBUTING.md](../CONTRIBUTING.md) para guías de contribución.
+See [Contributing](CONTRIBUTING.md) and [Module Standards](MODULE_STANDARDS.md).
 
-## Soporte
+## Support
 
-- Slack: #platform-engineering
-- Email: platform@company.com
-
-## Licencia
-
-Uso interno - Propiedad de la organización.
+For production adoption, assign an explicit module owner and escalation path. Repository examples are reference implementations and still require environment-specific validation.

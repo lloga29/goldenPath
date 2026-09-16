@@ -1,7 +1,7 @@
-# Módulo VPC Cloud-Agnostic
-# Soporta AWS, Azure y GCP
+# Multi-provider VPC/VNet/network reference module.
+# Supports AWS, Azure, and Google Cloud reference implementations.
 
-# Tags comunes para todos los recursos
+# Common metadata applied to supported resources.
 locals {
   common_tags = merge(
     var.tags,
@@ -28,12 +28,12 @@ resource "aws_vpc" "this" {
   })
 
   lifecycle {
-    # Proteger VPCs de producción contra eliminación accidental
-    prevent_destroy = false  # Se sobreescribe en producción
+    # Production deletion protection must be implemented by the consuming stack/policy.
+    prevent_destroy = false
   }
 }
 
-# Internet Gateway para AWS
+# AWS Internet Gateway.
 resource "aws_internet_gateway" "this" {
   count = var.cloud_provider == "aws" ? 1 : 0
 
@@ -44,7 +44,7 @@ resource "aws_internet_gateway" "this" {
   })
 }
 
-# Subnets privadas para AWS
+# AWS private subnets.
 resource "aws_subnet" "private" {
   count = var.cloud_provider == "aws" ? length(var.private_subnet_cidrs) : 0
 
@@ -58,7 +58,7 @@ resource "aws_subnet" "private" {
   })
 }
 
-# Subnets públicas para AWS
+# AWS public subnets.
 resource "aws_subnet" "public" {
   count = var.cloud_provider == "aws" ? length(var.public_subnet_cidrs) : 0
 
@@ -73,7 +73,7 @@ resource "aws_subnet" "public" {
   })
 }
 
-# Flow Logs para AWS
+# AWS VPC Flow Logs.
 resource "aws_flow_log" "this" {
   count = var.cloud_provider == "aws" && var.enable_flow_logs ? 1 : 0
 
@@ -160,7 +160,7 @@ resource "azurerm_virtual_network" "this" {
   }
 }
 
-# Subnets para Azure
+# Azure subnets.
 resource "azurerm_subnet" "private" {
   count = var.cloud_provider == "azure" ? length(var.private_subnet_cidrs) : 0
 
@@ -179,7 +179,7 @@ resource "azurerm_subnet" "public" {
   address_prefixes     = [var.public_subnet_cidrs[count.index]]
 }
 
-# Network Watcher Flow Logs para Azure
+# Azure Network Watcher flow logs.
 resource "azurerm_network_watcher_flow_log" "this" {
   count = var.cloud_provider == "azure" && var.enable_flow_logs ? 1 : 0
 
@@ -188,7 +188,7 @@ resource "azurerm_network_watcher_flow_log" "this" {
   resource_group_name  = "NetworkWatcherRG"
 
   network_security_group_id = azurerm_network_security_group.default[0].id
-  storage_account_id        = "" # Se debe proporcionar externamente
+  storage_account_id        = "" # Must be provided by a production-ready Azure implementation.
 
   enabled = true
 
@@ -211,7 +211,7 @@ resource "azurerm_network_security_group" "default" {
 }
 
 # ============================================
-# GCP VPC NETWORK
+# GOOGLE CLOUD VPC NETWORK
 # ============================================
 resource "google_compute_network" "this" {
   count = var.cloud_provider == "gcp" ? 1 : 0
@@ -225,7 +225,7 @@ resource "google_compute_network" "this" {
   }
 }
 
-# Subnets para GCP
+# Google Cloud subnets.
 resource "google_compute_subnetwork" "private" {
   count = var.cloud_provider == "gcp" ? length(var.private_subnet_cidrs) : 0
 
@@ -260,7 +260,7 @@ resource "google_compute_subnetwork" "public" {
   }
 }
 
-# Cloud Router para GCP (necesario para NAT)
+# Google Cloud Router. A production NAT design requires additional configuration.
 resource "google_compute_router" "this" {
   count = var.cloud_provider == "gcp" ? 1 : 0
 

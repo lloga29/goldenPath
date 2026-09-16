@@ -1,5 +1,4 @@
-# Stack de Entorno: {{ client_name }} - {{ environment }}
-# Infraestructura para el entorno {{ environment }}
+# Environment stack: {{ client_name }} / {{ environment }}
 
 terraform {
   required_version = ">= 1.5.0, < 2.0.0"
@@ -28,30 +27,24 @@ provider "aws" {
   }
 }
 
-# ============================================
-# VARIABLES
-# ============================================
 variable "aws_region" {
-  description = "Región de AWS"
+  description = "AWS region."
   type        = string
   default     = "{{ aws_region }}"
 }
 
 variable "environment" {
-  description = "Entorno"
+  description = "Deployment environment."
   type        = string
   default     = "{{ environment }}"
 }
 
 variable "client" {
-  description = "Nombre del cliente"
+  description = "Client identifier."
   type        = string
   default     = "{{ client_name }}"
 }
 
-# ============================================
-# LOCALS
-# ============================================
 locals {
   common_tags = {
     Environment = var.environment
@@ -61,12 +54,7 @@ locals {
   }
 }
 
-# ============================================
-# MÓDULOS
-# ============================================
-
-# Añadir módulos según sea necesario
+# Add explicitly version-pinned modules required by this stack.
 # module "vpc" {
-#   source = "git::https://github.com/org/terraform-modules.git//modules/networking/vpc?ref=v1.0.0"
-#   ...
+#   source = "git::https://github.com/example/platform-terraform-modules.git//modules/networking/vpc?ref=v1.0.0"
 # }

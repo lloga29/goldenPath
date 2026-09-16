@@ -1,14 +1,11 @@
-# Pipeline de Terraform para Pull Requests
-# Ejecuta plan y validaciones en cada PR
+# Pull-request validation blueprint for a standalone Platform Stacks repository.
 
 name: Terraform PR
 
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'clients/**'
-      - 'teams/**'
+    paths: ['clients/**', 'teams/**']
 
 concurrency:
   group: terraform-${{ github.event.pull_request.number }}
@@ -17,6 +14,7 @@ concurrency:
 env:
   TF_VERSION: "1.6.0"
   TF_IN_AUTOMATION: "true"
+  POLICY_PATH: "platform-policies/terraform"
 
 permissions:
   id-token: write
@@ -25,9 +23,6 @@ permissions:
   issues: write
 
 jobs:
-  # ============================================
-  # DETECTAR CAMBIOS
-  # ============================================
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
@@ -35,236 +30,126 @@ jobs:
       has_changes: ${{ steps.changes.outputs.has_changes }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Detectar stacks modificados
+        with: { fetch-depth: 0 }
+      - name: Detect changed stacks
         id: changes
+        shell: bash
         run: |
           CHANGED_FILES=$(git diff --name-only origin/main..HEAD)
+          STACKS=$(echo "$CHANGED_FILES" | grep -E "^(clients|teams)/" | grep -E "\.(tf|tfvars)$" | xargs -r -I {} dirname {} | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "stacks=$STACKS" >> "$GITHUB_OUTPUT"
+          echo "has_changes=$([ "$STACKS" != "[]" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "Detected stacks: $STACKS"
 
-          # Encontrar directorios con terraform.tfvars o main.tf modificados
-          STACKS=$(echo "$CHANGED_FILES" | \
-            grep -E "^(clients|teams)/" | \
-            grep -E "\.(tf|tfvars)$" | \
-            xargs -I {} dirname {} | \
-            sort -u | \
-            jq -R -s -c 'split("\n") | map(select(length > 0))')
-
-          echo "stacks=$STACKS" >> $GITHUB_OUTPUT
-          echo "has_changes=$([ "$STACKS" != "[]" ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
-          echo "Stacks detectados: $STACKS"
-
-  # ============================================
-  # VALIDACIÓN Y LINT
-  # ============================================
   validate:
     needs: detect-changes
     if: needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        stack: ${{ fromJson(needs.detect-changes.outputs.stacks) }}
       fail-fast: false
+      matrix: { stack: "${{ fromJson(needs.detect-changes.outputs.stacks) }}" }
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Terraform Format Check
-        run: terraform fmt -check -diff
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "${{ env.TF_VERSION }}" }
+      - run: terraform fmt -check -diff
+        working-directory: ${{ matrix.stack }}
+      - run: terraform init -backend=false -input=false
+        working-directory: ${{ matrix.stack }}
+      - run: terraform validate
         working-directory: ${{ matrix.stack }}
 
-      - name: Terraform Init
-        run: terraform init -backend=false
-        working-directory: ${{ matrix.stack }}
-
-      - name: Terraform Validate
-        run: terraform validate
-        working-directory: ${{ matrix.stack }}
-
-  # ============================================
-  # SECURITY SCAN
-  # ============================================
   security:
     needs: [detect-changes, validate]
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        stack: ${{ fromJson(needs.detect-changes.outputs.stacks) }}
       fail-fast: false
+      matrix: { stack: "${{ fromJson(needs.detect-changes.outputs.stacks) }}" }
     steps:
       - uses: actions/checkout@v4
+      - uses: bridgecrewio/checkov-action@v12
+        with: { directory: "${{ matrix.stack }}", framework: terraform, soft_fail: false }
+      - uses: aquasecurity/tfsec-action@v1.0.3
+        with: { working_directory: "${{ matrix.stack }}", soft_fail: false }
 
-      - name: Checkov Scan
-        uses: bridgecrewio/checkov-action@v12
-        with:
-          directory: ${{ matrix.stack }}
-          framework: terraform
-          output_format: sarif
-          soft_fail: false
-
-      - name: TFSec Scan
-        uses: aquasecurity/tfsec-action@v1.0.3
-        with:
-          working_directory: ${{ matrix.stack }}
-          soft_fail: false
-
-  # ============================================
-  # POLICY CHECK
-  # ============================================
   policy:
     needs: [detect-changes, security]
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        stack: ${{ fromJson(needs.detect-changes.outputs.stacks) }}
+      matrix: { stack: "${{ fromJson(needs.detect-changes.outputs.stacks) }}" }
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Conftest
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "${{ env.TF_VERSION }}", terraform_wrapper: false }
+      - name: Install Conftest
         run: |
           wget -q https://github.com/open-policy-agent/conftest/releases/download/v0.45.0/conftest_0.45.0_Linux_x86_64.tar.gz
           tar xzf conftest_0.45.0_Linux_x86_64.tar.gz
           sudo mv conftest /usr/local/bin/
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-          terraform_wrapper: false
-
-      - name: Init and Plan (JSON)
-        run: |
-          terraform init -backend=false
-          terraform plan -out=tfplan 2>/dev/null || true
-          terraform show -json tfplan > tfplan.json 2>/dev/null || echo '{}' > tfplan.json
+      - name: Build Terraform plan JSON
         working-directory: ${{ matrix.stack }}
-
-      - name: Run Policy Checks
         run: |
-          if [ -d "../../../platform-policies" ]; then
-            conftest test ${{ matrix.stack }}/tfplan.json \
-              --policy ../../../platform-policies/terraform/ \
-              --output json || true
-          else
-            echo "No policies found, skipping..."
+          terraform init -backend=false -input=false
+          terraform plan -out=tfplan
+          terraform show -json tfplan > tfplan.json
+      - name: Enforce Terraform policies
+        run: |
+          if [ ! -d "$POLICY_PATH" ]; then
+            echo "ERROR: policy directory $POLICY_PATH is unavailable. Integrate the policy repository/path before activating this workflow."
+            exit 1
           fi
+          conftest test "${{ matrix.stack }}/tfplan.json" --policy "$POLICY_PATH" --output json
 
-  # ============================================
-  # COST ESTIMATION
-  # ============================================
   cost:
     needs: [detect-changes, policy]
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        stack: ${{ fromJson(needs.detect-changes.outputs.stacks) }}
+      matrix: { stack: "${{ fromJson(needs.detect-changes.outputs.stacks) }}" }
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Infracost
-        uses: infracost/actions/setup@v3
-        with:
-          api-key: ${{ secrets.INFRACOST_API_KEY }}
-
-      - name: Generate Cost Estimate
-        run: |
-          infracost breakdown --path ${{ matrix.stack }} \
-            --format json \
-            --out-file infracost.json
+      - uses: infracost/actions/setup@v3
+        with: { api-key: "${{ secrets.INFRACOST_API_KEY }}" }
+      - name: Generate advisory cost estimate
+        run: infracost breakdown --path "${{ matrix.stack }}" --format json --out-file infracost.json
         continue-on-error: true
-
-      - name: Post Cost Comment
+      - name: Post advisory cost comment
         if: always()
         uses: infracost/actions/comment@v1
-        with:
-          path: infracost.json
-          behavior: update
+        with: { path: infracost.json, behavior: update }
         continue-on-error: true
 
-  # ============================================
-  # TERRAFORM PLAN
-  # ============================================
   plan:
     needs: [detect-changes, cost]
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        stack: ${{ fromJson(needs.detect-changes.outputs.stacks) }}
       max-parallel: 1
+      matrix: { stack: "${{ fromJson(needs.detect-changes.outputs.stacks) }}" }
     steps:
       - uses: actions/checkout@v4
-
-      - name: Determinar cliente y entorno
+      - name: Derive client and environment
         id: meta
+        shell: bash
         run: |
           STACK="${{ matrix.stack }}"
-          if [[ "$STACK" == clients/* ]]; then
-            CLIENT=$(echo $STACK | cut -d'/' -f2)
-            ENV=$(echo $STACK | cut -d'/' -f4)
-          else
-            CLIENT="shared"
-            ENV="default"
-          fi
-          echo "client=$CLIENT" >> $GITHUB_OUTPUT
-          echo "environment=$ENV" >> $GITHUB_OUTPUT
-
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Terraform Init
-        run: terraform init
+          if [[ "$STACK" == clients/* ]]; then CLIENT=$(echo "$STACK" | cut -d/ -f2); ENV=$(echo "$STACK" | cut -d/ -f4); else CLIENT=shared; ENV=default; fi
+          echo "client=$CLIENT" >> "$GITHUB_OUTPUT"
+          echo "environment=$ENV" >> "$GITHUB_OUTPUT"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with: { role-to-assume: "${{ secrets.AWS_ROLE_ARN }}", aws-region: us-east-1 }
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "${{ env.TF_VERSION }}" }
+      - run: terraform init -input=false
         working-directory: ${{ matrix.stack }}
-
-      - name: Terraform Plan
-        id: plan
-        run: |
-          terraform plan -no-color -out=tfplan 2>&1 | tee plan.txt
+      - name: Terraform plan
         working-directory: ${{ matrix.stack }}
-        continue-on-error: true
-
-      - name: Post Plan to PR
+        run: terraform plan -no-color -out=tfplan 2>&1 | tee plan.txt
+      - name: Post plan to PR
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
             const plan = fs.readFileSync('${{ matrix.stack }}/plan.txt', 'utf8');
             const truncated = plan.length > 60000 ? plan.substring(0, 60000) + '...(truncated)' : plan;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `### Terraform Plan for \`${{ matrix.stack }}\`
-
-            <details>
-            <summary>Show Plan</summary>
-
-            \`\`\`terraform
-            ${truncated}
-            \`\`\`
-
-            </details>
-
-            **Client:** ${{ steps.meta.outputs.client }}
-            **Environment:** ${{ steps.meta.outputs.environment }}`
-            });
-
-      - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan-${{ hashFiles(matrix.stack) }}
-          path: ${{ matrix.stack }}/tfplan
-          retention-days: 5
+            await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body: `### Terraform Plan for \`${{ matrix.stack }}\`\n\n<details><summary>Show plan</summary>\n\n\`\`\`terraform\n${truncated}\n\`\`\`\n</details>\n\n**Client:** ${{ steps.meta.outputs.client }}\n**Environment:** ${{ steps.meta.outputs.environment }}`});
+      - uses: actions/upload-artifact@v4
+        with: { name: "tfplan-${{ strategy.job-index }}", path: "${{ matrix.stack }}/tfplan", retention-days: 5 }

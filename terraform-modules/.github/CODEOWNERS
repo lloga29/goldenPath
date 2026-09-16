@@ -1,35 +1,35 @@
-# CODEOWNERS para Terraform Modules
-# Estos equipos serán automáticamente asignados como reviewers
+# CODEOWNERS blueprint for a standalone Terraform modules repository.
+# Replace placeholder organization teams before production use.
 
-# Default owners para todo el repositorio
+# Default owners.
 *                               @org/platform-team
 
-# Módulos de networking
+# Networking modules.
 modules/networking/             @org/platform-team @org/network-team
 
-# Módulos de seguridad - requieren aprobación de security
+# Security modules require security review.
 modules/security/               @org/platform-team @org/security-team
 
-# Módulos de compute
+# Compute modules.
 modules/compute/                @org/platform-team
 
-# Módulos de storage
+# Storage modules.
 modules/storage/                @org/platform-team @org/data-team
 
-# Módulos de observabilidad
+# Observability modules.
 modules/observability/          @org/platform-team @org/sre-team
 
-# Módulos de datos
+# Data modules.
 modules/data/                   @org/platform-team @org/data-team
 
-# Patterns requieren revisión adicional
+# Composite patterns require architecture review.
 patterns/                       @org/platform-team @org/architecture-team
 
-# Documentación
-docs/                          @org/platform-team
+# Documentation.
+docs/                           @org/platform-team
 
-# CI/CD workflows
-.github/                       @org/platform-team
+# CI/CD workflows.
+.github/                        @org/platform-team
 
-# Scripts
-scripts/                       @org/platform-team
+# Utility scripts.
+scripts/                        @org/platform-team

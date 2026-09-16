@@ -1,4 +1,4 @@
-# Pre-commit hooks para Platform Stacks
+# Pre-commit hooks for Platform Stacks.
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -18,13 +18,10 @@ repos:
     hooks:
       - id: terraform_fmt
       - id: terraform_validate
-        args:
-          - --hook-config=--retry-once-with-cleanup=true
+        args: [--hook-config=--retry-once-with-cleanup=true]
       - id: terraform_tflint
       - id: terraform_checkov
-        args:
-          - --args=--quiet
-          - --args=--compact
+        args: [--args=--quiet, --args=--compact]
 
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0

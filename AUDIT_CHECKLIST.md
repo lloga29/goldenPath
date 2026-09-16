@@ -1,60 +1,72 @@
-# Golden Path - Checklist de Auditoría
+# Golden Path Audit Checklist
 
-## P0 - Rompe CI/Uso (CRÍTICO)
+This checklist tracks gaps between the reference repository and an operational production Golden Path. Checked status must be based on repository or runtime evidence, not intent.
+
+## P0 - Repository correctness and usable paved road
+
+### Repository-wide
+- [x] Establish English as the repository language.
+- [x] Add authoritative architecture and operating documentation.
+- [ ] Remove remaining Spanish text from code, configuration, comments, workflows, templates, and generated messages.
+- [ ] Add active repository-root CI for this consolidated repository, or split the logical components into standalone repositories.
+- [ ] Validate all documentation links and rendered Mermaid diagrams.
 
 ### terraform-modules/
-- [ ] Crear `docs/header.md` y `docs/footer.md` (referenciados por .terraform-docs.yaml)
-- [ ] Crear `.secrets.baseline` o ajustar pre-commit
-- [ ] Completar `scripts/validate-all.sh` con verificación de dependencias
-- [ ] Módulos vacíos: compute/*, storage/database, storage/cache, security/kms-key, security/waf, networking/subnets, networking/security-groups, networking/load-balancer, observability/*, data/*, patterns/data-pipeline, patterns/api-gateway-pattern
+- [x] Provide terraform-docs header/footer files.
+- [x] Provide a detect-secrets baseline.
+- [x] Provide module validation and documentation scripts.
+- [ ] Validate every currently implemented module with the required provider/tool versions.
+- [ ] Remove or implement any placeholder/empty module directories that could imply unsupported capability.
+- [ ] Resolve provider-specific placeholders in reference modules before production use.
 
 ### platform-stacks/
-- [ ] Crear `scripts/init-environment.sh` (referenciado en docs)
-- [ ] Completar workflows con instalación de herramientas
-- [ ] Directorios vacíos: foundation/security, foundation/observability, teams/*, client-beta
+- [ ] Implement or remove documentation references to `scripts/init-environment.sh` if it is still absent.
+- [ ] Validate client bootstrap and environment templates end to end in a disposable account.
+- [ ] Activate CI plan/apply workflows in their effective repository location.
+- [ ] Verify remote-state bootstrapping and isolation for the selected production cloud.
 
 ### gitops-config/
-- [ ] Crear `clusters/staging/cluster-config.yaml`
-- [ ] Completar `apps/team-payments/payment-api/overlays/staging/`
-- [ ] Crear `docs/PROMOTION_GUIDE.md` y `docs/ROLLBACK_PROCEDURE.md`
-- [ ] Completar `platform/base/*` (cert-manager, external-secrets, ingress-nginx, prometheus-stack, loki, tempo, gatekeeper)
-- [ ] Completar `platform/overlays/*/`
-- [ ] Crear `apps/team-orders/` con al menos un servicio
-- [ ] Verificar scripts promote.sh y rollback.sh funcionan
+- [x] Provide dev/staging/prod cluster configuration references.
+- [x] Provide a staging application overlay reference.
+- [x] Provide promotion and rollback documentation.
+- [x] Provide reference platform add-ons and environment overlays.
+- [ ] Validate all Kustomize overlays render successfully.
+- [ ] Validate all Argo CD ApplicationSets and AppProjects against a real control plane.
+- [ ] Verify promotion and rollback scripts with a disposable GitOps repository/branch.
 
 ### service-templates/
-- [ ] Completar template microservice-golang (handlers, config, middleware)
-- [ ] Completar template microservice-python
-- [ ] Completar template terraform-stack
-- [ ] Crear scripts y docs
+- [x] Implement the Go microservice template baseline.
+- [ ] Add automated template-rendering tests.
+- [ ] Add Python template only when an executable template and full operational contract are ready.
+- [ ] Add Terraform stack template only when an executable template and validation are ready.
 
 ### platform-policies/
-- [ ] Verificar todas las políticas referenciadas existen
-- [ ] Completar constraint-templates de Gatekeeper
+- [x] Provide Terraform and Kubernetes OPA policy baselines.
+- [x] Provide Gatekeeper constraint examples.
+- [ ] Add/verify regression fixtures for every blocking policy.
+- [ ] Validate the exception mechanism and expiry behavior.
 
-## P1 - Seguridad/Correctitud
+## P1 - Security and production correctness
 
-### Todos los repos
-- [ ] Eliminar uso de `:latest` tags
-- [ ] Implementar OIDC para CI/CD
-- [ ] Asegurar encryption por defecto
-- [ ] Validar least privilege en IAM
-- [ ] Implementar build once → promote
+- [ ] Enforce immutable release references; prohibit `:latest` for production workloads.
+- [ ] Configure cloud OIDC/workload federation for the selected target environments.
+- [ ] Verify least privilege for CI/CD, Argo CD, Kubernetes service accounts, and cloud roles.
+- [ ] Configure real external secret management and rotation.
+- [ ] Enable protected production change paths and required approvals.
+- [ ] Confirm encryption, logging, backup, and recovery for Terraform state.
+- [ ] Validate runtime admission policies in staged/audit mode before enforcement.
+- [ ] Implement build-once promotion using immutable artifact identities.
+- [ ] Exercise application rollback and Git reconciliation.
 
-### terraform-modules/
-- [ ] Añadir prevent_destroy para prod
-- [ ] Completar flow logs con storage account para Azure
-- [ ] Validar tests funcionan
+## P2 - Platform maturity
 
-### gitops-config/
-- [ ] AppProjects con límites de namespaces/repos
-- [ ] Políticas no-latest en deployments
-- [ ] Promoción por PR entre entornos
-
-## P2 - Mejoras
-
-- [ ] SBOM generation
-- [ ] Image signing con Cosign
-- [ ] ADRs completos
-- [ ] Observabilidad más completa
-- [ ] Makefiles en todos los repos
+- [ ] Generate SBOMs for release artifacts.
+- [ ] Sign artifacts and publish provenance.
+- [ ] Verify signatures/provenance before production deployment.
+- [ ] Implement a service catalog and scorecards.
+- [ ] Add automated template/module upgrade workflows.
+- [ ] Operationalize platform and service SLOs.
+- [ ] Run disaster-recovery exercises and record measured RTO/RPO.
+- [ ] Add vulnerability-management automation and remediation SLAs.
+- [ ] Add cost allocation and capacity dashboards.
+- [ ] Collect DORA and platform-adoption metrics.

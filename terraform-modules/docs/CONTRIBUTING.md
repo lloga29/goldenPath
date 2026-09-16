@@ -1,123 +1,67 @@
-# Guía de Contribución - Terraform Modules
+# Contributing - Terraform Modules
 
-## Requisitos Previos
+## Prerequisites
 
-- Terraform >= 1.5.0
-- Pre-commit instalado
-- AWS CLI configurado (para tests)
+- Terraform 1.5 or later, subject to the module's declared constraints.
+- Pre-commit for local hooks.
+- Provider/cloud CLI credentials only when a test explicitly requires real infrastructure.
 
-## Flujo de Trabajo
+## Workflow
 
-### 1. Crear rama feature
+Create a short-lived branch:
 
 ```bash
-git checkout -b feat/nombre-modulo
+git checkout -b feat/<module-name>
 ```
 
-### 2. Desarrollar el módulo
+A typical module layout is:
 
-Cada módulo debe tener la siguiente estructura:
-
-```
-modules/categoria/nombre-modulo/
-├── main.tf           # Recursos principales
-├── variables.tf      # Variables con validaciones
-├── outputs.tf        # Outputs
-├── versions.tf       # Versiones requeridas
-├── README.md         # Documentación (auto-generada)
-├── CHANGELOG.md      # Historial de cambios
+```text
+modules/<category>/<module>/
+├── main.tf
+├── variables.tf
+├── outputs.tf
+├── versions.tf
+├── README.md
+├── CHANGELOG.md
 ├── examples/
-│   ├── basic/        # Ejemplo básico
-│   └── advanced/     # Ejemplo avanzado
 └── tests/
-    └── unit/         # Tests unitarios
 ```
 
-### 3. Ejecutar validaciones locales
+Run relevant checks before review:
 
 ```bash
-# Instalar pre-commit hooks
-pre-commit install
-
-# Ejecutar validaciones
-pre-commit run --all-files
-
-# O manualmente:
 terraform fmt -recursive
+terraform init -backend=false
 terraform validate
 terraform test
+pre-commit run --all-files
 ```
 
-### 4. Crear Pull Request
+Do not claim a cloud integration test passed when the required account, credentials, or provider dependency was unavailable.
 
-- Usa commits convencionales: `feat:`, `fix:`, `docs:`, etc.
-- Incluye tests para nuevas funcionalidades
-- Actualiza la documentación
+## Code standards
 
-## Estándares de Código
+Variables should be typed, documented, and validated when invalid values can be detected before apply. Defaults must not silently reduce security.
 
-### Variables
+Required organizational metadata should be standardized centrally. The current reference commonly uses `Environment`, `Team`, `CostCenter`, `Owner`, and `ManagedBy`.
 
-```hcl
-variable "name" {
-  description = "Descripción clara y útil"
-  type        = string
+## Security
 
-  validation {
-    condition     = can(regex("^[a-z][a-z0-9-]+$", var.name))
-    error_message = "Mensaje de error descriptivo."
-  }
-}
-```
+- No hard-coded credentials or secret values.
+- Prefer encryption and private access defaults.
+- Use least privilege for IAM policies and test identities.
+- Treat Terraform state as sensitive.
+- Avoid wildcard IAM permissions unless there is a documented, reviewed reason.
 
-### Tags Obligatorios
+## Versioning
 
-Todos los recursos deben soportar los tags:
-- `Team`
-- `CostCenter`
-- `Environment`
-- `ManagedBy`
+Use Semantic Versioning for published modules:
 
-### Seguridad
+- **MAJOR** for incompatible changes;
+- **MINOR** for backward-compatible functionality;
+- **PATCH** for backward-compatible fixes.
 
-- Encryption habilitado por defecto
-- Sin secrets hardcodeados
-- Principio de mínimo privilegio
-- Validaciones en todas las variables
+## Pull requests
 
-## Versionamiento
-
-Seguimos [Semantic Versioning](https://semver.org/):
-
-- `MAJOR`: Cambios incompatibles
-- `MINOR`: Nueva funcionalidad compatible
-- `PATCH`: Bug fixes
-
-## Testing
-
-### Tests Unitarios (terraform test)
-
-```hcl
-# tests/unit/example_test.tftest.hcl
-run "test_name" {
-  command = plan
-
-  assert {
-    condition     = resource.attribute == "expected"
-    error_message = "Error message"
-  }
-}
-```
-
-### Tests de Integración
-
-Para tests que requieren recursos reales, usar Terratest o similar.
-
-## Revisión de Código
-
-Todas las PRs requieren:
-
-1. Tests pasando
-2. Documentación actualizada
-3. Sin issues de seguridad
-4. Aprobación del equipo de plataforma
+A module pull request should include the motivation, compatibility impact, security impact, tests, example updates, generated documentation updates, and upgrade guidance when behavior changes.

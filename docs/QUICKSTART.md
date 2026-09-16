@@ -1,154 +1,130 @@
-# Golden Path - Quickstart en 15 minutos
+# Golden Path Quickstart
 
-Este documento te guía para crear y desplegar un nuevo servicio end-to-end.
+This quickstart demonstrates the reference paved road using the capabilities that are actually present in this repository.
 
-## Prerequisitos
+## Prerequisites
 
-```bash
-# Herramientas requeridas
-terraform --version   # >= 1.5.0
-kubectl version       # >= 1.28
-copier --version      # >= 9.0
-yq --version          # >= 4.0
+Recommended local tools:
+
+```text
+git
+terraform >= 1.5
+kubectl
+kustomize
+conftest
+copier
+Go (for the Go service template)
 ```
 
-## Paso 1: Crear Servicio desde Template (2 min)
+Optional tools depend on the workflow being tested: `gh`, cloud CLIs, Checkov, tfsec, Infracost, and Argo CD CLI.
+
+## 1. Generate a Go service
+
+The repository currently implements one service template: `microservice-golang`.
 
 ```bash
-# Crear nuevo microservicio
-copier copy ./service-templates/templates/microservice-golang my-awesome-api
-
-# Responder las preguntas:
-# - project_name: my-awesome-api
-# - team: payments
-# - description: API for awesome things
-# - port: 8080
-# - has_database: false
-# - has_cache: false
+copier copy ./service-templates/templates/microservice-golang ./my-service
+cd my-service
 ```
 
-## Paso 2: Verificar Localmente (3 min)
+Answer the Copier prompts, then inspect the generated repository before committing it.
+
+## 2. Validate the generated service
+
+Typical local validation:
 
 ```bash
-cd my-awesome-api
-
-# Instalar dependencias
-go mod tidy
-
-# Ejecutar tests
-make test
-
-# Ejecutar localmente
-make run
-
-# En otra terminal, verificar
-curl http://localhost:8080/health
-curl http://localhost:8080/ready
-curl http://localhost:8080/metrics
+go test ./...
+go vet ./...
+docker build -t my-service:local .
 ```
 
-## Paso 3: Configurar GitOps (5 min)
+The generated template also contains its own CI workflow blueprint and pre-commit configuration.
+
+## 3. Create or initialize an infrastructure client
+
+From `platform-stacks/`:
 
 ```bash
-# Crear directorio en gitops-config
-mkdir -p ../gitops-config/apps/team-payments/my-awesome-api/{base,overlays/{dev,staging,prod}}
-
-# Copiar manifiestos base
-cp -r ../gitops-config/apps/team-payments/payment-api/base/* \
-      ../gitops-config/apps/team-payments/my-awesome-api/base/
-
-# Actualizar nombres en los archivos
-cd ../gitops-config/apps/team-payments/my-awesome-api/base
-sed -i 's/payment-api/my-awesome-api/g' *.yaml
-
-# Crear overlays (copiar de payment-api y ajustar)
+./scripts/init-client.sh --name example --cloud aws --region us-east-1
 ```
 
-## Paso 4: Primer Deploy a Dev (3 min)
+Review every generated file before applying infrastructure. The reference templates contain placeholders and assume that real backends, cloud identity, account boundaries, and organization-specific values will be configured before production use.
+
+## 4. Validate Terraform
+
+For an existing stack:
 
 ```bash
-# Construir imagen
-cd my-awesome-api
-make docker-build
-
-# Push a registry (ajustar según tu registry)
-docker tag my-awesome-api:dev ghcr.io/org/my-awesome-api:v0.1.0
-docker push ghcr.io/org/my-awesome-api:v0.1.0
-
-# Actualizar overlay dev con el tag
-cd ../gitops-config/apps/team-payments/my-awesome-api/overlays/dev
-# Editar kustomization.yaml con el tag v0.1.0
-
-# Commit y push
-git add .
-git commit -m "feat(payments): add my-awesome-api to dev"
-git push
+terraform fmt -check -recursive
+terraform init -backend=false
+terraform validate
 ```
 
-## Paso 5: Verificar Despliegue (2 min)
+For plan-based policy validation:
 
 ```bash
-# Ver estado en ArgoCD
-kubectl get application my-awesome-api-dev -n argocd
-
-# Ver pods
-kubectl get pods -n payments-dev -l app.kubernetes.io/name=my-awesome-api
-
-# Ver logs
-kubectl logs -n payments-dev -l app.kubernetes.io/name=my-awesome-api
+terraform plan -out=tfplan
+terraform show -json tfplan > tfplan.json
+conftest test tfplan.json --policy ../../../platform-policies/terraform/
 ```
 
-## Paso 6: Promocionar a Staging
+Adjust the policy path for the stack location.
+
+## 5. Register an application in GitOps
+
+Use the existing `payment-api` layout as a reference:
+
+```text
+gitops-config/apps/team-payments/payment-api/
+├── base/
+└── overlays/
+    ├── dev/
+    ├── staging/
+    └── prod/
+```
+
+Create a team/service path, update the Kustomize resources and image reference, and validate the rendered output:
+
+```bash
+kustomize build gitops-config/apps/<team>/<service>/overlays/dev
+```
+
+## 6. Promote an immutable version
+
+The repository contains a promotion helper:
 
 ```bash
 cd gitops-config
-./scripts/promote.sh payments my-awesome-api dev staging v0.1.0
-# Crear PR, obtener aprobación, merge
+./scripts/promote.sh <team> <service> dev staging <immutable-tag>
 ```
 
-## Resumen de Tiempos
+Do not promote `:latest`. Promotion should change desired state in Git; Argo CD then reconciles that state to the target cluster.
 
-| Paso | Tiempo |
-|------|--------|
-| Crear servicio | 2 min |
-| Verificar local | 3 min |
-| Configurar GitOps | 5 min |
-| Deploy a dev | 3 min |
-| Verificar | 2 min |
-| **Total** | **15 min** |
+## 7. Observe deployment state
 
-## Troubleshooting
+In a connected environment, validate both GitOps and Kubernetes state:
 
-### El build falla
 ```bash
-# Verificar sintaxis Go
-go vet ./...
-
-# Verificar formato
-gofmt -d .
+argocd app get <application>
+kubectl get deploy,pods,svc -n <namespace>
+kubectl rollout status deployment/<service> -n <namespace>
 ```
 
-### ArgoCD no sincroniza
-```bash
-# Verificar manifiestos
-kustomize build overlays/dev
+## 8. Production-readiness checklist
 
-# Ver logs de ArgoCD
-kubectl logs -n argocd -l app.kubernetes.io/name=argocd-application-controller
-```
+Before using the paved road for production, confirm at minimum:
 
-### Pod en CrashLoopBackOff
-```bash
-# Ver logs del pod
-kubectl logs -n <namespace> <pod-name> --previous
+- cloud workload identity is configured with least privilege;
+- remote Terraform state is encrypted, locked, backed up, and access controlled;
+- real clusters and Argo CD destinations are registered securely;
+- registry immutability and retention are configured;
+- secret management is integrated;
+- TLS and DNS ownership are operationalized;
+- policy enforcement mode has been tested;
+- metrics, logs, traces, alerts, SLOs, and ownership are configured;
+- backup and recovery procedures have been tested;
+- production approvals and branch protections are enabled;
+- rollback and incident runbooks have been exercised.
 
-# Verificar configuración
-kubectl describe pod -n <namespace> <pod-name>
-```
-
-## Siguiente Pasos
-
-- [ ] Agregar tests de integración
-- [ ] Configurar alertas en Prometheus
-- [ ] Crear dashboard en Grafana
-- [ ] Documentar API
+Continue with the [architecture overview](architecture/overview.md) and [implementation guide](../golden-path-implementation-guide.md).

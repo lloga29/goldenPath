@@ -1,76 +1,40 @@
-# Pattern: Arquitectura de 3 Capas
+# Three-Tier Network Foundation Pattern
 
-Este pattern crea la infraestructura base para una aplicación de 3 capas.
+This pattern is an **infrastructure reference**, not a complete three-tier application deployment.
 
-## Arquitectura
+## What it currently creates
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                           INTERNET                               │
-└─────────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    CAPA 1: PRESENTACIÓN                          │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │ Public-1a   │  │ Public-1b   │  │ Public-1c   │             │
-│  │ (ALB/NLB)   │  │ (ALB/NLB)   │  │ (ALB/NLB)   │             │
-│  └─────────────┘  └─────────────┘  └─────────────┘             │
-└─────────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    CAPA 2: APLICACIÓN                            │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │ Private-1a  │  │ Private-1b  │  │ Private-1c  │             │
-│  │ (EKS/ECS)   │  │ (EKS/ECS)   │  │ (EKS/ECS)   │             │
-│  └─────────────┘  └─────────────┘  └─────────────┘             │
-└─────────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    CAPA 3: DATOS                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │ Database-1a │  │ Database-1b │  │ Database-1c │             │
-│  │ (RDS/Cache) │  │ (RDS/Cache) │  │ (RDS/Cache) │             │
-│  └─────────────┘  └─────────────┘  └─────────────┘             │
-└─────────────────────────────────────────────────────────────────┘
-```
+- An AWS VPC through the shared network module.
+- Public and private application subnet ranges.
+- Dedicated database subnets.
+- An application security group.
+- A database security group allowing PostgreSQL from the application security group.
+- An RDS DB subnet group.
+- VPC Flow Logs through the network module.
 
-## Uso
+## What it does not create
+
+The current pattern does not create an ALB/NLB, EKS/ECS cluster, application compute, RDS instance, cache, NAT gateways, route tables, WAF, DNS, certificates, or application deployment. The inputs `database_engine`, `database_instance_class`, and `enable_cache` are retained as roadmap placeholders but do not currently create resources.
+
+## Example
 
 ```hcl
-module "my_app" {
-  source = "git::https://github.com/org/terraform-modules.git//patterns/three-tier-app?ref=v1.0.0"
+module "network_foundation" {
+  source = "git::https://github.com/example/platform-terraform-modules.git//patterns/three-tier-app?ref=v1.0.0"
 
-  name        = "mi-aplicacion"
+  name        = "payments"
   environment = "prod"
   vpc_cidr    = "10.0.0.0/16"
 
   availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
 
-  database_engine         = "postgres"
-  database_instance_class = "db.t3.medium"
-  enable_cache           = true
-
   tags = {
-    Team       = "product"
+    Team       = "payments"
     CostCenter = "cc-001"
   }
 }
 ```
 
-## Recursos Creados
+## Security review before production
 
-- VPC con subnets públicas, privadas y de base de datos
-- Internet Gateway
-- Security Groups para cada capa
-- DB Subnet Group
-- Flow Logs habilitados
-
-## Seguridad
-
-- Subnets de BD aisladas (sin acceso a internet)
-- Security Groups restrictivos
-- Flow logs para auditoría
-- Sin IPs públicas en capas privadas
+The application security-group example currently allows outbound traffic to `0.0.0.0/0` and HTTP ingress from the example public-subnet CIDRs. Production architectures should replace these broad reference rules with the actual load-balancer/security-group and egress requirements. Add deletion protection, routing/NAT, database encryption/backup, and workload controls in the higher-level stack.

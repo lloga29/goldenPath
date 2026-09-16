@@ -1,13 +1,7 @@
-# Backend configuration para Azure
-# Uso: terraform init -backend-config=../../shared/backend-configs/azure.hcl
-
-# NOTA: Las variables ${} deben ser reemplazadas al inicializar
-# resource_group_name  = "rg-${client_name}-terraform"
-# storage_account_name = "st${client_name}tfstate"
-# container_name       = "tfstate"
-# key                  = "${project}/${stack}/${environment}/terraform.tfstate"
-
-# Ejemplo de uso en backend.tf:
+# Azure Storage backend reference.
+# Replace placeholders with client/environment-specific values before initialization.
+#
+# Example:
 # terraform {
 #   backend "azurerm" {
 #     resource_group_name  = "rg-acme-terraform"

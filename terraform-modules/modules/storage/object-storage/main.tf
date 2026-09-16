@@ -1,5 +1,5 @@
-# Módulo Object Storage Cloud-Agnostic
-# Soporta S3 (AWS), Blob Storage (Azure), GCS (GCP)
+# Multi-provider object-storage reference module.
+# Supports Amazon S3, Azure Blob containers, and Google Cloud Storage buckets.
 
 terraform {
   required_version = ">= 1.5.0, < 2.0.0"
@@ -20,59 +20,56 @@ terraform {
   }
 }
 
-# ============================================
-# VARIABLES
-# ============================================
 variable "name" {
-  description = "Nombre del bucket/container"
+  description = "Bucket or container name."
   type        = string
 
   validation {
     condition     = can(regex("^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$", var.name))
-    error_message = "El nombre debe ser 3-63 caracteres, lowercase alfanumérico con guiones."
+    error_message = "name must be 3-63 lowercase alphanumeric characters or hyphens."
   }
 }
 
 variable "environment" {
-  description = "Entorno"
+  description = "Deployment environment."
   type        = string
 
   validation {
     condition     = contains(["dev", "staging", "prod", "ephemeral"], var.environment)
-    error_message = "El entorno debe ser uno de: dev, staging, prod, ephemeral."
+    error_message = "environment must be one of: dev, staging, prod, ephemeral."
   }
 }
 
 variable "cloud_provider" {
-  description = "Proveedor cloud (aws, azure, gcp)"
+  description = "Provider implementation: aws, azure, or gcp."
   type        = string
 
   validation {
     condition     = contains(["aws", "azure", "gcp"], var.cloud_provider)
-    error_message = "El proveedor debe ser uno de: aws, azure, gcp."
+    error_message = "cloud_provider must be one of: aws, azure, gcp."
   }
 }
 
 variable "versioning_enabled" {
-  description = "Habilitar versionamiento"
+  description = "Enable provider-supported object versioning."
   type        = bool
-  default     = true  # Seguro por defecto
+  default     = true
 }
 
 variable "encryption_enabled" {
-  description = "Habilitar encryption at rest"
+  description = "Enable module-managed encryption configuration where this reference implements it."
   type        = bool
-  default     = true  # Seguro por defecto
+  default     = true
 }
 
 variable "public_access_blocked" {
-  description = "Bloquear acceso público"
+  description = "Block or prevent public access where the selected provider implementation supports the setting."
   type        = bool
-  default     = true  # Seguro por defecto
+  default     = true
 }
 
 variable "lifecycle_rules" {
-  description = "Reglas de lifecycle para el bucket"
+  description = "Lifecycle rules for supported bucket implementations."
   type = list(object({
     id                       = string
     enabled                  = bool
@@ -84,46 +81,43 @@ variable "lifecycle_rules" {
   default = []
 }
 
-# Variables específicas Azure
+# Azure-specific inputs.
 variable "resource_group_name" {
-  description = "Nombre del Resource Group (Azure)"
+  description = "Azure Resource Group name. Reserved for a fuller Azure implementation."
   type        = string
   default     = ""
 }
 
 variable "storage_account_name" {
-  description = "Nombre de la Storage Account (Azure)"
+  description = "Existing Azure Storage Account name that will host the container."
   type        = string
   default     = ""
 }
 
-# Variables específicas GCP
+# Google Cloud-specific inputs.
 variable "project_id" {
-  description = "ID del proyecto (GCP)"
+  description = "Google Cloud project ID."
   type        = string
   default     = ""
 }
 
 variable "location" {
-  description = "Ubicación/Región"
+  description = "Provider location/region where applicable."
   type        = string
   default     = "us-east-1"
 }
 
 variable "tags" {
-  description = "Tags a aplicar"
+  description = "Ownership/cost metadata. Must include Team and CostCenter."
   type        = map(string)
   default     = {}
 
   validation {
     condition     = contains(keys(var.tags), "Team") && contains(keys(var.tags), "CostCenter")
-    error_message = "Los tags deben incluir 'Team' y 'CostCenter'."
+    error_message = "tags must include Team and CostCenter."
   }
 }
 
-# ============================================
-# LOCALS
-# ============================================
 locals {
   common_tags = merge(
     var.tags,
@@ -135,15 +129,11 @@ locals {
   )
 }
 
-# ============================================
-# AWS S3 BUCKET
-# ============================================
 resource "aws_s3_bucket" "this" {
   count = var.cloud_provider == "aws" ? 1 : 0
 
   bucket = var.name
-
-  tags = local.common_tags
+  tags   = local.common_tags
 
   lifecycle {
     prevent_destroy = false
@@ -152,7 +142,6 @@ resource "aws_s3_bucket" "this" {
 
 resource "aws_s3_bucket_versioning" "this" {
   count = var.cloud_provider == "aws" ? 1 : 0
-
   bucket = aws_s3_bucket.this[0].id
 
   versioning_configuration {
@@ -161,8 +150,7 @@ resource "aws_s3_bucket_versioning" "this" {
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
-  count = var.cloud_provider == "aws" && var.encryption_enabled ? 1 : 0
-
+  count  = var.cloud_provider == "aws" && var.encryption_enabled ? 1 : 0
   bucket = aws_s3_bucket.this[0].id
 
   rule {
@@ -174,8 +162,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
 }
 
 resource "aws_s3_bucket_public_access_block" "this" {
-  count = var.cloud_provider == "aws" ? 1 : 0
-
+  count  = var.cloud_provider == "aws" ? 1 : 0
   bucket = aws_s3_bucket.this[0].id
 
   block_public_acls       = var.public_access_blocked
@@ -185,8 +172,7 @@ resource "aws_s3_bucket_public_access_block" "this" {
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "this" {
-  count = var.cloud_provider == "aws" && length(var.lifecycle_rules) > 0 ? 1 : 0
-
+  count  = var.cloud_provider == "aws" && length(var.lifecycle_rules) > 0 ? 1 : 0
   bucket = aws_s3_bucket.this[0].id
 
   dynamic "rule" {
@@ -212,9 +198,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "this" {
   }
 }
 
-# ============================================
-# AZURE BLOB CONTAINER
-# ============================================
+# Azure reference creates a container inside an existing Storage Account.
 resource "azurerm_storage_container" "this" {
   count = var.cloud_provider == "azure" ? 1 : 0
 
@@ -223,9 +207,6 @@ resource "azurerm_storage_container" "this" {
   container_access_type = var.public_access_blocked ? "private" : "blob"
 }
 
-# ============================================
-# GCP CLOUD STORAGE
-# ============================================
 resource "google_storage_bucket" "this" {
   count = var.cloud_provider == "gcp" ? 1 : 0
 
@@ -241,7 +222,7 @@ resource "google_storage_bucket" "this" {
   }
 
   encryption {
-    default_kms_key_name = null  # Usa encryption por defecto de Google
+    default_kms_key_name = null # Uses Google-managed encryption when no CMEK is configured externally.
   }
 
   public_access_prevention = var.public_access_blocked ? "enforced" : "inherited"
@@ -265,11 +246,8 @@ resource "google_storage_bucket" "this" {
   labels = local.common_tags
 }
 
-# ============================================
-# OUTPUTS
-# ============================================
 output "bucket_id" {
-  description = "ID del bucket/container"
+  description = "Provider-specific bucket/container ID."
   value = coalesce(
     try(aws_s3_bucket.this[0].id, null),
     try(azurerm_storage_container.this[0].id, null),
@@ -278,17 +256,17 @@ output "bucket_id" {
 }
 
 output "bucket_arn" {
-  description = "ARN del bucket (AWS)"
+  description = "AWS S3 bucket ARN, or null for other providers."
   value       = try(aws_s3_bucket.this[0].arn, null)
 }
 
 output "bucket_name" {
-  description = "Nombre del bucket"
+  description = "Configured bucket/container name."
   value       = var.name
 }
 
 output "bucket_url" {
-  description = "URL del bucket"
+  description = "Provider-specific bucket/container URL."
   value = coalesce(
     try("s3://${aws_s3_bucket.this[0].bucket}", null),
     try("https://${var.storage_account_name}.blob.core.windows.net/${azurerm_storage_container.this[0].name}", null),
@@ -297,11 +275,11 @@ output "bucket_url" {
 }
 
 output "versioning_enabled" {
-  description = "Si el versionamiento está habilitado"
+  description = "Requested versioning setting. Verify provider-specific behavior."
   value       = var.versioning_enabled
 }
 
 output "encryption_enabled" {
-  description = "Si la encriptación está habilitada"
+  description = "Requested module-managed encryption setting. This is not equivalent across providers."
   value       = var.encryption_enabled
 }

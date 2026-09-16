@@ -1,11 +1,11 @@
-# Metadata del Cliente: ACME Corporation
-# Este archivo define la configuración del cliente
+# Reference client metadata: ACME Corporation.
+# Values in this file are examples and must not be treated as real customer/account information.
 
 client:
   name: acme
   display_name: "ACME Corporation"
   created_at: "2024-01-15"
-  owner: platform@acme.com
+  owner: platform@acme.example
   cost_center: cc-acme-001
 
 cloud:
@@ -29,14 +29,14 @@ environments:
 
 teams:
   - name: payments
-    owner: payments@acme.com
+    owner: payments@acme.example
   - name: orders
-    owner: orders@acme.com
+    owner: orders@acme.example
 
 contacts:
-  primary: platform@acme.com
-  security: security@acme.com
-  billing: billing@acme.com
+  primary: platform@acme.example
+  security: security@acme.example
+  billing: billing@acme.example
 
 compliance:
   - pci-dss

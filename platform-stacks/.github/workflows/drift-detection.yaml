@@ -1,15 +1,14 @@
-# Drift Detection Pipeline
-# Detecta diferencias entre el estado y la realidad
+# Scheduled Terraform drift-detection blueprint.
 
 name: Drift Detection
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # Diariamente a las 6 AM UTC
+    - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
       stack:
-        description: 'Stack específico a verificar (vacío = todos)'
+        description: 'Specific stack to check; leave empty to check all discovered stacks.'
         required: false
         default: ''
 
@@ -23,74 +22,55 @@ permissions:
   issues: write
 
 jobs:
-  # ============================================
-  # LISTAR STACKS
-  # ============================================
   list-stacks:
     runs-on: ubuntu-latest
     outputs:
       stacks: ${{ steps.list.outputs.stacks }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Listar stacks
+      - name: List stacks
         id: list
+        shell: bash
         run: |
           if [ -n "${{ github.event.inputs.stack }}" ]; then
             STACKS='["${{ github.event.inputs.stack }}"]'
           else
-            # Encontrar todos los stacks con main.tf
-            STACKS=$(find clients teams -name "main.tf" -exec dirname {} \; 2>/dev/null | \
-              sort -u | \
-              jq -R -s -c 'split("\n") | map(select(length > 0))')
+            STACKS=$(find clients teams -name main.tf -exec dirname {} \; 2>/dev/null | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
           fi
-          echo "stacks=$STACKS" >> $GITHUB_OUTPUT
+          echo "stacks=$STACKS" >> "$GITHUB_OUTPUT"
 
-  # ============================================
-  # DETECTAR DRIFT
-  # ============================================
   detect-drift:
     needs: list-stacks
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        stack: ${{ fromJson(needs.list-stacks.outputs.stacks) }}
       fail-fast: false
       max-parallel: 3
+      matrix: { stack: "${{ fromJson(needs.list-stacks.outputs.stacks) }}" }
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Terraform Init
-        run: terraform init
+      - uses: aws-actions/configure-aws-credentials@v4
+        with: { role-to-assume: "${{ secrets.AWS_ROLE_ARN }}", aws-region: us-east-1 }
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "${{ env.TF_VERSION }}" }
+      - run: terraform init -input=false
         working-directory: ${{ matrix.stack }}
-
-      - name: Terraform Plan (Drift Check)
+      - name: Terraform drift plan
         id: plan
-        run: |
-          terraform plan -detailed-exitcode -out=tfplan 2>&1 | tee plan.txt
-          EXIT_CODE=$?
-          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
-          # Exit code 2 = changes detected (drift)
-          if [ $EXIT_CODE -eq 2 ]; then
-            echo "drift_detected=true" >> $GITHUB_OUTPUT
-          else
-            echo "drift_detected=false" >> $GITHUB_OUTPUT
-          fi
+        shell: bash
         working-directory: ${{ matrix.stack }}
-        continue-on-error: true
-
-      - name: Create Issue on Drift
+        run: |
+          set +e
+          set -o pipefail
+          terraform plan -detailed-exitcode -no-color 2>&1 | tee plan.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          set -e
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          case "$EXIT_CODE" in
+            0) echo "drift_detected=false" >> "$GITHUB_OUTPUT" ;;
+            2) echo "drift_detected=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "Terraform plan failed for ${{ matrix.stack }}"; exit "$EXIT_CODE" ;;
+          esac
+      - name: Create or update drift issue
         if: steps.plan.outputs.drift_detected == 'true'
         uses: actions/github-script@v7
         with:
@@ -98,75 +78,18 @@ jobs:
             const fs = require('fs');
             const plan = fs.readFileSync('${{ matrix.stack }}/plan.txt', 'utf8');
             const truncated = plan.length > 60000 ? plan.substring(0, 60000) + '...' : plan;
+            const issues = await github.rest.issues.listForRepo({owner: context.repo.owner, repo: context.repo.repo, labels: 'drift,infrastructure', state: 'open'});
+            const existing = issues.data.find(i => i.title.includes('${{ matrix.stack }}'));
+            const body = `## Drift detected in \`${{ matrix.stack }}\`\n\nTerraform reports a difference between declared and observed infrastructure.\n\n<details><summary>Terraform plan</summary>\n\n\`\`\`terraform\n${truncated}\n\`\`\`\n</details>\n\n### Required actions\n1. Review the changes and relevant cloud audit logs.\n2. Determine whether the runtime change was authorized.\n3. If accepted, update/import the declared configuration through review.\n4. If unauthorized, use the approved apply path to restore declared state.\n\nSee the infrastructure-drift runbook in the platform documentation.`;
+            if (existing) await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body});
+            else await github.rest.issues.create({owner: context.repo.owner, repo: context.repo.repo, title: `Infrastructure drift: ${{ matrix.stack }}`, body, labels: ['drift','infrastructure','automated']});
 
-            // Buscar issue existente
-            const issues = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: ['drift', 'infrastructure'],
-              state: 'open'
-            });
-
-            const existingIssue = issues.data.find(i =>
-              i.title.includes('${{ matrix.stack }}')
-            );
-
-            const body = `## Drift detectado en \`${{ matrix.stack }}\`
-
-            Se detectaron diferencias entre el estado de Terraform y la infraestructura real.
-
-            ### Plan de Terraform
-
-            <details>
-            <summary>Ver cambios detectados</summary>
-
-            \`\`\`
-            ${truncated}
-            \`\`\`
-
-            </details>
-
-            ### Acciones Requeridas
-
-            1. Revisar los cambios detectados
-            2. Determinar si fueron cambios manuales autorizados
-            3. Si son válidos: importar al estado con \`terraform import\`
-            4. Si no son válidos: aplicar \`terraform apply\` para revertir
-
-            ### Runbook
-
-            Ver [Runbook: Drift Detectado](../docs/runbooks/drift-detected.md)
-
-            ---
-            *Detectado automáticamente por Drift Detection*`;
-
-            if (existingIssue) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existingIssue.number,
-                body: body
-              });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: `🔄 Drift detectado: ${{ matrix.stack }}`,
-                body: body,
-                labels: ['drift', 'infrastructure', 'automated']
-              });
-            }
-
-  # ============================================
-  # RESUMEN
-  # ============================================
   summary:
     needs: detect-drift
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Resumen de Drift Detection
+      - name: Drift detection summary
         run: |
-          echo "=== Drift Detection Completado ==="
-          echo "Fecha: $(date)"
-          echo "Ver issues creados para stacks con drift"
+          echo "Drift detection completed at $(date -u +%FT%TZ)."
+          echo "Review open drift issues and any failed plan jobs."

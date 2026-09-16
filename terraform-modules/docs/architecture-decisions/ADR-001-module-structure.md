@@ -1,62 +1,15 @@
-# ADR-001: Estructura de Módulos Terraform
+# ADR-001: Organize Terraform by Reusable Modules and Composed Patterns
 
-## Estado
+- Status: Accepted
 
-Aceptado
+## Context
 
-## Contexto
+Platform teams need reusable infrastructure primitives without forcing application teams to copy large Terraform stacks.
 
-Necesitamos definir una estructura estándar para los módulos Terraform que sea:
-- Fácil de mantener
-- Consistente entre equipos
-- Testeable
-- Documentable automáticamente
+## Decision
 
-## Decisión
+Keep small reusable modules under `modules/<category>/<name>` and compose higher-level reference architectures under `patterns/`. Client/environment composition belongs in the separate `platform-stacks` domain.
 
-### Estructura de Directorios
+## Consequences
 
-```
-modules/
-├── categoria/
-│   └── nombre-modulo/
-│       ├── main.tf
-│       ├── variables.tf
-│       ├── outputs.tf
-│       ├── versions.tf
-│       ├── README.md
-│       ├── examples/
-│       └── tests/
-```
-
-### Categorías
-
-1. **networking** - VPC, subnets, load balancers
-2. **compute** - EKS, VMs, serverless
-3. **storage** - S3, RDS, cache
-4. **security** - IAM, KMS, WAF
-5. **observability** - logging, monitoring
-6. **data** - data lake, streaming
-
-### Separación de Archivos
-
-- `main.tf`: Recursos principales
-- `variables.tf`: TODAS las variables
-- `outputs.tf`: TODOS los outputs
-- `versions.tf`: Versiones de Terraform y providers
-
-## Consecuencias
-
-### Positivas
-- Consistencia entre módulos
-- Fácil onboarding de nuevos contribuidores
-- Documentación auto-generada funciona correctamente
-
-### Negativas
-- Puede resultar en archivos variables.tf grandes
-- Requiere disciplina del equipo
-
-## Alternativas Consideradas
-
-1. **Un archivo por recurso**: Descartado por dificultar navegación
-2. **Variables inline en main.tf**: Descartado por dificultar terraform-docs
+Modules can be versioned and tested independently, while patterns provide opinionated composition. The platform must avoid creating deep module nesting that obscures provider behavior or makes upgrades difficult.

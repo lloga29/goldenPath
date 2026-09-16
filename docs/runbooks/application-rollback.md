@@ -1,79 +1,56 @@
-# Runbook: Rollback de Aplicación
+# Runbook: Application Rollback
 
-## Alerta
-**Nombre:** Application Rollback Required
-**Severidad:** High/Critical
+## Trigger
 
-## Síntomas
-- Error rate elevado
-- Latencia aumentada
-- Pods en CrashLoopBackOff
-- Deployment stuck
+Use this runbook when a recently promoted application version causes errors, latency, failed readiness, business regression, or another production-impacting condition and rollback is the safest mitigation.
 
-## Diagnóstico Rápido
+## Safety principles
 
-### 1. Estado del deployment
+- Prefer GitOps rollback so desired state and runtime state remain aligned.
+- Roll back to a known-good immutable image reference.
+- Do not rebuild an old release.
+- Check database/schema compatibility before reverting application code.
+- Preserve incident evidence before destructive cleanup.
+
+## Diagnosis
+
 ```bash
-kubectl get deployment <service> -n <namespace>
-kubectl describe deployment <service> -n <namespace> | tail -30
-```
-
-### 2. Estado de pods
-```bash
-kubectl get pods -n <namespace> -l app=<service>
-kubectl logs -n <namespace> -l app=<service> --tail=100
-```
-
-### 3. Eventos recientes
-```bash
-kubectl get events -n <namespace> --sort-by=.metadata.creationTimestamp | tail -20
-```
-
-## Rollback
-
-### Opción 1: Via GitOps (Recomendado)
-```bash
-cd gitops-config
-./scripts/rollback.sh <team> <service> <env>
-# Seguir instrucciones
-```
-
-### Opción 2: Via kubectl (Emergencia)
-```bash
-# Rollback inmediato
-kubectl rollout undo deployment/<service> -n <namespace>
-
-# Verificar
+argocd app get <application>
 kubectl rollout status deployment/<service> -n <namespace>
-
-# IMPORTANTE: Crear PR para sincronizar GitOps después
+kubectl get pods -n <namespace> -l app=<service>
+kubectl get events -n <namespace> --sort-by=.lastTimestamp
 ```
 
-### Opción 3: Via ArgoCD UI
-1. Ir a ArgoCD: https://argocd.company.com
-2. Seleccionar aplicación
-3. History and Rollback
-4. Seleccionar revisión anterior
-5. Rollback
+Confirm the current image:
 
-## Post-Rollback
+```bash
+kubectl get deployment/<service> -n <namespace> \
+  -o jsonpath='{.spec.template.spec.containers[*].image}'
+```
 
-### Verificación
-- [ ] Pods running y healthy
-- [ ] Error rate normalizado
-- [ ] Latencia normalizada
-- [ ] Health checks pasando
+## Preferred recovery: GitOps revert
 
-### Comunicación
-- [ ] Notificar en #incidents
-- [ ] Actualizar status page si aplica
-- [ ] Notificar a stakeholders
+1. Identify the Git commit or image reference for the last known-good version.
+2. Revert or update the target environment overlay.
+3. Open/review the emergency pull request according to the incident process.
+4. Merge the known-good desired state.
+5. Sync or allow Argo CD to reconcile.
 
-### Follow-up
-- [ ] Investigar causa raíz
-- [ ] Crear post-mortem si afectó usuarios
-- [ ] Implementar fixes
+Validate:
 
-## Escalación
-- Platform on-call: Ver PagerDuty
-- Emergencia: Slack #incidents
+```bash
+argocd app wait <application> --health --sync
+kubectl rollout status deployment/<service> -n <namespace>
+```
+
+## Emergency runtime rollback
+
+If GitOps cannot meet the required recovery time, an authorized operator may use a runtime rollback such as `kubectl rollout undo`. Record the exact command and actor. As soon as impact is mitigated, update Git so Argo CD does not reapply the broken desired state.
+
+## Validation
+
+Verify application health, error rate, latency, key business transaction, logs, alerts, and downstream dependencies. Confirm Argo CD reports the intended state.
+
+## Follow-up
+
+Document the failed artifact, root cause, rollback duration, missing tests/guards, and changes required to prevent recurrence.

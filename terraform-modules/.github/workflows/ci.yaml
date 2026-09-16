@@ -1,7 +1,7 @@
-# CI Pipeline para Terraform Modules
-# Ejecuta validación, linting y tests en cada PR
+# CI blueprint for a standalone Terraform modules repository.
+# In the consolidated goldenPath repository this nested workflow is documentation/reference only.
 
-name: CI
+name: Terraform Modules CI
 
 on:
   pull_request:
@@ -10,17 +10,17 @@ on:
     branches: [main]
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: terraform-modules-ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
   TF_VERSION: "1.6.0"
   TFLINT_VERSION: "v0.50.0"
 
+permissions:
+  contents: read
+
 jobs:
-  # ============================================
-  # DETECTAR CAMBIOS EN MÓDULOS
-  # ============================================
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
@@ -31,177 +31,140 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detectar módulos modificados
+      - name: Detect changed modules
         id: changes
+        shell: bash
         run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
             CHANGED_FILES=$(git diff --name-only origin/main..HEAD)
           else
             CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD)
           fi
 
-          # Extraer directorios de módulos modificados
           MODULES=$(echo "$CHANGED_FILES" | \
             grep -E "^modules/" | \
             cut -d'/' -f1-3 | \
             sort -u | \
             jq -R -s -c 'split("\n") | map(select(length > 0))')
 
-          echo "modules=$MODULES" >> $GITHUB_OUTPUT
-          echo "has_changes=$([ "$MODULES" != "[]" ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
-          echo "Módulos detectados: $MODULES"
+          echo "modules=$MODULES" >> "$GITHUB_OUTPUT"
+          echo "has_changes=$([ "$MODULES" != "[]" ] && echo 'true' || echo 'false')" >> "$GITHUB_OUTPUT"
+          echo "Detected modules: $MODULES"
 
-  # ============================================
-  # FORMAT CHECK
-  # ============================================
   format:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Terraform Format Check
+      - name: Terraform format check
         run: terraform fmt -check -recursive -diff
 
-  # ============================================
-  # LINT
-  # ============================================
   lint:
     needs: detect-changes
     if: needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         module: ${{ fromJson(needs.detect-changes.outputs.modules) }}
-      fail-fast: false
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v4
+      - uses: terraform-linters/setup-tflint@v4
         with:
           tflint_version: ${{ env.TFLINT_VERSION }}
-
-      - name: Init TFLint
+      - name: Initialize TFLint
         run: tflint --init
         working-directory: ${{ matrix.module }}
-
       - name: Run TFLint
         run: tflint --recursive
         working-directory: ${{ matrix.module }}
 
-  # ============================================
-  # VALIDATE
-  # ============================================
   validate:
     needs: detect-changes
     if: needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         module: ${{ fromJson(needs.detect-changes.outputs.modules) }}
-      fail-fast: false
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Terraform Init
-        run: terraform init -backend=false
+      - name: Terraform init
+        run: terraform init -backend=false -input=false
         working-directory: ${{ matrix.module }}
-
-      - name: Terraform Validate
+      - name: Terraform validate
         run: terraform validate
         working-directory: ${{ matrix.module }}
 
-  # ============================================
-  # SECURITY SCAN
-  # ============================================
   security:
     needs: [detect-changes, validate]
     if: needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         module: ${{ fromJson(needs.detect-changes.outputs.modules) }}
-      fail-fast: false
     steps:
       - uses: actions/checkout@v4
-
-      - name: Checkov Scan
+      - name: Checkov scan
         uses: bridgecrewio/checkov-action@v12
         with:
           directory: ${{ matrix.module }}
           framework: terraform
           soft_fail: false
-          skip_check: CKV_TF_1  # Skip module source version check for internal modules
-
-      - name: TFSec Scan
+          skip_check: CKV_TF_1
+      - name: tfsec scan
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
           working_directory: ${{ matrix.module }}
           soft_fail: false
 
-  # ============================================
-  # TERRAFORM TESTS
-  # ============================================
   test:
     needs: [detect-changes, security]
     if: needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         module: ${{ fromJson(needs.detect-changes.outputs.modules) }}
-      fail-fast: false
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Terraform Init
-        run: terraform init -backend=false
+      - name: Terraform init
+        run: terraform init -backend=false -input=false
         working-directory: ${{ matrix.module }}
-
-      - name: Run Terraform Tests
+      - name: Run Terraform tests
         run: |
-          if [ -d "tests" ]; then
+          if [ -d tests ]; then
             terraform test
           else
-            echo "No tests directory found, skipping..."
+            echo "No tests directory found; skipping Terraform-native tests."
           fi
         working-directory: ${{ matrix.module }}
 
-  # ============================================
-  # DOCS CHECK
-  # ============================================
   docs:
     needs: detect-changes
     if: needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup terraform-docs
+      - name: Install terraform-docs
         run: |
           curl -sSLo terraform-docs.tar.gz https://github.com/terraform-docs/terraform-docs/releases/download/v0.17.0/terraform-docs-v0.17.0-linux-amd64.tar.gz
           tar -xzf terraform-docs.tar.gz
           chmod +x terraform-docs
           sudo mv terraform-docs /usr/local/bin/
-
-      - name: Check docs are up to date
+      - name: Verify generated documentation
         run: |
           ./scripts/generate-docs.sh
-          if ! git diff --exit-code; then
-            echo "Documentation is out of date. Please run ./scripts/generate-docs.sh"
+          git diff --exit-code || {
+            echo "Generated documentation is stale. Run ./scripts/generate-docs.sh and commit the result as the repository author."
             exit 1
-          fi
+          }

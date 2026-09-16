@@ -1,84 +1,86 @@
-.PHONY: help fmt validate lint test docs clean all
+.PHONY: help check-deps fmt fmt-check validate lint test security docs clean all ci
 
 MODULES := $(shell find modules -mindepth 2 -maxdepth 2 -type d)
 PATTERNS := $(shell find patterns -mindepth 1 -maxdepth 1 -type d)
 
-help: ## Mostrar esta ayuda
+help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-check-deps: ## Verificar dependencias instaladas
-	@echo "Verificando dependencias..."
-	@command -v terraform >/dev/null 2>&1 || { echo "ERROR: terraform no instalado"; exit 1; }
-	@command -v tflint >/dev/null 2>&1 || { echo "WARNING: tflint no instalado"; }
-	@command -v terraform-docs >/dev/null 2>&1 || { echo "WARNING: terraform-docs no instalado"; }
-	@command -v checkov >/dev/null 2>&1 || { echo "WARNING: checkov no instalado"; }
-	@echo "Dependencias verificadas."
+check-deps: ## Check installed dependencies
+	@echo "Checking dependencies..."
+	@command -v terraform >/dev/null 2>&1 || { echo "ERROR: terraform is not installed"; exit 1; }
+	@command -v tflint >/dev/null 2>&1 || { echo "WARNING: tflint is not installed"; }
+	@command -v terraform-docs >/dev/null 2>&1 || { echo "WARNING: terraform-docs is not installed"; }
+	@command -v checkov >/dev/null 2>&1 || { echo "WARNING: checkov is not installed"; }
+	@echo "Dependency check completed."
 
-fmt: ## Formatear código Terraform
-	@echo "Formateando código..."
+fmt: ## Format Terraform code
+	@echo "Formatting Terraform code..."
 	@terraform fmt -recursive modules/
 	@terraform fmt -recursive patterns/
-	@echo "Formateo completado."
+	@echo "Formatting completed."
 
-fmt-check: ## Verificar formato sin modificar
-	@echo "Verificando formato..."
+fmt-check: ## Check formatting without modifying files
+	@echo "Checking Terraform formatting..."
 	@terraform fmt -check -recursive modules/
 	@terraform fmt -check -recursive patterns/
 
-validate: ## Validar sintaxis de todos los módulos
-	@echo "Validando módulos..."
+validate: ## Validate all implemented modules
+	@echo "Validating modules..."
 	@for dir in $(MODULES); do \
 		if [ -f "$$dir/main.tf" ]; then \
-			echo "Validando $$dir..."; \
+			echo "Validating $$dir..."; \
 			cd $$dir && terraform init -backend=false -input=false >/dev/null 2>&1 && terraform validate && cd - >/dev/null; \
 		fi \
 	done
-	@echo "Validación completada."
+	@echo "Validation completed."
 
-lint: check-deps ## Ejecutar tflint en todos los módulos
-	@echo "Ejecutando tflint..."
+lint: check-deps ## Run TFLint for all implemented modules
+	@echo "Running TFLint..."
 	@for dir in $(MODULES); do \
 		if [ -f "$$dir/main.tf" ]; then \
 			echo "Linting $$dir..."; \
-			tflint --chdir=$$dir --init >/dev/null 2>&1 || true; \
-			tflint --chdir=$$dir || true; \
+			tflint --chdir=$$dir --init >/dev/null 2>&1; \
+			tflint --chdir=$$dir; \
 		fi \
 	done
-	@echo "Linting completado."
+	@echo "Linting completed."
 
-test: ## Ejecutar tests de Terraform
-	@echo "Ejecutando tests..."
+test: ## Run Terraform tests
+	@echo "Running Terraform tests..."
 	@for dir in $(MODULES); do \
 		if [ -d "$$dir/tests" ]; then \
 			echo "Testing $$dir..."; \
 			cd $$dir && terraform init -backend=false >/dev/null 2>&1 && terraform test && cd - >/dev/null; \
 		fi \
 	done
-	@echo "Tests completados."
+	@echo "Tests completed."
 
-security: ## Ejecutar escaneo de seguridad con checkov
-	@echo "Ejecutando checkov..."
-	@checkov -d modules/ --framework terraform --quiet --compact || true
-	@echo "Escaneo de seguridad completado."
+security: check-deps ## Run Checkov security scanning
+	@command -v checkov >/dev/null 2>&1 || { echo "ERROR: checkov is required for the security target"; exit 1; }
+	@echo "Running Checkov..."
+	@checkov -d modules/ --framework terraform --quiet --compact
+	@echo "Security scan completed."
 
-docs: ## Generar documentación con terraform-docs
-	@echo "Generando documentación..."
+docs: check-deps ## Generate documentation with terraform-docs
+	@command -v terraform-docs >/dev/null 2>&1 || { echo "ERROR: terraform-docs is required for the docs target"; exit 1; }
+	@echo "Generating module documentation..."
 	@for dir in $(MODULES); do \
 		if [ -f "$$dir/main.tf" ]; then \
-			echo "Documentando $$dir..."; \
-			terraform-docs markdown table $$dir > $$dir/README.md 2>/dev/null || true; \
+			echo "Documenting $$dir..."; \
+			terraform-docs markdown table $$dir > $$dir/README.md; \
 		fi \
 	done
-	@echo "Documentación generada."
+	@echo "Documentation generated."
 
-clean: ## Limpiar archivos temporales
-	@echo "Limpiando..."
+clean: ## Remove Terraform temporary files
+	@echo "Cleaning generated Terraform files..."
 	@find . -type d -name ".terraform" -exec rm -rf {} + 2>/dev/null || true
 	@find . -type f -name ".terraform.lock.hcl" -delete 2>/dev/null || true
 	@find . -type f -name "*.tfplan" -delete 2>/dev/null || true
-	@echo "Limpieza completada."
+	@echo "Cleanup completed."
 
-all: fmt-check validate lint security ## Ejecutar todas las validaciones
+all: fmt-check validate lint security ## Run all static validations
 
-ci: check-deps fmt-check validate lint security ## Pipeline CI completo
-	@echo "Pipeline CI completado exitosamente."
+ci: check-deps fmt-check validate lint security ## Run the complete CI validation set
+	@echo "CI validation completed successfully."

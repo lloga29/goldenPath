@@ -1,11 +1,10 @@
-# Outputs del módulo VPC
-# Expone IDs y atributos necesarios para otros módulos
+# Outputs exposed for consumers and composed patterns.
 
 # ============================================
-# OUTPUTS COMUNES (Cloud-Agnostic)
+# COMMON OUTPUTS
 # ============================================
 output "vpc_id" {
-  description = "ID de la VPC/VNet/Network creada"
+  description = "ID of the created VPC, VNet, or Google Cloud network."
   value = coalesce(
     try(aws_vpc.this[0].id, null),
     try(azurerm_virtual_network.this[0].id, null),
@@ -14,114 +13,114 @@ output "vpc_id" {
 }
 
 output "vpc_name" {
-  description = "Nombre de la VPC"
+  description = "Network name."
   value       = var.name
 }
 
 output "cidr_block" {
-  description = "Bloque CIDR de la VPC"
+  description = "Configured network CIDR block."
   value       = var.cidr_block
 }
 
 output "environment" {
-  description = "Entorno de la VPC"
+  description = "Configured environment."
   value       = var.environment
 }
 
 output "cloud_provider" {
-  description = "Proveedor cloud utilizado"
+  description = "Selected cloud provider implementation."
   value       = var.cloud_provider
 }
 
 # ============================================
-# OUTPUTS AWS
+# AWS OUTPUTS
 # ============================================
 output "aws_vpc_arn" {
-  description = "ARN de la VPC de AWS"
+  description = "AWS VPC ARN."
   value       = try(aws_vpc.this[0].arn, null)
 }
 
 output "aws_internet_gateway_id" {
-  description = "ID del Internet Gateway de AWS"
+  description = "AWS Internet Gateway ID."
   value       = try(aws_internet_gateway.this[0].id, null)
 }
 
 output "aws_private_subnet_ids" {
-  description = "IDs de las subnets privadas de AWS"
+  description = "AWS private subnet IDs."
   value       = aws_subnet.private[*].id
 }
 
 output "aws_public_subnet_ids" {
-  description = "IDs de las subnets públicas de AWS"
+  description = "AWS public subnet IDs."
   value       = aws_subnet.public[*].id
 }
 
 output "aws_flow_log_id" {
-  description = "ID del Flow Log de AWS"
+  description = "AWS VPC Flow Log ID."
   value       = try(aws_flow_log.this[0].id, null)
 }
 
 # ============================================
-# OUTPUTS AZURE
+# AZURE OUTPUTS
 # ============================================
 output "azure_vnet_id" {
-  description = "ID de la Virtual Network de Azure"
+  description = "Azure Virtual Network ID."
   value       = try(azurerm_virtual_network.this[0].id, null)
 }
 
 output "azure_vnet_name" {
-  description = "Nombre de la Virtual Network de Azure"
+  description = "Azure Virtual Network name."
   value       = try(azurerm_virtual_network.this[0].name, null)
 }
 
 output "azure_private_subnet_ids" {
-  description = "IDs de las subnets privadas de Azure"
+  description = "Azure private subnet IDs."
   value       = azurerm_subnet.private[*].id
 }
 
 output "azure_public_subnet_ids" {
-  description = "IDs de las subnets públicas de Azure"
+  description = "Azure public subnet IDs."
   value       = azurerm_subnet.public[*].id
 }
 
 output "azure_nsg_id" {
-  description = "ID del Network Security Group por defecto"
+  description = "Default Azure Network Security Group ID."
   value       = try(azurerm_network_security_group.default[0].id, null)
 }
 
 # ============================================
-# OUTPUTS GCP
+# GOOGLE CLOUD OUTPUTS
 # ============================================
 output "gcp_network_id" {
-  description = "ID de la VPC Network de GCP"
+  description = "Google Cloud VPC network ID."
   value       = try(google_compute_network.this[0].id, null)
 }
 
 output "gcp_network_self_link" {
-  description = "Self link de la VPC Network de GCP"
+  description = "Google Cloud VPC network self link."
   value       = try(google_compute_network.this[0].self_link, null)
 }
 
 output "gcp_private_subnet_ids" {
-  description = "IDs de las subnets privadas de GCP"
+  description = "Google Cloud private subnet IDs."
   value       = google_compute_subnetwork.private[*].id
 }
 
 output "gcp_public_subnet_ids" {
-  description = "IDs de las subnets públicas de GCP"
+  description = "Google Cloud public subnet IDs."
   value       = google_compute_subnetwork.public[*].id
 }
 
 output "gcp_router_id" {
-  description = "ID del Cloud Router de GCP"
+  description = "Google Cloud Router ID."
   value       = try(google_compute_router.this[0].id, null)
 }
 
 # ============================================
-# OUTPUTS PARA OTROS MÓDULOS
+# PROVIDER-NEUTRAL CONSUMER OUTPUTS
 # ============================================
 output "private_subnet_ids" {
-  description = "IDs de subnets privadas (cloud-agnostic)"
+  description = "Private subnet IDs for the selected provider implementation."
   value = coalesce(
     length(aws_subnet.private) > 0 ? aws_subnet.private[*].id : null,
     length(azurerm_subnet.private) > 0 ? azurerm_subnet.private[*].id : null,
@@ -131,7 +130,7 @@ output "private_subnet_ids" {
 }
 
 output "public_subnet_ids" {
-  description = "IDs de subnets públicas (cloud-agnostic)"
+  description = "Public subnet IDs for the selected provider implementation."
   value = coalesce(
     length(aws_subnet.public) > 0 ? aws_subnet.public[*].id : null,
     length(azurerm_subnet.public) > 0 ? azurerm_subnet.public[*].id : null,
@@ -141,6 +140,6 @@ output "public_subnet_ids" {
 }
 
 output "tags" {
-  description = "Tags aplicados a los recursos"
+  description = "Common metadata applied by the module."
   value       = local.common_tags
 }

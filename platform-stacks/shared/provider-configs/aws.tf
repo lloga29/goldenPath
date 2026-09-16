@@ -1,5 +1,4 @@
-# Configuración de provider AWS
-# Copiar y ajustar según el entorno
+# AWS provider configuration reference. Copy and adapt it in an actual stack.
 
 terraform {
   required_version = ">= 1.5.0, < 2.0.0"
@@ -12,11 +11,9 @@ terraform {
   }
 }
 
-# Provider principal
 provider "aws" {
   region = var.aws_region
 
-  # Tags por defecto para todos los recursos
   default_tags {
     tags = {
       ManagedBy   = "terraform"
@@ -26,13 +23,13 @@ provider "aws" {
     }
   }
 
-  # Asumir rol (para cross-account)
+  # Cross-account role assumption belongs here when required by the target account design.
   # assume_role {
-  #   role_arn = "arn:aws:iam::${var.target_account_id}:role/TerraformRole"
+  #   role_arn = "arn:aws:iam::<account-id>:role/<scoped-terraform-role>"
   # }
 }
 
-# Provider secundario (para recursos globales como CloudFront)
+# Secondary provider for AWS resources that must be managed from us-east-1.
 provider "aws" {
   alias  = "us_east_1"
   region = "us-east-1"
@@ -47,24 +44,23 @@ provider "aws" {
   }
 }
 
-# Variables requeridas
 variable "aws_region" {
-  description = "Región de AWS"
+  description = "AWS region."
   type        = string
   default     = "us-east-1"
 }
 
 variable "environment" {
-  description = "Entorno"
+  description = "Deployment environment."
   type        = string
 }
 
 variable "project" {
-  description = "Nombre del proyecto"
+  description = "Project identifier."
   type        = string
 }
 
 variable "client" {
-  description = "Nombre del cliente"
+  description = "Client identifier."
   type        = string
 }
