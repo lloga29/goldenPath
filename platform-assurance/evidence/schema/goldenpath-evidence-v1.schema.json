@@ -17,102 +17,367 @@
     "gates"
   ],
   "properties": {
-    "schemaVersion": {"const": "goldenpath.evidence/v1"},
-    "evidenceId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
-    "generatedAt": {"type": "string", "format": "date-time"},
-    "claimLevel": {"type": "string", "enum": ["implemented", "reference", "runtime-validated", "production-validated"]},
-    "decision": {"type": "string", "enum": ["READY", "NOT_READY"]},
+    "schemaVersion": {
+      "const": "goldenpath.evidence/v1"
+    },
+    "evidenceId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "claimLevel": {
+      "type": "string",
+      "enum": [
+        "implemented",
+        "reference",
+        "runtime-validated",
+        "production-validated"
+      ]
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "READY",
+        "NOT_READY"
+      ]
+    },
     "source": {
-      "type": "object", "additionalProperties": false, "required": ["repository", "commitSha"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "commitSha"
+      ],
       "properties": {
-        "repository": {"type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$"},
-        "commitSha": {"$ref": "#/$defs/gitSha"},
-        "workflowName": {"type": "string", "minLength": 1},
-        "workflowRunUrl": {"type": "string", "format": "uri"}
+        "repository": {
+          "type": "string",
+          "pattern": "^[^/\\s]+/[^/\\s]+$"
+        },
+        "commitSha": {
+          "$ref": "#/$defs/gitSha"
+        },
+        "workflowName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workflowRunUrl": {
+          "type": "string",
+          "format": "uri"
+        }
       }
     },
     "context": {
-      "type": "object", "additionalProperties": false, "required": ["environment", "capability"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "environment",
+        "capability"
+      ],
       "properties": {
-        "environment": {"type": "string", "enum": ["repository", "dev", "staging", "prod", "ephemeral"]},
-        "capability": {"type": "string", "minLength": 1},
-        "service": {"type": "string", "minLength": 1}
+        "environment": {
+          "type": "string",
+          "enum": [
+            "repository",
+            "dev",
+            "staging",
+            "prod",
+            "ephemeral"
+          ]
+        },
+        "capability": {
+          "type": "string",
+          "minLength": 1
+        },
+        "service": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "artifact": {
-      "type": "object", "additionalProperties": false, "required": ["type", "identity"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "identity"
+      ],
       "properties": {
-        "type": {"type": "string", "enum": ["container", "package", "bundle", "none"]},
-        "identity": {"type": "string", "minLength": 1},
-        "digest": {"$ref": "#/$defs/sha256Digest"}
+        "type": {
+          "type": "string",
+          "enum": [
+            "container",
+            "package",
+            "bundle",
+            "none"
+          ]
+        },
+        "identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest": {
+          "$ref": "#/$defs/sha256Digest"
+        }
       }
     },
     "inputs": {
-      "type": "object", "additionalProperties": false,
-      "required": ["sourceSha", "policyDigest", "architectureDigest", "desiredStateDigest"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceSha",
+        "policyDigest",
+        "architectureDigest",
+        "desiredStateDigest"
+      ],
       "properties": {
-        "sourceSha": {"$ref": "#/$defs/gitSha"},
-        "policyDigest": {"$ref": "#/$defs/sha256Digest"},
-        "architectureDigest": {"$ref": "#/$defs/sha256Digest"},
-        "desiredStateDigest": {"$ref": "#/$defs/sha256Digest"}
+        "sourceSha": {
+          "$ref": "#/$defs/gitSha"
+        },
+        "policyDigest": {
+          "$ref": "#/$defs/sha256Digest"
+        },
+        "architectureDigest": {
+          "$ref": "#/$defs/sha256Digest"
+        },
+        "desiredStateDigest": {
+          "$ref": "#/$defs/sha256Digest"
+        }
       }
     },
-    "gates": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/gateEvidence"}},
-    "runtimeEvidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/runtimeEvidence"}},
-    "assurance": {"$ref": "#/$defs/assuranceSnapshot"}
-  },
-  "allOf": [
-    {
-      "if": {"properties": {"claimLevel": {"enum": ["runtime-validated", "production-validated"]}}, "required": ["claimLevel"]},
-      "then": {"required": ["runtimeEvidence"]}
-    },
-    {
-      "if": {"properties": {"claimLevel": {"const": "production-validated"}}, "required": ["claimLevel"]},
-      "then": {"properties": {"context": {"properties": {"environment": {"const": "prod"}}}}}
-    }
-  ],
-  "$defs": {
-    "gitSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
-    "sha256Digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-    "gateId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$"},
-    "gateEvidence": {
-      "type": "object", "additionalProperties": false,
-      "required": ["id", "required", "skipAllowed", "result", "observedAt"],
-      "properties": {
-        "id": {"$ref": "#/$defs/gateId"},
-        "required": {"type": "boolean"},
-        "skipAllowed": {"type": "boolean"},
-        "result": {"type": "string", "enum": ["PASS", "FAIL", "INFRASTRUCTURE_FAILURE", "SKIP_ALLOWED"]},
-        "observedAt": {"type": "string", "format": "date-time"},
-        "evidenceUrl": {"type": "string", "format": "uri"},
-        "reason": {"type": "string", "minLength": 1}
+    "gates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/gateEvidence"
       }
     },
     "runtimeEvidence": {
-      "type": "object", "additionalProperties": false,
-      "required": ["kind", "result", "observedAt", "evidenceUrl"],
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/runtimeEvidence"
+      }
+    },
+    "assurance": {
+      "$ref": "#/$defs/assuranceSnapshot"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "claimLevel": {
+            "enum": [
+              "runtime-validated",
+              "production-validated"
+            ]
+          }
+        },
+        "required": [
+          "claimLevel"
+        ]
+      },
+      "then": {
+        "required": [
+          "runtimeEvidence"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "claimLevel": {
+            "const": "production-validated"
+          }
+        },
+        "required": [
+          "claimLevel"
+        ]
+      },
+      "then": {
+        "properties": {
+          "context": {
+            "properties": {
+              "environment": {
+                "const": "prod"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "gitSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256Digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "gateId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$"
+    },
+    "gateEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "required",
+        "skipAllowed",
+        "result",
+        "observedAt"
+      ],
       "properties": {
-        "kind": {"type": "string", "enum": ["deployment", "health", "rollout", "smoke", "slo", "rollback"]},
-        "result": {"type": "string", "enum": ["PASS", "FAIL", "INFRASTRUCTURE_FAILURE"]},
-        "observedAt": {"type": "string", "format": "date-time"},
-        "evidenceUrl": {"type": "string", "format": "uri"},
-        "reason": {"type": "string", "minLength": 1}
+        "id": {
+          "$ref": "#/$defs/gateId"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "skipAllowed": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "INFRASTRUCTURE_FAILURE",
+            "SKIP_ALLOWED"
+          ]
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "evidenceUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "runtimeEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "result",
+        "observedAt",
+        "evidenceUrl"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "deployment",
+            "health",
+            "rollout",
+            "smoke",
+            "slo",
+            "rollback"
+          ]
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "INFRASTRUCTURE_FAILURE"
+          ]
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "evidenceUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "assuranceSnapshot": {
-      "type": "object", "additionalProperties": false,
-      "required": ["schemaVersion", "riskLevel", "policyDigest", "planDigest", "architectureMetadataDigest", "requiredGateIds", "runtimeValidationRequired", "previewEnvironmentRequired", "humanApprovalGateIds", "autonomy"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "riskLevel",
+        "policyDigest",
+        "planDigest",
+        "architectureMetadataDigest",
+        "requiredGateIds",
+        "runtimeValidationRequired",
+        "previewEnvironmentRequired",
+        "humanApprovalGateIds",
+        "autonomy"
+      ],
       "properties": {
-        "schemaVersion": {"const": "goldenpath.assurance/v1"},
-        "riskLevel": {"type": "string", "enum": ["R0", "R1", "R2", "R3", "R4"]},
-        "policyDigest": {"$ref": "#/$defs/sha256Digest"},
-        "planDigest": {"$ref": "#/$defs/sha256Digest"},
-        "architectureMetadataDigest": {"$ref": "#/$defs/sha256Digest"},
-        "requiredGateIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/gateId"}},
-        "runtimeValidationRequired": {"type": "boolean"},
-        "previewEnvironmentRequired": {"type": "boolean"},
-        "humanApprovalGateIds": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/gateId"}},
-        "autonomy": {"type": "string", "enum": ["automated", "policy-bounded", "guarded", "supervised", "human-authorized"]}
+        "schemaVersion": {
+          "const": "goldenpath.assurance/v1"
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": [
+            "R0",
+            "R1",
+            "R2",
+            "R3",
+            "R4"
+          ]
+        },
+        "policyDigest": {
+          "$ref": "#/$defs/sha256Digest"
+        },
+        "planDigest": {
+          "$ref": "#/$defs/sha256Digest"
+        },
+        "architectureMetadataDigest": {
+          "$ref": "#/$defs/sha256Digest"
+        },
+        "requiredGateIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/gateId"
+          }
+        },
+        "runtimeValidationRequired": {
+          "type": "boolean"
+        },
+        "previewEnvironmentRequired": {
+          "type": "boolean"
+        },
+        "humanApprovalGateIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/gateId"
+          }
+        },
+        "autonomy": {
+          "type": "string",
+          "enum": [
+            "automated",
+            "policy-bounded",
+            "guarded",
+            "supervised",
+            "human-authorized"
+          ]
+        }
       }
     }
   }
