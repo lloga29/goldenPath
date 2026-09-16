@@ -54,6 +54,9 @@ jobs:
       - name: Validate YAML and JSON syntax
         run: python3 scripts/check-structured-files.py
 
+      - name: Validate evidence contract fail-closed semantics
+        run: python3 scripts/test-evidence-contract.py
+
       - name: Validate shell syntax
         shell: bash
         run: |
