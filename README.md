@@ -1,8 +1,4 @@
-<p align="center">
-  <a href="https://github.com/lloga29/goldenPath">
-    <img src="./docs/assets/branding/goldenpath-logo.png" alt="GoldenPath logo" width="420">
-  </a>
-</p>
+<p align="center"><img src="docs/assets/branding/goldenpath-logo.png" alt="GoldenPath Logo"></p>
 
 <h3 align="center">The paved road from source code to production.</h3>
 
