@@ -1,82 +1,60 @@
-# Changelog - Golden Path Platform
+# Changelog - GoldenPath
 
-All notable changes to this project are documented here.
+All notable repository changes are documented here. This changelog describes repository evolution and must not be interpreted as runtime or production validation.
 
-## [Unreleased] - Repository Validation, GitOps Reconciliation, and CI Supply-Chain Hardening
+The public repository currently has no tagged GitHub release baseline. Earlier pre-publication iterations are therefore described as an untagged baseline instead of being presented as dated releases that cannot be verified from repository tags.
+
+## [Unreleased] - Public Reference Baseline
 
 ### Added
+
 - Active root-level repository validation for English-only content, structured files, shell syntax, Markdown links, Terraform modules/tests/stacks, GitOps/policy contracts, and the Go service template.
+- A stable `Repository validation gate` that aggregates required/applicable validation domains for branch-protection use.
+- Full reachable-history secret scanning with pinned, checksum-verified Gitleaks and a fail-closed runtime canary.
+- Versioned `goldenpath.evidence/v1` Evidence Manifest semantics with explicit `PASS`, `FAIL`, `INFRASTRUCTURE_FAILURE`, and `SKIP_ALLOWED` outcomes.
+- Versioned Architecture as Code and `goldenpath.assurance/v1` R0-R4 risk-adaptive assurance semantics.
+- Fail-closed policy-exception validation and exact-scope exception application for Terraform/Conftest paths while Gatekeeper remains independently strict.
+- Multi-provider Terraform policy coverage for mapped AWS, Azure, and Google Cloud public-access, metadata, and least-privilege outcomes.
 - Argo CD-native multi-source Helm reconciliation for shared platform add-ons.
-- Versioned platform Helm values and 21 chart/environment renders in root CI.
+- Exact platform chart/environment rendering in root CI for the supported reference matrix.
 - Envoy Gateway and a platform-owned `GatewayClass/golden-path` as the Gateway API reference baseline.
-- ADRs for Argo CD-native platform reconciliation and Gateway API/Envoy Gateway.
-- ingress-nginx to Gateway API migration runbook.
-- Executable GitOps contract validation that rejects active Flux dependencies, deprecated Kustomize `commonLabels`, wildcard platform source repositories, non-exact chart version expressions, and an ingress-nginx platform component.
-- Executable root-CI supply-chain validation for immutable action references, explicit runner families, verified tool downloads, and hash-locked Python installs.
-- CPython 3.13.15-specific hash locks for structured-file tooling and the complete Copier CI dependency graph on Ubuntu 24.04 x86_64.
+- ADRs, runbooks, architecture documentation, security guidance, maturity model, public-release runbook, and an evidence-aware audit checklist.
+- A working Go paved-road service template with non-interactive rendering, format/vet/test/build validation, immutable base-image digests, and a Distroless non-root runtime.
+- Reviewable Dependabot configuration for active GitHub Actions and implemented Go-template container dependencies.
 
 ### Changed
-- Standardized repository documentation on English and enforced the rule in CI.
-- Reframed the repository as a production-oriented Golden Path reference implementation.
-- Added architecture, security, operations, governance, standards, maturity, and roadmap documentation.
-- Added operational runbooks and Architecture Decision Records.
-- Corrected documentation that presented roadmap templates as already implemented.
-- Documented the consolidated-repository limitation for nested GitHub Actions workflows.
-- Made Argo CD the sole authoritative Kubernetes reconciliation engine in the reference platform layer.
-- Migrated Kustomize labels to the current transformer while preserving selector behavior.
-- Moved placeholder secret-store configuration out of active desired state and into an explicit `.invalid` example.
-- Removed ingress-nginx from the recommended new-production baseline; existing deployments require a controlled migration.
-- Pinned every active external GitHub Action to a full commit SHA and replaced `ubuntu-latest` with the explicit `ubuntu-24.04` runner family.
-- Added SHA-256 verification for Kustomize, Helm, and Conftest executable archives before extraction/installation.
-- Upgraded Conftest to 0.70.0 while keeping current Rego v0 policy semantics explicit through `--rego-version v0`; Rego v1 migration is tracked in issue #30.
-- Pinned the Go template smoke-test runtime to Go 1.26.8.
-- Documented that exact version pins, commit SHAs, checksums, signatures, provenance, and hosted-runner labels provide different assurance properties and must not be conflated.
 
-## [0.2.0] - 2024-01-20 - Hardening Release
+- Standardized repository documentation and contribution content on English and enforced the convention in CI.
+- Reframed GoldenPath as a production-oriented reference implementation whose claims are bounded by available evidence.
+- Established Argo CD as the sole authoritative Kubernetes reconciler for the reference platform layer.
+- Removed active Flux reconciliation dependencies from platform desired state.
+- Migrated the executable Conftest policy bundle to Rego v1 semantics and Conftest 0.70.0 without a v0 compatibility flag.
+- Replaced deprecated Kustomize `commonLabels` usage while preserving explicit selector behavior.
+- Removed ingress-nginx from the recommended new-production baseline and documented controlled migration to Gateway API / Envoy Gateway.
+- Migrated Loki, Tempo, cert-manager, External Secrets, kube-prometheus-stack, and Gatekeeper reference definitions to maintained/current chart baselines tracked by repository validation.
+- Normalized Google Cloud object-storage labels to provider-native constraints while preserving fail-closed ownership policy behavior.
+- Routed Terraform module/platform-stack changes through policy validation as well as Terraform validation.
+- Kept provider encryption differences explicit instead of claiming false AWS/Azure/GCP configuration symmetry.
+- Pinned active external GitHub Actions to immutable commit SHAs and replaced mutable hosted-runner aliases with the explicit `ubuntu-24.04` family.
+- Added checksum verification for downloaded CI executables and hash-locked active Python CI dependencies.
 
-### terraform-modules/
-- **fix:** Added `docs/header.md` and `docs/footer.md` for terraform-docs.
-- **fix:** Added `.secrets.baseline` for detect-secrets.
-- **feat:** Added a `Makefile` with standard commands (`fmt`, `validate`, `lint`, `test`, `docs`).
-- **fix:** Improved `scripts/validate-all.sh` with dependency checks.
+### Security
 
-### platform-stacks/
-- **fix:** Completed the ACME reference client structure with environment examples.
-- **feat:** Added CI/CD workflow blueprints with tool installation.
-- **docs:** Added templates for new clients and environments.
+- The complete reachable Git history is scanned for secrets on every active root validation run.
+- Secret scanning is trusted only after a canary secret is detected with the expected fail-closed exit behavior.
+- Repository evidence, runtime evidence, and production validation are explicitly separated throughout documentation and machine-readable assurance contracts.
+- Production/runtime claims require evidence bound to exact source, target, and relevant artifact/desired-state identities.
 
-### gitops-config/
-- **fix:** Added `clusters/staging/cluster-config.yaml`.
-- **fix:** Completed the `payment-api` staging overlay.
-- **feat:** Added platform base definitions for ingress-nginx, cert-manager, External Secrets, Prometheus stack, Loki, Tempo, and Gatekeeper.
-- **feat:** Added platform overlays for development, staging, and production.
-- **docs:** Added promotion and rollback guidance.
-- **fix:** Improved `scripts/promote.sh` with `:latest` validation and `yq` support.
-- **fix:** Improved `scripts/rollback.sh` with an emergency mode.
+## Pre-publication baseline (untagged)
 
-### service-templates/
-- **fix:** Completed the Go template with handlers, middleware, and configuration.
-- **fix:** Updated the Dockerfile to use a distroless runtime image and removed the invalid runtime health check.
-- **feat:** Added version injection through Go linker flags.
-- **feat:** Added pre-commit configuration to the template.
+Before the current public-reference baseline, the repository established the initial consolidated structure and core patterns that were later hardened and corrected. This work included:
 
-### platform-policies/
-- **feat:** Added immutable-image, security-context, and resource-requirement policies.
-- **feat:** Added `policy-exceptions.yaml` as a reference exception inventory.
+- reusable Terraform networking, IAM/OIDC, and object-storage module references;
+- dev/staging/prod GitOps and Kustomize layout;
+- initial Argo CD delivery structure;
+- initial OPA/Conftest and Gatekeeper policy examples;
+- the first Go service-template implementation;
+- promotion and rollback scripts/runbooks;
+- initial observability, security, operations, and developer-experience documentation.
 
-### Documentation
-- **docs:** Added a 15-minute quickstart and operational runbooks.
-- **docs:** Added an audit checklist to track remaining gaps.
-
-## [0.1.0] - 2024-01-15 - Initial Release
-
-### Added
-- Initial consolidated repository structure.
-- Initial Terraform VPC, IAM, OIDC, and storage references.
-- Initial Argo CD/GitOps structure.
-- Go service template skeleton.
-- Initial OPA/Conftest policies.
-- CI/CD workflow blueprints.
-- Initial documentation.
-
-> Historical entries describe the intent and state of the project at the time. The current repository tree and current documentation are authoritative for capabilities that exist today.
+These entries describe pre-publication repository evolution only. They are intentionally not assigned release dates or version tags here because the current GitHub repository does not contain corresponding release tags. The current tree, exact commit history, active CI, and evidence documentation are authoritative for capabilities that exist today.
