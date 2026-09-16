@@ -6,8 +6,10 @@ namespace: payments-staging
 resources:
   - ../../base
 
-commonLabels:
-  environment: staging
+labels:
+  - pairs:
+      environment: staging
+    includeSelectors: true
 
 images:
   - name: ghcr.io/org/payment-api
