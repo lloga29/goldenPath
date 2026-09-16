@@ -1,7 +1,7 @@
-# Pre-commit hooks para {{ project_name }}
+# Optional local quality hooks. CI is the authoritative merge gate.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -10,23 +10,30 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
 
-  - repo: https://github.com/dnephin/pre-commit-golang
-    rev: v0.5.1
+  - repo: local
     hooks:
-      - id: go-fmt
+      - id: gofmt
+        name: gofmt check
+        entry: bash -c 'files="$(gofmt -l .)"; test -z "$files" || { echo "$files"; exit 1; }'
+        language: system
+        pass_filenames: false
       - id: go-vet
-      - id: go-imports
-      - id: go-cyclo
-        args: [-over=15]
-      - id: golangci-lint
+        name: go vet
+        entry: go vet ./...
+        language: system
+        pass_filenames: false
+      - id: go-test
+        name: go test
+        entry: go test ./...
+        language: system
+        pass_filenames: false
 
   - repo: https://github.com/hadolint/hadolint
     rev: v2.12.0
     hooks:
       - id: hadolint
-        args: ['--ignore', 'DL3018']
 
   - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
+    rev: v1.5.0
     hooks:
       - id: detect-secrets

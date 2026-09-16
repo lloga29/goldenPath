@@ -1,52 +1,34 @@
-# Build stage
-FROM golang:1.22-alpine AS builder
+# syntax=docker/dockerfile:1
+ARG GO_VERSION={{ go_version }}
+FROM golang:${GO_VERSION}-bookworm AS builder
 
 ARG VERSION=dev
-ARG BUILD_TIME=unknown
 ARG GIT_COMMIT=unknown
 
-WORKDIR /app
+WORKDIR /src
 
-# Instalar dependencias del sistema
-RUN apk add --no-cache git ca-certificates tzdata
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
 
-# Copiar go.mod y go.sum primero para cache de dependencias
-COPY go.mod go.sum* ./
-RUN go mod download
-
-# Copiar código fuente
 COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath \
+    -ldflags="-w -s -X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT}" \
+    -o /out/server \
+    ./cmd
 
-# Build binario estático con información de versión
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-    -ldflags="-w -s -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME} -X main.GitCommit=${GIT_COMMIT}" \
-    -o /app/server \
-    ./cmd/main.go
-
-# Runtime stage - usando distroless para mejor seguridad
 FROM gcr.io/distroless/static-debian12:nonroot
 
-# Labels para trazabilidad
-LABEL org.opencontainers.image.source="https://github.com/org/{{ project_name }}"
+ARG VERSION=dev
+ARG GIT_COMMIT=unknown
+
+LABEL org.opencontainers.image.source="https://github.com/{{ github_owner }}/{{ project_name }}"
 LABEL org.opencontainers.image.description="{{ description }}"
 LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.revision="${GIT_COMMIT}"
 
-# Copiar zona horaria
-COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /out/server /server
 
-# Copiar certificados CA
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-
-# Copiar binario
-COPY --from=builder /app/server /server
-
-# Usuario no-root (ya definido en nonroot image)
 USER nonroot:nonroot
-
-# Puerto de la aplicación
 EXPOSE {{ port }}
-
-# Health check nativo de Kubernetes (usar probes en deployment)
-# No usar HEALTHCHECK de Docker en Kubernetes
-
 ENTRYPOINT ["/server"]

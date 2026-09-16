@@ -1,51 +1,71 @@
-// Package config gestiona la configuración del servicio
+// Package config loads and validates service configuration.
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
-// Config estructura de configuración
+// Config contains runtime configuration that is safe to log when values are not secrets.
 type Config struct {
-	Port        string
+	Port        int
 	Environment string
 	LogLevel    string
-{% if has_database %}
-	DatabaseURL string
-{% endif %}
-{% if has_cache %}
-	RedisURL    string
-{% endif %}
 }
 
-// Load carga la configuración desde variables de entorno
-func Load() *Config {
-	return &Config{
-		Port:        getEnv("PORT", "{{ port }}"),
-		Environment: getEnv("ENVIRONMENT", "development"),
-		LogLevel:    getEnv("LOG_LEVEL", "info"),
-{% if has_database %}
-		DatabaseURL: getEnv("DATABASE_URL", ""),
-{% endif %}
-{% if has_cache %}
-		RedisURL:    getEnv("REDIS_URL", ""),
-{% endif %}
+// Load reads configuration from environment variables and validates paved-road values.
+func Load() (Config, error) {
+	port, err := strconv.Atoi(getEnv("PORT", "{{ port }}"))
+	if err != nil || port < 1 || port > 65535 {
+		return Config{}, fmt.Errorf("PORT must be an integer between 1 and 65535")
 	}
+
+	environment := strings.ToLower(getEnv("ENVIRONMENT", "local"))
+	if !validEnvironment(environment) {
+		return Config{}, fmt.Errorf("ENVIRONMENT must be one of local, dev, staging, prod, ephemeral")
+	}
+
+	logLevel := strings.ToLower(getEnv("LOG_LEVEL", "info"))
+	if !validLogLevel(logLevel) {
+		return Config{}, fmt.Errorf("LOG_LEVEL must be one of debug, info, warn, error")
+	}
+
+	return Config{
+		Port:        port,
+		Environment: environment,
+		LogLevel:    logLevel,
+	}, nil
+}
+
+// Address returns the HTTP server listen address.
+func (c Config) Address() string {
+	return fmt.Sprintf(":%d", c.Port)
 }
 
 func getEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
+	value, exists := os.LookupEnv(key)
+	if !exists || value == "" {
+		return defaultValue
 	}
-	return defaultValue
+	return value
 }
 
-func getEnvAsInt(key string, defaultValue int) int {
-	if value, exists := os.LookupEnv(key); exists {
-		if i, err := strconv.Atoi(value); err == nil {
-			return i
-		}
+func validEnvironment(value string) bool {
+	switch value {
+	case "local", "dev", "staging", "prod", "ephemeral":
+		return true
+	default:
+		return false
 	}
-	return defaultValue
+}
+
+func validLogLevel(value string) bool {
+	switch value {
+	case "debug", "info", "warn", "error":
+		return true
+	default:
+		return false
+	}
 }
