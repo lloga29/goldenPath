@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "goldenpath.evidence/v1",
+  "evidenceId": "risk-adaptive-missing-gate",
+  "generatedAt": "2026-09-16T10:20:00Z",
+  "claimLevel": "reference",
+  "decision": "READY",
+  "source": {
+    "repository": "lloga29/goldenPath",
+    "commitSha": "2222222222222222222222222222222222222222",
+    "workflowName": "Repository validation",
+    "workflowRunUrl": "https://github.com/lloga29/goldenPath/actions/runs/2001"
+  },
+  "context": {
+    "environment": "ephemeral",
+    "capability": "risk-adaptive-assurance",
+    "service": "orders-api"
+  },
+  "artifact": {"type": "none", "identity": "repository-source"},
+  "inputs": {
+    "sourceSha": "2222222222222222222222222222222222222222",
+    "policyDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "architectureDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "desiredStateDigest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "assurance": {
+    "schemaVersion": "goldenpath.assurance/v1",
+    "riskLevel": "R2",
+    "policyDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "planDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "architectureMetadataDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "requiredGateIds": ["baseline-ci", "evidence-contract", "policy-validation", "unit-tests", "supply-chain-verification", "integration-tests", "architecture-conformance", "preview-environment"],
+    "runtimeValidationRequired": true,
+    "previewEnvironmentRequired": true,
+    "humanApprovalGateIds": [],
+    "autonomy": "guarded"
+  },
+  "gates": [
+    {"id":"baseline-ci","required":true,"skipAllowed":false,"result":"PASS","observedAt":"2026-09-16T10:19:10Z","evidenceUrl":"https://github.com/lloga29/goldenPath/actions/runs/2001"},
+    {"id":"evidence-contract","required":true,"skipAllowed":false,"result":"PASS","observedAt":"2026-09-16T10:19:11Z","evidenceUrl":"https://github.com/lloga29/goldenPath/actions/runs/2001"},
+    {"id":"policy-validation","required":true,"skipAllowed":false,"result":"PASS","observedAt":"2026-09-16T10:19:12Z","evidenceUrl":"https://github.com/lloga29/goldenPath/actions/runs/2001"},
+    {"id":"unit-tests","required":true,"skipAllowed":false,"result":"PASS","observedAt":"2026-09-16T10:19:13Z","evidenceUrl":"https://github.com/lloga29/goldenPath/actions/runs/2001"},
+    {"id":"supply-chain-verification","required":true,"skipAllowed":false,"result":"PASS","observedAt":"2026-09-16T10:19:14Z","evidenceUrl":"https://github.com/lloga29/goldenPath/actions/runs/2001"},
+    {"id":"integration-tests","required":true,"skipAllowed":false,"result":"PASS","observedAt":"2026-09-16T10:19:15Z","evidenceUrl":"https://github.com/lloga29/goldenPath/actions/runs/2001"},
+    {"id":"architecture-conformance","required":true,"skipAllowed":false,"result":"PASS","observedAt":"2026-09-16T10:19:16Z","evidenceUrl":"https://github.com/lloga29/goldenPath/actions/runs/2001"}
+  ],
+  "runtimeEvidence": [
+    {"kind":"smoke","result":"PASS","observedAt":"2026-09-16T10:19:30Z","evidenceUrl":"https://github.com/lloga29/goldenPath/actions/runs/2001"}
+  ]
+}
