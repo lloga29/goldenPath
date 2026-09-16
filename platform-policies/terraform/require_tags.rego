@@ -1,7 +1,7 @@
 # Require ownership, environment, and cost-allocation tags on supported AWS resources.
 package terraform.compliance
 
-import future.keywords.in
+import rego.v1
 
 required_tags := {"Environment", "Team", "CostCenter", "Owner"}
 
@@ -25,7 +25,7 @@ taggable_types := {
     "aws_dynamodb_table"
 }
 
-deny[msg] {
+deny contains msg if {
     resource := input.resource_changes[_]
     resource.type in taggable_types
     resource.change.actions[_] in ["create", "update"]
@@ -36,7 +36,7 @@ deny[msg] {
     msg := sprintf("Terraform resource '%s' is missing required tags: %v", [resource.address, missing])
 }
 
-deny[msg] {
+deny contains msg if {
     resource := input.resource_changes[_]
     resource.type in taggable_types
     resource.change.actions[_] in ["create", "update"]
@@ -47,26 +47,26 @@ deny[msg] {
     msg := sprintf("Terraform resource '%s' has invalid Environment tag '%s'. Allowed values: dev, staging, prod, ephemeral.", [resource.address, env])
 }
 
-valid_environment(env) {
+valid_environment(env) if {
     env in ["dev", "staging", "prod", "ephemeral"]
 }
 
-warn[msg] {
+warn contains msg if {
     resource := input.resource_changes[_]
     resource.type in taggable_types
     tags := object.get(resource.change.after, "tags", {})
     cost_center := object.get(tags, "CostCenter", "")
     cost_center != ""
-    not re_match(`^cc-[a-z0-9]+(-[a-z0-9]+)*$`, cost_center)
+    not regex.match(`^cc-[a-z0-9]+(-[a-z0-9]+)*$`, cost_center)
     msg := sprintf("Terraform resource '%s' has CostCenter '%s' with an invalid format. Use cc-<segment>[-<segment>...].", [resource.address, cost_center])
 }
 
-warn[msg] {
+warn contains msg if {
     resource := input.resource_changes[_]
     resource.type in taggable_types
     tags := object.get(resource.change.after, "tags", {})
     owner := object.get(tags, "Owner", "")
     owner != ""
-    not re_match(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`, owner)
+    not regex.match(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`, owner)
     msg := sprintf("Terraform resource '%s' has Owner '%s', which is not a valid email address.", [resource.address, owner])
 }

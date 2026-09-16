@@ -1,40 +1,40 @@
 # Enforce a restrictive security context for Kubernetes workloads.
 package kubernetes.security
 
-import future.keywords.in
+import rego.v1
 
 controller_kinds := {"Deployment", "StatefulSet", "DaemonSet", "Job"}
 
-pod_specs[spec] {
+pod_specs contains spec if {
     input.kind == "Pod"
     spec := input.spec
 }
 
-pod_specs[spec] {
+pod_specs contains spec if {
     input.kind in controller_kinds
     spec := input.spec.template.spec
 }
 
-pod_specs[spec] {
+pod_specs contains spec if {
     input.kind == "CronJob"
     spec := input.spec.jobTemplate.spec.template.spec
 }
 
-runs_as_non_root(pod_security_context, container_security_context) {
+runs_as_non_root(pod_security_context, container_security_context) if {
     object.get(container_security_context, "runAsNonRoot", false) == true
 }
 
-runs_as_non_root(pod_security_context, container_security_context) {
+runs_as_non_root(pod_security_context, container_security_context) if {
     object.get(pod_security_context, "runAsNonRoot", false) == true
 }
 
-drops_all_capabilities(container_security_context) {
+drops_all_capabilities(container_security_context) if {
     capabilities := object.get(container_security_context, "capabilities", {})
     drops := object.get(capabilities, "drop", [])
     drops[_] == "ALL"
 }
 
-deny[msg] {
+deny contains msg if {
     spec := pod_specs[_]
     pod_security_context := object.get(spec, "securityContext", {})
     container := spec.containers[_]
@@ -43,7 +43,7 @@ deny[msg] {
     msg := sprintf("%s '%s': container '%s' must run as non-root at the pod or container level.", [input.kind, input.metadata.name, container.name])
 }
 
-deny[msg] {
+deny contains msg if {
     spec := pod_specs[_]
     container := spec.containers[_]
     container_security_context := object.get(container, "securityContext", {})
@@ -51,7 +51,7 @@ deny[msg] {
     msg := sprintf("%s '%s': container '%s' must set allowPrivilegeEscalation=false.", [input.kind, input.metadata.name, container.name])
 }
 
-warn[msg] {
+warn contains msg if {
     spec := pod_specs[_]
     container := spec.containers[_]
     container_security_context := object.get(container, "securityContext", {})
@@ -59,7 +59,7 @@ warn[msg] {
     msg := sprintf("%s '%s': container '%s' should set readOnlyRootFilesystem=true.", [input.kind, input.metadata.name, container.name])
 }
 
-warn[msg] {
+warn contains msg if {
     spec := pod_specs[_]
     container := spec.containers[_]
     container_security_context := object.get(container, "securityContext", {})

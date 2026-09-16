@@ -1,50 +1,50 @@
 # Prevent unintended public exposure for supported AWS resource types.
 package terraform.security
 
-import future.keywords.in
+import rego.v1
 
 sensitive_ports := {22, 3389, 3306, 5432, 27017, 6379, 9200, 11211}
 
-public_cidr(cidr) {
+public_cidr(cidr) if {
     cidr in ["0.0.0.0/0", "::/0"]
 }
 
-sensitive_port_in_range(from_port, to_port) {
+sensitive_port_in_range(from_port, to_port) if {
     port := sensitive_ports[_]
     from_port <= port
     to_port >= port
 }
 
-same_resource_identity(left, right) {
+same_resource_identity(left, right) if {
     object.get(left, "module_address", "") == object.get(right, "module_address", "")
     left.name == right.name
     object.get(left, "index", "") == object.get(right, "index", "")
 }
 
-same_bucket_reference(bucket, companion) {
+same_bucket_reference(bucket, companion) if {
     bucket_name := object.get(bucket.change.after, "bucket", "")
     bucket_name != ""
     object.get(companion.change.after, "bucket", "") == bucket_name
 }
 
-same_bucket_reference(bucket, companion) {
+same_bucket_reference(bucket, companion) if {
     same_resource_identity(bucket, companion)
 }
 
-s3_public_access_block(bucket) {
+s3_public_access_block(bucket) if {
     companion := input.resource_changes[_]
     companion.type == "aws_s3_bucket_public_access_block"
     same_bucket_reference(bucket, companion)
 }
 
-s3_public_access_block_is_secure(block) {
+s3_public_access_block_is_secure(block) if {
     block.block_public_acls == true
     block.block_public_policy == true
     block.ignore_public_acls == true
     block.restrict_public_buckets == true
 }
 
-deny[msg] {
+deny contains msg if {
     resource := input.resource_changes[_]
     resource.type == "aws_s3_bucket"
     resource.change.actions[_] in ["create", "update"]
@@ -53,7 +53,7 @@ deny[msg] {
     msg := sprintf("S3 bucket '%s' must not use public ACL '%s'.", [resource.address, acl])
 }
 
-deny[msg] {
+deny contains msg if {
     resource := input.resource_changes[_]
     resource.type == "aws_s3_bucket"
     resource.change.actions[_] in ["create", "update"]
@@ -61,7 +61,7 @@ deny[msg] {
     msg := sprintf("S3 bucket '%s' must have a matching aws_s3_bucket_public_access_block resource.", [resource.address])
 }
 
-deny[msg] {
+deny contains msg if {
     resource := input.resource_changes[_]
     resource.type == "aws_s3_bucket_public_access_block"
     resource.change.actions[_] in ["create", "update"]
@@ -69,7 +69,7 @@ deny[msg] {
     msg := sprintf("S3 public access block '%s' must enable all four public-access protections.", [resource.address])
 }
 
-deny[msg] {
+deny contains msg if {
     resource := input.resource_changes[_]
     resource.type == "aws_security_group_rule"
     resource.change.actions[_] in ["create", "update"]
@@ -81,7 +81,7 @@ deny[msg] {
     msg := sprintf("Security group rule '%s' exposes a sensitive port range (%v-%v) to %s.", [resource.address, resource.change.after.from_port, resource.change.after.to_port, cidr])
 }
 
-deny[msg] {
+deny contains msg if {
     resource := input.resource_changes[_]
     resource.type == "aws_security_group"
     resource.change.actions[_] in ["create", "update"]
@@ -93,7 +93,7 @@ deny[msg] {
     msg := sprintf("Security group '%s' exposes a sensitive port range (%v-%v) to %s.", [resource.address, ingress.from_port, ingress.to_port, cidr])
 }
 
-deny[msg] {
+deny contains msg if {
     resource := input.resource_changes[_]
     resource.type == "aws_db_instance"
     resource.change.actions[_] in ["create", "update"]
@@ -101,7 +101,7 @@ deny[msg] {
     msg := sprintf("RDS instance '%s' must not be publicly accessible.", [resource.address])
 }
 
-deny[msg] {
+deny contains msg if {
     resource := input.resource_changes[_]
     resource.type == "aws_redshift_cluster"
     resource.change.actions[_] in ["create", "update"]

@@ -43,11 +43,13 @@ The active Python lock files were resolved and verified for **CPython 3.13.15 on
 
 A Python runtime, operating-system family, architecture, or top-level dependency change requires regenerating the lock under the new target environment and reviewing the complete dependency and hash diff. Do not copy hashes from a different runtime/platform and treat them as equivalent evidence.
 
-## Policy language compatibility
+## Policy language baseline
 
-Conftest `0.70.0` uses Rego v1 as its default parser. The current Golden Path policy bundle is still written in Rego v0 syntax, so root CI invokes Conftest with the explicit `--rego-version v0` compatibility mode. Positive and intentionally invalid policy fixtures prove that the existing policy semantics remain enforced under the upgraded Conftest binary.
+Conftest `0.70.0` uses Rego v1 as its default parser. The executable Golden Path Kubernetes and Terraform policy modules use explicit Rego v1 syntax, including `import rego.v1`, `if` rule bodies, and `contains` for partial-set rules. Root CI does not pass a Rego v0 compatibility flag.
 
-Migration of the policy bundle to Rego v1 is tracked separately in issue #30. The compatibility flag must not be removed until all rules parse under Rego v1 and the same regression fixtures demonstrate equivalent behavior.
+Positive and intentionally invalid Kubernetes/Terraform fixtures exercise the same policy contract under the Rego v1 parser. A future policy-toolchain update must preserve those outcomes or explicitly document and review the semantic change.
+
+Gatekeeper ConstraintTemplates are a separate admission-runtime surface and are not treated as proof of live-cluster enforcement by the Conftest fixture suite. Their runtime compatibility must still be validated against the selected Gatekeeper/OPA version before production enforcement.
 
 ## Build rules
 
