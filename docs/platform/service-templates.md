@@ -31,7 +31,8 @@ The Go template currently provides:
 - full-Git-SHA GHCR publication from `main` only;
 - BuildKit SBOM and max-level provenance attestations on published images;
 - post-push retrieval and structural validation of the registry-attached SPDX SBOM by the exact immutable image digest;
-- keyless Cosign image signing through GitHub OIDC;
+- post-push retrieval and structural validation of BuildKit SLSA provenance by the same immutable image digest;
+- keyless Cosign image signing through GitHub OIDC followed by identity-bound verification of the exact signed digest;
 - ownership metadata and a runbook placeholder;
 - explicit separation between application source and GitOps desired state.
 
@@ -45,17 +46,19 @@ The repository includes:
 ./service-templates/scripts/render-go-template-smoke-test.sh
 ```
 
-The script renders representative output, then runs Go formatting validation, vet, tests, build, container construction, immutable-base checks, and static validation of the generated release-SBOM contract. Root CI executes this smoke test for template-affecting changes.
+The script renders representative output, then runs Go formatting validation, vet, tests, build, container construction, immutable-base checks, and static validation of the generated release-evidence contract for SBOM, provenance, signing, and signature verification. Root CI executes this smoke test for template-affecting changes.
 
-The root smoke test proves repository/reference behavior only. It does not push a generated service image to GHCR, so the post-push SBOM retrieval remains runtime evidence that must be established by an actual generated service delivery repository.
+The root smoke test proves repository/reference behavior only. It does not push a generated service image to GHCR, request a live GitHub OIDC certificate, or retrieve registry attestations/signatures. Those post-push checks become runtime evidence only when an actual generated service delivery repository executes the publish path successfully.
 
 ## Artifact lifecycle
 
 The application pipeline builds once and identifies an image by the full Git SHA. The GitOps repository promotes that same immutable image through environments. `:latest` publication is not part of the paved road.
 
-On a `main` publication, BuildKit attaches an SBOM to the pushed image. The workflow then addresses the artifact as `IMAGE_NAME@<build-output-digest>`, extracts `.SBOM.SPDX` with `docker buildx imagetools inspect`, and fails closed unless the payload is a parseable SPDX document with creation metadata and a non-empty package inventory. The SBOM therefore follows the immutable registry artifact rather than a mutable tag.
+On a `main` publication, BuildKit attaches an SBOM and max-level provenance to the pushed image. The workflow addresses the artifact as `IMAGE_NAME@<build-output-digest>`, extracts `.SBOM.SPDX` and `.Provenance.SLSA` with `docker buildx imagetools inspect`, and fails closed unless both payloads have the expected structure. It then signs that exact digest with keyless Cosign and immediately verifies the signature against the generated workflow identity and GitHub Actions OIDC issuer. SBOM, provenance, signing, and post-sign verification therefore follow the immutable registry artifact rather than a mutable tag.
 
-External CI Actions remain version-tag pinned in the generated template; stronger immutable dependency pinning is a separate supply-chain concern from the SBOM contract.
+This release-time verification is not deployment-time policy enforcement. A production delivery path must independently verify the trusted signature/provenance before admitting or promoting an artifact when that higher assurance level is required.
+
+External CI Actions remain version-tag pinned in the generated template; stronger immutable dependency pinning is a separate supply-chain concern from the release-evidence contract.
 
 ## Ownership boundary
 

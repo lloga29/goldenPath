@@ -184,10 +184,76 @@ jobs:
 
           echo "Verified registry-attached SPDX SBOM for ${IMAGE_REF}" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Verify published SLSA provenance by immutable digest
+        env:
+          DIGEST: {% raw %}${{ steps.build.outputs.digest }}{% endraw %}
+          PROVENANCE_PATH: {% raw %}${{ runner.temp }}{% endraw %}/provenance.slsa.json
+        run: |
+          if [[ ! "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "ERROR: build output digest is missing or malformed: $DIGEST" >&2
+            exit 1
+          fi
+
+          IMAGE_REF="${IMAGE_NAME}@${DIGEST}"
+          docker buildx imagetools inspect "$IMAGE_REF" \
+            --format '{% raw %}{{ json .Provenance.SLSA }}{% endraw %}' > "$PROVENANCE_PATH"
+
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          path = Path(os.environ["PROVENANCE_PATH"])
+          try:
+              document = json.loads(path.read_text(encoding="utf-8"))
+          except (OSError, json.JSONDecodeError) as exc:
+              print(f"ERROR: cannot read valid SLSA provenance from {path}: {exc}", file=sys.stderr)
+              raise SystemExit(1)
+
+          if not isinstance(document, dict):
+              print("ERROR: published provenance payload is not a JSON object", file=sys.stderr)
+              raise SystemExit(1)
+          if document.get("buildType") != "https://mobyproject.org/buildkit@v1":
+              print("ERROR: published provenance has an unexpected BuildKit buildType", file=sys.stderr)
+              raise SystemExit(1)
+          if not isinstance(document.get("builder"), dict):
+              print("ERROR: published provenance is missing builder metadata", file=sys.stderr)
+              raise SystemExit(1)
+          if not isinstance(document.get("invocation"), dict):
+              print("ERROR: published provenance is missing invocation metadata", file=sys.stderr)
+              raise SystemExit(1)
+          materials = document.get("materials")
+          if not isinstance(materials, list) or not materials:
+              print("ERROR: published provenance contains no build materials", file=sys.stderr)
+              raise SystemExit(1)
+          metadata = document.get("metadata")
+          if not isinstance(metadata, dict):
+              print("ERROR: published provenance is missing build metadata", file=sys.stderr)
+              raise SystemExit(1)
+          for field in ("buildStartedOn", "buildFinishedOn"):
+              if not isinstance(metadata.get(field), str) or not metadata[field]:
+                  print(f"ERROR: published provenance is missing metadata.{field}", file=sys.stderr)
+                  raise SystemExit(1)
+
+          print(f"PASS: verified BuildKit SLSA provenance with {len(materials)} material entries")
+          PY
+
+          echo "Verified registry-attached SLSA provenance for ${IMAGE_REF}" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Install Cosign
         uses: sigstore/cosign-installer@v4.1.2
 
-      - name: Sign published image with GitHub OIDC
+      - name: Sign and verify published image with GitHub OIDC
         env:
           DIGEST: {% raw %}${{ steps.build.outputs.digest }}{% endraw %}
-        run: cosign sign --yes "{% raw %}${{ env.IMAGE_NAME }}{% endraw %}@${DIGEST}"
+        run: |
+          IMAGE_REF="${IMAGE_NAME}@${DIGEST}"
+          CERTIFICATE_IDENTITY="https://github.com/{{ github_owner }}/{{ project_name }}/.github/workflows/ci.yaml@refs/heads/main"
+
+          cosign sign --yes "$IMAGE_REF"
+          cosign verify "$IMAGE_REF" \
+            --certificate-identity="$CERTIFICATE_IDENTITY" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" >/dev/null
+
+          echo "Verified keyless Cosign signature for ${IMAGE_REF} from ${CERTIFICATE_IDENTITY}" >> "$GITHUB_STEP_SUMMARY"

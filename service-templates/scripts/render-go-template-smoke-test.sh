@@ -74,14 +74,22 @@ fi
 
 for required_ci_contract in \
     'sbom: true' \
+    'provenance: mode=max' \
     'steps.build.outputs.digest' \
     'IMAGE_REF="${IMAGE_NAME}@${DIGEST}"' \
     'docker buildx imagetools inspect "$IMAGE_REF"' \
     '{{ json .SBOM.SPDX }}' \
     'SPDXRef-DOCUMENT' \
-    'published SBOM contains no package inventory'; do
-    if ! grep -F "$required_ci_contract" "$CI_WORKFLOW" >/dev/null; then
-        echo "ERROR: generated CI is missing required release-SBOM contract: $required_ci_contract" >&2
+    'published SBOM contains no package inventory' \
+    '{{ json .Provenance.SLSA }}' \
+    'https://mobyproject.org/buildkit@v1' \
+    'published provenance contains no build materials' \
+    'cosign sign --yes "$IMAGE_REF"' \
+    'cosign verify "$IMAGE_REF"' \
+    'https://github.com/example/golden-smoke/.github/workflows/ci.yaml@refs/heads/main' \
+    '--certificate-oidc-issuer="https://token.actions.githubusercontent.com"'; do
+    if ! grep -F -- "$required_ci_contract" "$CI_WORKFLOW" >/dev/null; then
+        echo "ERROR: generated CI is missing required release-evidence contract: $required_ci_contract" >&2
         exit 1
     fi
 done
