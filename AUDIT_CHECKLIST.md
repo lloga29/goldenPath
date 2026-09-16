@@ -49,7 +49,7 @@ A higher evidence status must never be inferred from a lower one.
 - [x] Add positive and negative R0-R4 regression fixtures and execute them from active root CI.
 - [ ] Resolve emitted reviewer roles to real organization identities and enforce reviewer requests/approvals in the hosting platform.
 - [ ] Generate and retain Evidence Manifests from a real delivery repository/runtime rather than fixtures only.
-- [ ] Compute and compare policy, architecture, and desired-state digests automatically at evidence-consumption time.
+- [x] Compute and compare policy, architecture, and desired-state digests automatically at evidence-consumption time.
 - [ ] Add durable retention/signing/provenance for production Evidence Manifests before using them as compliance evidence.
 
 ### terraform-modules/
