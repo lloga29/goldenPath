@@ -1,8 +1,72 @@
-# Golden Path
+<p align="center">
+  <a href="https://github.com/lloga29/goldenPath">
+    <img src="https://github.com/lloga29/goldenPath/blob/main/docs/assets/branding/goldenpath-logo.png?raw=1" alt="GoldenPath logo" width="420">
+  </a>
+</p>
 
-A production-oriented **Golden Path reference implementation** for internal developer platforms.
+<h3 align="center">The paved road from source code to production.</h3>
 
-This repository brings together reusable Terraform modules, client and environment stacks, GitOps configuration, Kubernetes platform components, policy-as-code guardrails, service templates, active repository validation, and operational documentation. Its purpose is to provide a paved road that teams can adopt and adapt without hiding the underlying platform decisions.
+<p align="center">
+  <strong>Secure by default · GitOps-driven · Observable · Repeatable</strong>
+</p>
+
+[![Repository validation](https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml/badge.svg?branch=main)](https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml)
+[![English-only repository](https://github.com/lloga29/goldenPath/actions/workflows/english-only.yaml/badge.svg?branch=main)](https://github.com/lloga29/goldenPath/actions/workflows/english-only.yaml)
+
+<p align="center">
+  <a href="docs/QUICKSTART.md">Quickstart</a> ·
+  <a href="docs/architecture/overview.md">Architecture</a> ·
+  <a href="SECURITY.md">Security</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
+
+GoldenPath is a production-oriented **Golden Path reference implementation** for internal developer platforms. It brings together reusable Terraform modules, client and environment stacks, GitOps configuration, Kubernetes platform components, policy-as-code guardrails, service templates, active repository validation, and operational documentation.
+
+Its purpose is to provide a paved road that teams can adopt and adapt without hiding the underlying platform decisions.
+
+## Portfolio highlights
+
+This repository demonstrates an end-to-end Platform Engineering approach rather than a collection of isolated manifests. The implementation is intentionally evidence-driven: capabilities are described as implemented, reference, roadmap, or runtime-dependent according to what the repository can actually prove.
+
+| Engineering area | What the repository demonstrates | Evidence |
+|---|---|---|
+| Platform Engineering | A reusable paved-road model with service templates, environment conventions, governance, and operational documentation | `service-templates/`, `docs/`, `platform-stacks/` |
+| Kubernetes and GitOps | Argo CD as the authoritative reconciler, ApplicationSets/AppProjects, Kustomize overlays, explicit environment promotion, and manual production synchronization | `gitops-config/`, `docs/architecture/`, `docs/operations/` |
+| Infrastructure as Code | Reusable Terraform modules, executable reference stacks, validation, testing, and cloud-provider abstractions | `terraform-modules/`, `platform-stacks/` |
+| Policy as code | OPA/Conftest controls, Gatekeeper examples, negative/positive fixtures, and governed policy exceptions | `platform-policies/`, `gitops-config/policies/` |
+| CI/CD engineering | Root validation with changed-domain detection, pinned toolchains, build/test gates, and reviewable promotion semantics | `.github/workflows/`, `scripts/` |
+| Software supply chain | SHA-pinned external Actions, checksum-verified executable downloads, hash-locked Python tooling, immutable artifact expectations, and provenance-aware service templates | `.github/workflows/`, `.github/requirements/`, `service-templates/` |
+| Observability | A reference platform baseline for Prometheus, Grafana, Loki, and Tempo integrated into the GitOps model | `gitops-config/platform/values/`, `gitops-config/argocd/applicationsets/` |
+| Operational discipline | Runbooks, ADRs, security guidance, support expectations, rollback procedures, audit checklist, and maturity model | `docs/runbooks/`, `docs/adr/`, `SECURITY.md`, `AUDIT_CHECKLIST.md` |
+
+For reviewers evaluating the project as a portfolio artifact, the fastest path is the [15-minute quickstart](docs/QUICKSTART.md), the [architecture overview](docs/architecture/overview.md), and the [audit checklist](AUDIT_CHECKLIST.md). The audit checklist is deliberately conservative: static CI or desired-state configuration is never presented as proof that an external cloud account, cluster, DNS zone, certificate authority, or secret backend is operational.
+
+## Architecture at a glance
+
+```mermaid
+flowchart LR
+    subgraph Build[Build and validate]
+        Dev[Developer] --> Template[Golden Service Template]
+        Template --> PR[Pull Request]
+        PR --> Gates[CI and Policy Gates]
+        Gates --> Artifact[Immutable Artifact]
+    end
+
+    subgraph Deliver[Promote and reconcile]
+        Artifact --> Promotion[Promotion PR]
+        Promotion --> GitOps[GitOps Desired State]
+        GitOps --> Argo[Argo CD]
+        Argo --> Runtime[Dev / Staging / Production]
+    end
+
+    Guardrails[OPA / Conftest / Gatekeeper] --> Gates
+    Guardrails --> Argo
+    IaC[Terraform / Platform Stacks] --> Runtime
+    Gateway[Gateway API / Envoy Gateway] --> Runtime
+    Observability[Prometheus / Grafana / Loki / Tempo] --> Runtime
+```
+
+The reference platform declares Argo CD-native Helm configuration for Envoy Gateway, cert-manager, External Secrets, Prometheus stack, Loki, Tempo, and Gatekeeper. Root CI renders every pinned platform chart for development, staging, and production values before merge. Actual cloud credentials, registries, DNS, secret backends, environment Gateways, certificate issuers, load-balancer behavior, and real cluster endpoints remain environment-specific responsibilities and must not be fabricated in shared desired state.
 
 > **Repository model:** this is a consolidated reference repository. Several directories are designed to become independent repositories in a production organization. Workflows stored under nested `.github/workflows` directories are reference workflows for those future repositories; GitHub Actions only executes workflows from the repository-root `.github/workflows` directory.
 
@@ -38,29 +102,6 @@ This repository brings together reusable Terraform modules, client and environme
 | Terraform stack template | Roadmap | Not present in the repository yet |
 | Operational runbooks | Implemented and expanding | `docs/runbooks/` and `docs/operations/` |
 | Platform product documentation | Implemented in this documentation set | `docs/` |
-
-## Architecture
-
-```mermaid
-flowchart LR
-    Dev[Developer] --> Template[Golden Service Template]
-    Template --> PR[Pull Request]
-    PR --> CI[CI and Policy Gates]
-    CI --> Registry[Immutable Artifact Registry]
-    Registry --> Promotion[Promotion PR]
-    Promotion --> GitOps[GitOps Repository State]
-    GitOps --> Argo[Argo CD]
-    Argo --> DevEnv[Development]
-    Argo --> Staging[Staging]
-    Argo --> Prod[Production]
-    Policies[OPA / Conftest / Gatekeeper] --> CI
-    Policies --> Argo
-    Platform[Platform Add-ons] --> Argo
-    Gateway[Gateway API / Envoy Gateway] --> Platform
-    Obs[Prometheus / Grafana / Loki / Tempo] --> Platform
-```
-
-The reference platform declares Argo CD-native Helm configuration for Envoy Gateway, cert-manager, External Secrets, Prometheus stack, Loki, Tempo, and Gatekeeper. Root CI renders every pinned platform chart for development, staging, and production values before merge. Actual cloud credentials, registries, DNS, secret backends, environment Gateways, certificate issuers, load-balancer behavior, and real cluster endpoints remain environment-specific responsibilities and must not be fabricated in shared desired state.
 
 ## Repository layout
 
@@ -134,6 +175,10 @@ Passing static validation does **not** prove a real cluster, cloud account, DNS 
 ## Production adoption rule
 
 Nothing in this repository should be considered production-enabled merely because a manifest or workflow exists. A capability is production-ready only after it is integrated with real identity, secrets, cloud accounts, clusters, registries, DNS, observability, alerting, ownership, backup/recovery, and organization-level protection rules, and after those controls have been validated in the target environment.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE). The license permits use, modification, and distribution subject to its terms and preserves the patent grant and attribution obligations defined by Apache-2.0.
 
 ## Ownership
 
