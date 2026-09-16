@@ -30,7 +30,7 @@ gitops-config/
 
 `argocd/applicationsets/platform-apps.yaml` combines an explicit upstream chart source with this repository as a `$values` source. Component/chart versions are pinned in the ApplicationSet; values are loaded from `platform/values/<component>/common.yaml` plus an optional environment override.
 
-The current compatibility pins are validated as repository state. Broad dependency refresh work, including the 2026 Grafana Community chart transition, is tracked separately in issue #25 so breaking chart migrations do not get hidden inside the control-plane correction.
+The current support and upgrade status is recorded in the [platform dependency baseline](../docs/platform/dependency-baseline.md). Broad dependency refresh work remains tracked in issue #25 so unrelated breaking chart migrations are reviewed and validated independently.
 
 Envoy Gateway replaces retired ingress-nginx as the reference Gateway API controller. The controller is installed from the upstream OCI Helm chart and `platform/resources/gateway-class.yaml` declares the platform-owned `GatewayClass`.
 

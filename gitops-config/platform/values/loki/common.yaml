@@ -1,9 +1,24 @@
+# Reference Loki baseline for a small monolithic installation.
+# Real production adopters must replace local filesystem storage with a governed
+# object-storage design and validate retention, capacity, backup, and recovery.
+deploymentMode: Monolithic
+
 loki:
   auth_enabled: false
   commonConfig:
     replication_factor: 1
   storage:
     type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2024-04-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+
 singleBinary:
   replicas: 1
   resources:
@@ -13,3 +28,12 @@ singleBinary:
     limits:
       cpu: 500m
       memory: 1Gi
+
+# The community chart keeps Simple Scalable targets enabled by default. They
+# must be explicitly disabled when the reference deployment mode is Monolithic.
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0

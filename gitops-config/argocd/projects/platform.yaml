@@ -15,6 +15,7 @@ spec:
     - https://charts.external-secrets.io
     - https://prometheus-community.github.io/helm-charts
     - https://grafana.github.io/helm-charts
+    - https://grafana-community.github.io/helm-charts
     - https://open-policy-agent.github.io/gatekeeper/charts
     - docker.io/envoyproxy
 
