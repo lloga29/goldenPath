@@ -1,61 +1,78 @@
-# Módulo GitHub OIDC para AWS
-# Permite autenticación sin secretos estáticos desde GitHub Actions
+# GitHub Actions OIDC federation module for AWS.
+# Provides short-lived CI/CD identity without static AWS access keys.
 
-# ============================================
-# VARIABLES
-# ============================================
+terraform {
+  required_version = ">= 1.5.0, < 2.0.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.0.0, < 6.0.0"
+    }
+  }
+}
+
 variable "project" {
-  description = "Nombre del proyecto"
+  description = "Project identifier used in role/policy names."
   type        = string
 }
 
 variable "environment" {
-  description = "Entorno (dev, staging, prod)"
+  description = "Deployment environment."
   type        = string
 
   validation {
     condition     = contains(["dev", "staging", "prod", "ephemeral"], var.environment)
-    error_message = "El entorno debe ser uno de: dev, staging, prod, ephemeral."
+    error_message = "environment must be one of: dev, staging, prod, ephemeral."
   }
 }
 
 variable "github_org" {
-  description = "Organización de GitHub"
+  description = "GitHub organization or user that owns the trusted repositories."
   type        = string
 }
 
 variable "github_repos" {
-  description = "Lista de repositorios permitidos (formato: repo-name)"
+  description = "Repository names allowed to assume the role. Use explicit names for production."
   type        = list(string)
   default     = ["*"]
 }
 
 variable "allowed_branches" {
-  description = "Ramas permitidas para asumir el rol"
+  description = "Branches allowed to assume the role."
   type        = list(string)
-  default     = ["main", "develop"]
+  default     = ["main"]
 }
 
 variable "iam_policy_arns" {
-  description = "ARNs de políticas IAM a adjuntar al rol"
+  description = "Additional managed IAM policy ARNs to attach to the GitHub Actions role."
   type        = list(string)
   default     = []
 }
 
+variable "terraform_state_bucket_arn" {
+  description = "Optional exact S3 bucket ARN for Terraform state access. When null, no built-in state policy is created."
+  type        = string
+  default     = null
+}
+
+variable "terraform_lock_table_arn" {
+  description = "Optional exact DynamoDB lock-table ARN for Terraform state locking. Required together with terraform_state_bucket_arn."
+  type        = string
+  default     = null
+}
+
 variable "tags" {
-  description = "Tags a aplicar a los recursos"
+  description = "Metadata applied to supported resources. Must include Team and CostCenter."
   type        = map(string)
   default     = {}
 
   validation {
     condition     = contains(keys(var.tags), "Team") && contains(keys(var.tags), "CostCenter")
-    error_message = "Los tags deben incluir 'Team' y 'CostCenter'."
+    error_message = "tags must include Team and CostCenter."
   }
 }
 
-# ============================================
-# LOCALS
-# ============================================
 locals {
   common_tags = merge(
     var.tags,
@@ -66,26 +83,20 @@ locals {
     }
   )
 
-  # Construir condiciones para repositorios
-  repo_conditions = [
-    for repo in var.github_repos : "repo:${var.github_org}/${repo}:*"
-  ]
+  # GitHub's OIDC subject is constrained by both repository and branch.
+  allowed_subjects = flatten([
+    for repo in var.github_repos : [
+      for branch in var.allowed_branches : "repo:${var.github_org}/${repo}:ref:refs/heads/${branch}"
+    ]
+  ])
 
-  # Construir condiciones para ramas
-  branch_conditions = [
-    for branch in var.allowed_branches : "repo:${var.github_org}/*:ref:refs/heads/${branch}"
-  ]
+  create_terraform_state_policy = var.terraform_state_bucket_arn != null && var.terraform_lock_table_arn != null
 }
 
-# ============================================
-# OIDC PROVIDER
-# ============================================
 resource "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com"
 
   client_id_list = ["sts.amazonaws.com"]
-
-  # Thumbprints de GitHub Actions
   thumbprint_list = [
     "6938fd4d98bab03faadb97b34396831e3780aea1",
     "1c58a3a8518e8759bf075b76b750d4f2df264fcd"
@@ -94,9 +105,6 @@ resource "aws_iam_openid_connect_provider" "github" {
   tags = local.common_tags
 }
 
-# ============================================
-# IAM ROLE
-# ============================================
 resource "aws_iam_role" "github_actions" {
   name = "${var.project}-github-actions-${var.environment}"
 
@@ -114,7 +122,7 @@ resource "aws_iam_role" "github_actions" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = local.repo_conditions
+            "token.actions.githubusercontent.com:sub" = local.allowed_subjects
           }
         }
       }
@@ -124,9 +132,6 @@ resource "aws_iam_role" "github_actions" {
   tags = local.common_tags
 }
 
-# ============================================
-# IAM POLICY ATTACHMENTS
-# ============================================
 resource "aws_iam_role_policy_attachment" "custom_policies" {
   count = length(var.iam_policy_arns)
 
@@ -134,8 +139,10 @@ resource "aws_iam_role_policy_attachment" "custom_policies" {
   policy_arn = var.iam_policy_arns[count.index]
 }
 
-# Política básica para Terraform State
+# Optional, explicitly scoped Terraform-state policy.
 resource "aws_iam_role_policy" "terraform_state" {
+  count = local.create_terraform_state_policy ? 1 : 0
+
   name = "${var.project}-terraform-state-${var.environment}"
   role = aws_iam_role.github_actions.id
 
@@ -151,8 +158,8 @@ resource "aws_iam_role_policy" "terraform_state" {
           "s3:ListBucket"
         ]
         Resource = [
-          "arn:aws:s3:::*-terraform-state",
-          "arn:aws:s3:::*-terraform-state/*"
+          var.terraform_state_bucket_arn,
+          "${var.terraform_state_bucket_arn}/*"
         ]
       },
       {
@@ -162,31 +169,28 @@ resource "aws_iam_role_policy" "terraform_state" {
           "dynamodb:PutItem",
           "dynamodb:DeleteItem"
         ]
-        Resource = "arn:aws:dynamodb:*:*:table/*-terraform-locks"
+        Resource = var.terraform_lock_table_arn
       }
     ]
   })
 }
 
-# ============================================
-# OUTPUTS
-# ============================================
 output "oidc_provider_arn" {
-  description = "ARN del proveedor OIDC"
+  description = "GitHub OIDC provider ARN."
   value       = aws_iam_openid_connect_provider.github.arn
 }
 
 output "oidc_provider_url" {
-  description = "URL del proveedor OIDC"
+  description = "GitHub OIDC provider URL."
   value       = aws_iam_openid_connect_provider.github.url
 }
 
 output "role_arn" {
-  description = "ARN del rol IAM para GitHub Actions"
+  description = "GitHub Actions IAM role ARN."
   value       = aws_iam_role.github_actions.arn
 }
 
 output "role_name" {
-  description = "Nombre del rol IAM"
+  description = "GitHub Actions IAM role name."
   value       = aws_iam_role.github_actions.name
 }

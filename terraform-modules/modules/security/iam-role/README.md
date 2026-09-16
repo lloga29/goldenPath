@@ -1,52 +1,50 @@
-# Módulo IAM Role
+# AWS IAM Role Module
 
-Crea roles IAM con configuración estándar y políticas de seguridad.
+Creates an AWS IAM role with an explicit trust policy, optional managed policy attachments, optional inline policies, an optional permissions boundary, and standard metadata.
 
-## Uso
+## Security responsibility
+
+This module does not attempt to infer least privilege from arbitrary JSON. Callers must review every trust statement and permission. Organization policy should reject wildcard permissions where they are not justified.
+
+## Example
 
 ```hcl
 module "iam_role" {
-  source = "git::https://github.com/org/terraform-modules.git//modules/security/iam-role?ref=v1.0.0"
+  source = "git::https://github.com/example/platform-terraform-modules.git//modules/security/iam-role?ref=v1.0.0"
 
-  name        = "mi-servicio-role"
-  description = "Rol para el servicio X"
+  name        = "payments-log-writer"
+  description = "Writes application logs to the approved log group"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect = "Allow"
       Principal = {
-        Service = "ec2.amazonaws.com"
+        Service = "ecs-tasks.amazonaws.com"
       }
       Action = "sts:AssumeRole"
     }]
   })
 
-  managed_policy_arns = [
-    "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-  ]
-
   inline_policies = {
-    custom-policy = jsonencode({
+    log-writer = jsonencode({
       Version = "2012-10-17"
       Statement = [{
-        Effect   = "Allow"
-        Action   = ["logs:*"]
-        Resource = "*"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:us-east-1:123456789012:log-group:/apps/payments:*"
       }]
     })
   }
 
   tags = {
-    Team       = "platform"
+    Team       = "payments"
     CostCenter = "cc-001"
   }
 }
 ```
 
-## Seguridad
-
-- Soporta permissions boundaries
-- Validación de nombres
-- Duración de sesión configurable
-- Sin wildcards en políticas (verificar manualmente)
+Use placeholder account IDs only in documentation; production code must reference the real authorized resources through configuration/data sources.
