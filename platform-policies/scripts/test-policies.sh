@@ -115,6 +115,21 @@ grep -F "EXC-2026-903" <<<"$TF_OUTPUT" >/dev/null || {
     exit 1
 }
 
+# Exception filtering must preserve full plan context for companion-resource policies.
+TF_COMPANION_EXCEPTION_DATA="$TMP_DIR/terraform-public-access-companion-exception.json"
+compile_registry "$ROOT_DIR/tests/exceptions/terraform-public-access-companion.yaml" "$TF_COMPANION_EXCEPTION_DATA"
+TF_COMPANION_OUTPUT="$(conftest test "$ROOT_DIR/tests/terraform/exception-public-access-companion-plan.json" \
+    --policy "$ROOT_DIR/terraform" \
+    --policy "$LIB_DIR" \
+    --policy "$WRAPPER_DIR" \
+    --data "$TF_COMPANION_EXCEPTION_DATA" \
+    --namespace goldenpath.terraform 2>&1)"
+printf '%s\n' "$TF_COMPANION_OUTPUT"
+grep -F "EXC-2026-911" <<<"$TF_COMPANION_OUTPUT" >/dev/null || {
+    echo "ERROR: Terraform companion-resource exception did not emit its audit-visible exception ID." >&2
+    exit 1
+}
+
 # A valid Terraform exception for a different policy ID must not suppress public-access enforcement.
 TF_WRONG_POLICY_DATA="$TMP_DIR/terraform-wrong-policy.json"
 compile_registry "$ROOT_DIR/tests/exceptions/terraform-wrong-policy.yaml" "$TF_WRONG_POLICY_DATA"

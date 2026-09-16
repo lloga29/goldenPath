@@ -49,30 +49,35 @@ warn contains msg if {
 }
 
 warn contains msg if {
+    data.kubernetes.images.deny[_]
     exception := exceptionlib.kubernetes_exception(images_policy_id, input)
     namespace := object.get(input.metadata, "namespace", "default")
     msg := sprintf("Policy exception %s suppresses %s deny results for exact scope %s in namespace %s.", [exception.id, images_policy_id, exception.resource, namespace])
 }
 
 warn contains msg if {
+    data.kubernetes.compliance.deny[_]
     exception := exceptionlib.kubernetes_exception(labels_policy_id, input)
     namespace := object.get(input.metadata, "namespace", "default")
     msg := sprintf("Policy exception %s suppresses %s deny results for exact scope %s in namespace %s.", [exception.id, labels_policy_id, exception.resource, namespace])
 }
 
 warn contains msg if {
+    data.kubernetes.resources.deny[_]
     exception := exceptionlib.kubernetes_exception(resources_policy_id, input)
     namespace := object.get(input.metadata, "namespace", "default")
     msg := sprintf("Policy exception %s suppresses %s deny results for exact scope %s in namespace %s.", [exception.id, resources_policy_id, exception.resource, namespace])
 }
 
 warn contains msg if {
+    data.kubernetes.security.deny[_]
     exception := exceptionlib.kubernetes_exception(security_policy_id, input)
     namespace := object.get(input.metadata, "namespace", "default")
     msg := sprintf("Policy exception %s suppresses %s deny results for exact scope %s in namespace %s.", [exception.id, security_policy_id, exception.resource, namespace])
 }
 
 warn contains msg if {
+    data.kubernetes.workload.deny[_]
     exception := exceptionlib.kubernetes_exception(workload_policy_id, input)
     namespace := object.get(input.metadata, "namespace", "default")
     msg := sprintf("Policy exception %s suppresses %s deny results for exact scope %s in namespace %s.", [exception.id, workload_policy_id, exception.resource, namespace])

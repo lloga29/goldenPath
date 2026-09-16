@@ -1,0 +1,53 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.16.2",
+  "resource_changes": [
+    {
+      "address": "aws_s3_bucket.assets",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "assets",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "bucket": "goldenpath-assets",
+          "acl": "private",
+          "tags": {
+            "Environment": "dev",
+            "Team": "platform",
+            "CostCenter": "cc-platform",
+            "Owner": "platform@example.com"
+          }
+        }
+      }
+    },
+    {
+      "address": "aws_s3_bucket_public_access_block.assets",
+      "mode": "managed",
+      "type": "aws_s3_bucket_public_access_block",
+      "name": "assets",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "bucket": "goldenpath-assets",
+          "block_public_acls": true,
+          "block_public_policy": true,
+          "ignore_public_acls": true,
+          "restrict_public_buckets": false
+        }
+      }
+    },
+    {
+      "address": "aws_s3_bucket_server_side_encryption_configuration.assets",
+      "mode": "managed",
+      "type": "aws_s3_bucket_server_side_encryption_configuration",
+      "name": "assets",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "bucket": "goldenpath-assets"
+        }
+      }
+    }
+  ]
+}

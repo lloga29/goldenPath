@@ -48,7 +48,7 @@ has_sensitive_action(statement) if {
     sensitive_action(action)
 }
 
-deny contains msg if {
+violations contains {"resource": resource.address, "msg": msg} if {
     resource := input.resource_changes[_]
     resource.type in iam_policy_types
     resource.change.actions[_] in ["create", "update"]
@@ -61,7 +61,7 @@ deny contains msg if {
     msg := sprintf("IAM policy resource '%s' contains Allow Action '*'. Use explicit actions.", [resource.address])
 }
 
-deny contains msg if {
+violations contains {"resource": resource.address, "msg": msg} if {
     resource := input.resource_changes[_]
     resource.type in iam_policy_types
     resource.change.actions[_] in ["create", "update"]
@@ -73,6 +73,11 @@ deny contains msg if {
     has_wildcard_resource(statement)
     has_sensitive_action(statement)
     msg := sprintf("IAM policy resource '%s' grants a sensitive action against Resource '*'. Scope the resource explicitly.", [resource.address])
+}
+
+deny contains msg if {
+    result := violations[_]
+    msg := result.msg
 }
 
 warn contains msg if {

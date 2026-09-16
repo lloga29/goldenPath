@@ -27,19 +27,27 @@ kubernetes_exception(policy, resource) := exception if {
     exception := matches[0]
 }
 
-terraform_matches(policy, resource) := [exception |
+terraform_address_matches(policy, address) := [exception |
     exception := exceptions[_]
     exception.target == "terraform"
     exception.policy == policy
-    exception.resource == object.get(resource, "address", "")
+    exception.resource == address
 ]
 
+terraform_address_exempt(policy, address) if {
+    count(terraform_address_matches(policy, address)) == 1
+}
+
+terraform_exception_for_address(policy, address) := exception if {
+    matches := terraform_address_matches(policy, address)
+    count(matches) == 1
+    exception := matches[0]
+}
+
 terraform_exempt(policy, resource) if {
-    count(terraform_matches(policy, resource)) == 1
+    terraform_address_exempt(policy, object.get(resource, "address", ""))
 }
 
 terraform_exception(policy, resource) := exception if {
-    matches := terraform_matches(policy, resource)
-    count(matches) == 1
-    exception := matches[0]
+    exception := terraform_exception_for_address(policy, object.get(resource, "address", ""))
 }
