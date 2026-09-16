@@ -23,6 +23,11 @@ Flux `HelmRelease`, `HelmRepository`, `flux-system`, and Flux controller depende
 - One reconciliation engine owns platform desired state.
 - Git history captures chart pins and configuration changes.
 - Helm rendering is performed by Argo CD; Helm does not become a second release-state authority.
-- Root CI must validate the ApplicationSet contract and render pinned charts with repository values.
+- Root CI validates the ApplicationSet contract and renders pinned charts with repository values.
 - Upstream chart availability becomes part of the supply-chain boundary and is restricted through AppProject source allowlists.
 - Chart upgrades remain separate, reviewable changes with compatibility and rollback evidence.
+
+## References
+
+- [Argo CD Helm documentation](https://argo-cd.readthedocs.io/en/stable/user-guide/helm/)
+- [Argo CD multiple sources documentation](https://argo-cd.readthedocs.io/en/stable/user-guide/multiple_sources/)

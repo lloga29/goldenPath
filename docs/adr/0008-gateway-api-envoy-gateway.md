@@ -23,3 +23,10 @@ The repository does not create a fake default public Gateway, DNS name, certific
 - TLS remains based on Gateway listener `certificateRefs`. cert-manager can issue the referenced Secrets when Gateway API integration is enabled and a real Issuer/ClusterIssuer exists.
 - Existing ingress-nginx deployments require parallel-run, traffic verification, and rollback planning before controller removal.
 - Envoy Gateway and Gateway API CRD compatibility become an explicit platform upgrade concern.
+
+## References
+
+- [Kubernetes Ingress NGINX retirement announcement](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/)
+- [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/)
+- [Envoy Gateway installation documentation](https://gateway.envoyproxy.io/latest/install/install-helm/)
+- [cert-manager Gateway API documentation](https://cert-manager.io/docs/usage/gateway/)
