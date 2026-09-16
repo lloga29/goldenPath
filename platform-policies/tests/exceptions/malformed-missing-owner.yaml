@@ -1,0 +1,14 @@
+version: 1
+enforcement:
+  conftest: scoped-exceptions
+  gatekeeper: strict
+exceptions:
+  - id: EXC-2026-908
+    policy: kubernetes.images.immutable
+    resource: deployment/legacy-api
+    namespace: legacy-system
+    reason: "Invalid fixture: required ownership metadata is missing."
+    approved_by: "security-test"
+    tracking_issue: "#14"
+    created: "2026-09-16"
+    expires: "2099-01-01"

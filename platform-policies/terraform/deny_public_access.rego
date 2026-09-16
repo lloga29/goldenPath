@@ -1,5 +1,5 @@
 # Prevent unintended public exposure for supported AWS resource types.
-package terraform.security
+package terraform.public_access
 
 import rego.v1
 
@@ -44,7 +44,7 @@ s3_public_access_block_is_secure(block) if {
     block.restrict_public_buckets == true
 }
 
-deny contains msg if {
+violations contains {"resource": resource.address, "msg": msg} if {
     resource := input.resource_changes[_]
     resource.type == "aws_s3_bucket"
     resource.change.actions[_] in ["create", "update"]
@@ -53,7 +53,7 @@ deny contains msg if {
     msg := sprintf("S3 bucket '%s' must not use public ACL '%s'.", [resource.address, acl])
 }
 
-deny contains msg if {
+violations contains {"resource": resource.address, "msg": msg} if {
     resource := input.resource_changes[_]
     resource.type == "aws_s3_bucket"
     resource.change.actions[_] in ["create", "update"]
@@ -61,7 +61,7 @@ deny contains msg if {
     msg := sprintf("S3 bucket '%s' must have a matching aws_s3_bucket_public_access_block resource.", [resource.address])
 }
 
-deny contains msg if {
+violations contains {"resource": resource.address, "msg": msg} if {
     resource := input.resource_changes[_]
     resource.type == "aws_s3_bucket_public_access_block"
     resource.change.actions[_] in ["create", "update"]
@@ -69,7 +69,7 @@ deny contains msg if {
     msg := sprintf("S3 public access block '%s' must enable all four public-access protections.", [resource.address])
 }
 
-deny contains msg if {
+violations contains {"resource": resource.address, "msg": msg} if {
     resource := input.resource_changes[_]
     resource.type == "aws_security_group_rule"
     resource.change.actions[_] in ["create", "update"]
@@ -81,7 +81,7 @@ deny contains msg if {
     msg := sprintf("Security group rule '%s' exposes a sensitive port range (%v-%v) to %s.", [resource.address, resource.change.after.from_port, resource.change.after.to_port, cidr])
 }
 
-deny contains msg if {
+violations contains {"resource": resource.address, "msg": msg} if {
     resource := input.resource_changes[_]
     resource.type == "aws_security_group"
     resource.change.actions[_] in ["create", "update"]
@@ -93,7 +93,7 @@ deny contains msg if {
     msg := sprintf("Security group '%s' exposes a sensitive port range (%v-%v) to %s.", [resource.address, ingress.from_port, ingress.to_port, cidr])
 }
 
-deny contains msg if {
+violations contains {"resource": resource.address, "msg": msg} if {
     resource := input.resource_changes[_]
     resource.type == "aws_db_instance"
     resource.change.actions[_] in ["create", "update"]
@@ -101,10 +101,15 @@ deny contains msg if {
     msg := sprintf("RDS instance '%s' must not be publicly accessible.", [resource.address])
 }
 
-deny contains msg if {
+violations contains {"resource": resource.address, "msg": msg} if {
     resource := input.resource_changes[_]
     resource.type == "aws_redshift_cluster"
     resource.change.actions[_] in ["create", "update"]
     object.get(resource.change.after, "publicly_accessible", false) == true
     msg := sprintf("Redshift cluster '%s' must not be publicly accessible.", [resource.address])
+}
+
+deny contains msg if {
+    result := violations[_]
+    msg := result.msg
 }

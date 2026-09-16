@@ -1,0 +1,15 @@
+version: 1
+enforcement:
+  conftest: scoped-exceptions
+  gatekeeper: strict
+exceptions:
+  - id: EXC-2026-907
+    policy: kubernetes.unknown-policy
+    resource: deployment/legacy-api
+    namespace: legacy-system
+    reason: "Invalid fixture: unknown policy IDs must fail closed."
+    owner: "platform@example.com"
+    approved_by: "security-test"
+    tracking_issue: "#14"
+    created: "2026-09-16"
+    expires: "2099-01-01"

@@ -1,0 +1,14 @@
+version: 1
+enforcement:
+  conftest: scoped-exceptions
+  gatekeeper: strict
+exceptions:
+  - id: EXC-2026-909
+    policy: terraform.public_access
+    resource: aws_security_group_rule
+    reason: "Invalid fixture: a resource type is broader than an exact Terraform address."
+    owner: "platform@example.com"
+    approved_by: "security-test"
+    tracking_issue: "#14"
+    created: "2026-09-16"
+    expires: "2099-01-01"

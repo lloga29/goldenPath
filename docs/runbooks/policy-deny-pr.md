@@ -15,12 +15,13 @@ A policy denial is expected platform feedback, not a CI defect by default. Under
 3. Reproduce the check locally when possible.
 4. Determine whether the proposed configuration is incorrect, the policy has a defect, or the workload has a legitimate exceptional requirement.
 
-Example:
+The supported local path is the same exception-aware contract used by CI. The simplest full check is:
 
 ```bash
-conftest test tfplan.json --policy platform-policies/terraform/
-conftest test deployment.yaml --policy platform-policies/kubernetes/
+./platform-policies/scripts/test-policies.sh
 ```
+
+For a single input, first compile `platform-policies/policy-exceptions.yaml`, then load the implementation policies, shared library, and wrapper directory and query either `goldenpath.terraform` or `goldenpath.kubernetes` as documented in `platform-policies/README.md`.
 
 ## Normal remediation
 
@@ -32,7 +33,7 @@ Create a minimal fixture that demonstrates incorrect policy behavior. Fix the po
 
 ## Exception
 
-Use the documented exception process only when remediation is not currently feasible and the residual risk is accepted. The exception must be narrow, owned, approved, and time-bounded.
+Use the documented exception process only when remediation is not currently feasible and the residual risk is accepted. The exception must be narrow, owned, approved, and time-bounded. Conftest exceptions do not weaken Gatekeeper admission; Kubernetes runtime admission remains strict.
 
 ## Escalation
 

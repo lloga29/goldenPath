@@ -25,7 +25,7 @@ taggable_types := {
     "aws_dynamodb_table"
 }
 
-deny contains msg if {
+violations contains {"resource": resource.address, "msg": msg} if {
     resource := input.resource_changes[_]
     resource.type in taggable_types
     resource.change.actions[_] in ["create", "update"]
@@ -36,7 +36,7 @@ deny contains msg if {
     msg := sprintf("Terraform resource '%s' is missing required tags: %v", [resource.address, missing])
 }
 
-deny contains msg if {
+violations contains {"resource": resource.address, "msg": msg} if {
     resource := input.resource_changes[_]
     resource.type in taggable_types
     resource.change.actions[_] in ["create", "update"]
@@ -45,6 +45,11 @@ deny contains msg if {
     env != ""
     not valid_environment(env)
     msg := sprintf("Terraform resource '%s' has invalid Environment tag '%s'. Allowed values: dev, staging, prod, ephemeral.", [resource.address, env])
+}
+
+deny contains msg if {
+    result := violations[_]
+    msg := result.msg
 }
 
 valid_environment(env) if {

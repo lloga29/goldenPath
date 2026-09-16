@@ -1,0 +1,14 @@
+version: 1
+enforcement:
+  conftest: scoped-exceptions
+  gatekeeper: strict
+exceptions:
+  - id: EXC-2026-911
+    policy: terraform.public_access
+    resource: aws_s3_bucket_public_access_block.assets
+    reason: "Fixture proves exact exceptions preserve companion-resource context."
+    owner: "platform@example.com"
+    approved_by: "security-test"
+    tracking_issue: "#14"
+    created: "2026-09-16"
+    expires: "2099-01-01"

@@ -1,0 +1,15 @@
+version: 1
+enforcement:
+  conftest: scoped-exceptions
+  gatekeeper: strict
+exceptions:
+  - id: EXC-2026-902
+    policy: kubernetes.labels.required
+    resource: deployment/legacy-api
+    namespace: legacy-system
+    reason: "Fixture proving a different policy ID cannot suppress the image policy."
+    owner: "platform@example.com"
+    approved_by: "security-team"
+    tracking_issue: "#14"
+    created: "2026-09-16"
+    expires: "2099-01-01"
