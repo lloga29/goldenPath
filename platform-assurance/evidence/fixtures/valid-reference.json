@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "goldenpath.evidence/v1",
+  "evidenceId": "reference-ci-001",
+  "generatedAt": "2026-09-16T10:10:00Z",
+  "claimLevel": "reference",
+  "decision": "READY",
+  "source": {
+    "repository": "lloga29/goldenPath",
+    "commitSha": "1111111111111111111111111111111111111111",
+    "workflowName": "Repository validation",
+    "workflowRunUrl": "https://github.com/lloga29/goldenPath/actions/runs/1001"
+  },
+  "context": {
+    "environment": "repository",
+    "capability": "repository-validation"
+  },
+  "artifact": {
+    "type": "none",
+    "identity": "repository-source"
+  },
+  "inputs": {
+    "sourceSha": "1111111111111111111111111111111111111111",
+    "policyDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "architectureDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "desiredStateDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "gates": [
+    {
+      "id": "baseline-ci",
+      "required": true,
+      "skipAllowed": false,
+      "result": "PASS",
+      "observedAt": "2026-09-16T10:09:00Z",
+      "evidenceUrl": "https://github.com/lloga29/goldenPath/actions/runs/1001"
+    },
+    {
+      "id": "runtime-smoke",
+      "required": false,
+      "skipAllowed": true,
+      "result": "SKIP_ALLOWED",
+      "observedAt": "2026-09-16T10:09:30Z",
+      "reason": "Runtime validation is outside a repository-reference claim."
+    }
+  ]
+}

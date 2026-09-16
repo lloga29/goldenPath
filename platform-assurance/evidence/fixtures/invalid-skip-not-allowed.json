@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "goldenpath.evidence/v1",
+  "evidenceId": "invalid-skip-001",
+  "generatedAt": "2026-09-16T10:22:00Z",
+  "claimLevel": "reference",
+  "decision": "READY",
+  "source": {
+    "repository": "lloga29/goldenPath",
+    "commitSha": "5555555555555555555555555555555555555555"
+  },
+  "context": {
+    "environment": "repository",
+    "capability": "repository-validation"
+  },
+  "inputs": {
+    "sourceSha": "5555555555555555555555555555555555555555",
+    "policyDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "architectureDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "desiredStateDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "gates": [
+    {
+      "id": "required-runtime-check",
+      "required": true,
+      "skipAllowed": false,
+      "result": "SKIP_ALLOWED",
+      "observedAt": "2026-09-16T10:21:30Z",
+      "reason": "This fixture attempts an unauthorized skip."
+    }
+  ]
+}

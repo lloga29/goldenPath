@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "goldenpath.evidence/v1",
+  "evidenceId": "invalid-runtime-proof-001",
+  "generatedAt": "2026-09-16T10:21:00Z",
+  "claimLevel": "runtime-validated",
+  "decision": "READY",
+  "source": {
+    "repository": "lloga29/goldenPath",
+    "commitSha": "4444444444444444444444444444444444444444"
+  },
+  "context": {
+    "environment": "staging",
+    "capability": "golden-service-delivery"
+  },
+  "inputs": {
+    "sourceSha": "4444444444444444444444444444444444444444",
+    "policyDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "architectureDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "desiredStateDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "gates": [
+    {
+      "id": "baseline-ci",
+      "required": true,
+      "skipAllowed": false,
+      "result": "PASS",
+      "observedAt": "2026-09-16T10:20:30Z"
+    }
+  ]
+}
