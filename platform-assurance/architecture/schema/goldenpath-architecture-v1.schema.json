@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://goldenpath.dev/schemas/architecture/goldenpath-architecture-v1.schema.json",
+  "title": "GoldenPath Architecture Metadata v1",
+  "description": "Architecture as Code metadata used as an authoritative input to risk-adaptive assurance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "service"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "goldenpath.architecture/v1"
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "owner",
+        "serviceType",
+        "dataSensitivity",
+        "dependencies",
+        "runtime",
+        "sloTier",
+        "deploymentUnit",
+        "riskClass"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "serviceType": {
+          "type": "string",
+          "enum": [
+            "documentation",
+            "application",
+            "api",
+            "worker",
+            "platform",
+            "data",
+            "infrastructure"
+          ]
+        },
+        "dataSensitivity": {
+          "type": "string",
+          "enum": [
+            "public",
+            "internal",
+            "confidential",
+            "restricted"
+          ]
+        },
+        "dependencies": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "runtime": {
+          "type": "string",
+          "enum": [
+            "none",
+            "serverless",
+            "managed-service",
+            "kubernetes",
+            "vm"
+          ]
+        },
+        "sloTier": {
+          "type": "string",
+          "enum": [
+            "none",
+            "tier3",
+            "tier2",
+            "tier1"
+          ]
+        },
+        "deploymentUnit": {
+          "type": "string",
+          "enum": [
+            "none",
+            "package",
+            "container",
+            "function",
+            "helm",
+            "kustomize",
+            "terraform"
+          ]
+        },
+        "riskClass": {
+          "type": "string",
+          "enum": [
+            "R0",
+            "R1",
+            "R2",
+            "R3",
+            "R4"
+          ]
+        }
+      }
+    }
+  }
+}
