@@ -1,0 +1,51 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_s3_bucket.example",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "example",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "bucket": "golden-path-example-secure",
+          "acl": "private",
+          "tags": {
+            "Environment": "dev",
+            "Team": "platform",
+            "CostCenter": "cc-platform-001",
+            "Owner": "platform@example.com"
+          }
+        }
+      }
+    },
+    {
+      "address": "aws_s3_bucket_server_side_encryption_configuration.example",
+      "mode": "managed",
+      "type": "aws_s3_bucket_server_side_encryption_configuration",
+      "name": "example",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "bucket": "golden-path-example-secure"
+        }
+      }
+    },
+    {
+      "address": "aws_s3_bucket_public_access_block.example",
+      "mode": "managed",
+      "type": "aws_s3_bucket_public_access_block",
+      "name": "example",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "bucket": "golden-path-example-secure",
+          "block_public_acls": true,
+          "block_public_policy": true,
+          "ignore_public_acls": true,
+          "restrict_public_buckets": true
+        }
+      }
+    }
+  ]
+}

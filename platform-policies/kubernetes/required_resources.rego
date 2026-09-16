@@ -1,37 +1,64 @@
-# Política: Resources obligatorios
-# Descripción: Todos los containers deben tener requests y limits definidos
+# Require CPU and memory requests/limits on workload containers.
 package kubernetes.resources
 
 import future.keywords.in
 
-# Denegar containers sin memory request
-deny[msg] {
-    input.kind == "Deployment"
-    container := input.spec.template.spec.containers[_]
-    not container.resources.requests.memory
-    msg := sprintf("Deployment '%s': container '%s' debe tener resources.requests.memory", [input.metadata.name, container.name])
+controller_kinds := {"Deployment", "StatefulSet", "DaemonSet", "Job"}
+
+pod_specs[spec] {
+    input.kind == "Pod"
+    spec := input.spec
 }
 
-# Denegar containers sin cpu request
-deny[msg] {
-    input.kind == "Deployment"
-    container := input.spec.template.spec.containers[_]
-    not container.resources.requests.cpu
-    msg := sprintf("Deployment '%s': container '%s' debe tener resources.requests.cpu", [input.metadata.name, container.name])
+pod_specs[spec] {
+    input.kind in controller_kinds
+    spec := input.spec.template.spec
 }
 
-# Denegar containers sin memory limit
-deny[msg] {
-    input.kind == "Deployment"
-    container := input.spec.template.spec.containers[_]
-    not container.resources.limits.memory
-    msg := sprintf("Deployment '%s': container '%s' debe tener resources.limits.memory", [input.metadata.name, container.name])
+pod_specs[spec] {
+    input.kind == "CronJob"
+    spec := input.spec.jobTemplate.spec.template.spec
 }
 
-# Advertir si no tiene cpu limit (no siempre requerido)
-warn[msg] {
-    input.kind == "Deployment"
-    container := input.spec.template.spec.containers[_]
-    not container.resources.limits.cpu
-    msg := sprintf("Deployment '%s': container '%s' debería tener resources.limits.cpu", [input.metadata.name, container.name])
+containers[container] {
+    spec := pod_specs[_]
+    container := spec.containers[_]
+}
+
+containers[container] {
+    spec := pod_specs[_]
+    init_containers := object.get(spec, "initContainers", [])
+    container := init_containers[_]
+}
+
+deny[msg] {
+    container := containers[_]
+    resources := object.get(container, "resources", {})
+    requests := object.get(resources, "requests", {})
+    object.get(requests, "memory", "") == ""
+    msg := sprintf("%s '%s': container '%s' must define resources.requests.memory.", [input.kind, input.metadata.name, container.name])
+}
+
+deny[msg] {
+    container := containers[_]
+    resources := object.get(container, "resources", {})
+    requests := object.get(resources, "requests", {})
+    object.get(requests, "cpu", "") == ""
+    msg := sprintf("%s '%s': container '%s' must define resources.requests.cpu.", [input.kind, input.metadata.name, container.name])
+}
+
+deny[msg] {
+    container := containers[_]
+    resources := object.get(container, "resources", {})
+    limits := object.get(resources, "limits", {})
+    object.get(limits, "memory", "") == ""
+    msg := sprintf("%s '%s': container '%s' must define resources.limits.memory.", [input.kind, input.metadata.name, container.name])
+}
+
+deny[msg] {
+    container := containers[_]
+    resources := object.get(container, "resources", {})
+    limits := object.get(resources, "limits", {})
+    object.get(limits, "cpu", "") == ""
+    msg := sprintf("%s '%s': container '%s' must define resources.limits.cpu.", [input.kind, input.metadata.name, container.name])
 }
