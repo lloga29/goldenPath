@@ -61,15 +61,23 @@ terraform init -backend=false
 terraform validate
 ```
 
-For plan-based policy validation:
+For plan-based policy validation, run from the repository root or adjust the paths consistently:
 
 ```bash
 terraform plan -out=tfplan
 terraform show -json tfplan > tfplan.json
-conftest test tfplan.json --policy ../../../platform-policies/terraform/
+python3 platform-policies/scripts/validate-exceptions.py \
+  platform-policies/policy-exceptions.yaml \
+  --output /tmp/goldenpath-policy-exceptions.json
+conftest test tfplan.json \
+  --policy platform-policies/terraform/ \
+  --policy platform-policies/lib/ \
+  --policy platform-policies/wrappers/ \
+  --data /tmp/goldenpath-policy-exceptions.json \
+  --namespace goldenpath.terraform
 ```
 
-Adjust the policy path for the stack location.
+The wrapper namespace is part of the policy contract; direct evaluation of implementation packages is not the supported exception-aware path.
 
 ## 5. Register an application in GitOps
 

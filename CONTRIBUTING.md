@@ -85,10 +85,12 @@ python3 scripts/check-markdown-links.py
 terraform fmt -check -recursive
 terraform validate
 terraform test
-conftest test <input> --policy platform-policies/
+./platform-policies/scripts/test-policies.sh
 kustomize build <overlay>
 ./service-templates/scripts/render-go-template-smoke-test.sh
 ```
+
+For ad hoc Conftest evaluation, follow `platform-policies/README.md`: validate and compile the exception registry, load the shared library and wrapper policy directories, and query the `goldenpath.kubernetes` or `goldenpath.terraform` namespace. Direct queries of implementation packages are not the supported exception-aware enforcement path.
 
 The exact set depends on the repository area. Do not mark a validation as successful if the required tool, cloud credential, cluster, or dependency was unavailable.
 

@@ -1,5 +1,5 @@
 # Require encryption at rest/in transit for supported AWS resource types.
-package terraform.security
+package terraform.encryption
 
 import rego.v1
 

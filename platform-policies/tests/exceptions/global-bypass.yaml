@@ -1,0 +1,7 @@
+version: 1
+enforcement:
+  conftest: scoped-exceptions
+  gatekeeper: strict
+exceptions: []
+disabled_policies:
+  - terraform.public_access

@@ -14,7 +14,9 @@ The Kubernetes policy bundle evaluates Pod-style workloads, Deployments, Statefu
 platform-policies/
 ├── terraform/              # Terraform plan policies
 ├── kubernetes/             # Kubernetes manifest policies
-├── tests/                  # Positive and negative fixtures
+├── lib/                    # Shared Rego libraries, including exception matching
+├── wrappers/               # Exception-aware Conftest entrypoint namespaces
+├── tests/                  # Positive, negative, and exception-scope fixtures
 ├── scripts/                # Policy and exception validation helpers
 ├── policy-exceptions.yaml  # Governed exception registry
 └── docs/
@@ -22,22 +24,40 @@ platform-policies/
 
 ## Local evaluation
 
+Policy exceptions are never passed directly to Conftest. First validate and compile the registry into canonical data:
+
+```bash
+python3 platform-policies/scripts/validate-exceptions.py \
+  platform-policies/policy-exceptions.yaml \
+  --output /tmp/goldenpath-policy-exceptions.json
+```
+
+Then load both the policy bundle and the shared exception library explicitly:
+
 ```bash
 terraform plan -out=tfplan
 terraform show -json tfplan > tfplan.json
-conftest test tfplan.json --policy platform-policies/terraform/
+conftest test tfplan.json \
+  --policy platform-policies/terraform/ \
+  --policy platform-policies/lib/ \
+  --policy platform-policies/wrappers/ \
+  --data /tmp/goldenpath-policy-exceptions.json \
+  --namespace goldenpath.terraform
 ```
 
 ```bash
-conftest test rendered-manifest.yaml --policy platform-policies/kubernetes/
+conftest test rendered-manifest.yaml \
+  --policy platform-policies/kubernetes/ \
+  --policy platform-policies/lib/ \
+  --policy platform-policies/wrappers/ \
+  --data /tmp/goldenpath-policy-exceptions.json \
+  --namespace goldenpath.kubernetes
 ```
 
-Run the repository fixtures:
+Run the complete repository fixtures:
 
 ```bash
 ./platform-policies/scripts/test-policies.sh
-python3 ./platform-policies/scripts/validate-exceptions.py \
-  ./platform-policies/policy-exceptions.yaml
 ```
 
 ## Kubernetes evaluation contract
@@ -56,6 +76,10 @@ Gatekeeper admission templates live under `gitops-config/policies/`; Conftest re
 
 ## Exceptions
 
-`policy-exceptions.yaml` is machine-validated for identity, ownership, approval, tracking, and expiry. It does **not** automatically bypass a policy today. Safe integration of approved exceptions with Conftest and admission is tracked in issue #14. Global policy disabling is prohibited.
+`policy-exceptions.yaml` is the authoritative exception registry. CI validates it fail closed before producing the JSON data consumed by Conftest. An exception is matched only by an approved semantic policy ID and an exact resource selector; Kubernetes entries additionally require an exact namespace. Duplicate scopes, expired entries, unknown policy IDs, wildcard Terraform selectors, malformed entries, and global-disable fields are rejected.
+
+Conftest must query the `goldenpath.kubernetes` or `goldenpath.terraform` wrapper namespace; querying the implementation packages directly bypasses the exception contract and is not the supported entrypoint. When a matching exception suppresses a deny result, the wrapper emits an audit-visible warning containing the exception ID.
+
+The admission boundary is deliberately stricter: **Gatekeeper does not consume the exception registry and remains fail closed.** The registry declares `gatekeeper: strict`, and validation rejects attempts to turn it into a registry-driven admission bypass. Existing Gatekeeper `excludedNamespaces` are static constraint scope, not policy exceptions.
 
 See [Policy Guide](docs/POLICY_GUIDE.md) and [Policy Exceptions](../docs/governance/policy-exceptions.md).

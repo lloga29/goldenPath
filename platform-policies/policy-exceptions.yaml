@@ -1,16 +1,19 @@
 # Governed policy exception registry.
 #
-# This file is validated for structure and expiry, but it does NOT currently
-# bypass Conftest or Gatekeeper decisions. Active exception enforcement is
-# tracked in repository issue #14 to avoid introducing an implicit bypass.
+# CI compiles this registry into Conftest data only after fail-closed validation.
+# Gatekeeper intentionally remains strict and does not consume this registry.
 version: 1
+
+enforcement:
+  conftest: scoped-exceptions
+  gatekeeper: strict
 
 exceptions: []
 
 # Example only; keep examples commented so no exception is accidentally active.
 # exceptions:
 #   - id: EXC-2026-001
-#     policy: kubernetes.images
+#     policy: kubernetes.images.immutable
 #     resource: deployment/legacy-api
 #     namespace: legacy-system
 #     reason: "Migration requires a temporary compatibility image reference."
@@ -19,11 +22,3 @@ exceptions: []
 #     tracking_issue: "#123"
 #     created: "2026-09-16"
 #     expires: "2026-10-01"
-
-# Admission/system namespaces that may require separate platform policies.
-# This list is reference data until issue #14 integrates exception data with
-# enforcement. It must not be interpreted as an automatic bypass today.
-excluded_namespaces:
-  - kube-system
-  - kube-public
-  - gatekeeper-system

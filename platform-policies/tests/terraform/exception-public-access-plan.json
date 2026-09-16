@@ -1,0 +1,24 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.13.3",
+  "resource_changes": [
+    {
+      "address": "aws_security_group_rule.ssh",
+      "mode": "managed",
+      "type": "aws_security_group_rule",
+      "name": "ssh",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "type": "ingress",
+          "from_port": 22,
+          "to_port": 22,
+          "cidr_blocks": ["0.0.0.0/0"]
+        },
+        "after_unknown": {}
+      }
+    }
+  ]
+}

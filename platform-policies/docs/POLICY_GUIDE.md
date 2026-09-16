@@ -13,6 +13,8 @@ The executable Terraform policy bundle is currently AWS-specific. Multi-provider
 - Reject public sensitive-port ingress for supported AWS security-group representations.
 - Reject publicly accessible RDS and Redshift instances/clusters.
 
+Policy ID: `terraform.public_access`.
+
 ### Encryption
 
 - Require EBS encryption.
@@ -20,24 +22,29 @@ The executable Terraform policy bundle is currently AWS-specific. Multi-provider
 - Require a matching S3 server-side-encryption companion resource.
 - Require ElastiCache at-rest and in-transit encryption.
 
+Policy ID: `terraform.encryption.required`.
+
 ### Required metadata
 
 Supported taggable resources must carry `Environment`, `Team`, `CostCenter`, and `Owner`. Environment values are constrained to `dev`, `staging`, `prod`, or `ephemeral`.
+
+Policy ID: `terraform.tags.required`.
 
 ### IAM wildcard restrictions
 
 Managed and inline IAM policy resources reject `Action: "*"` and reject sensitive IAM/KMS/secret-access actions against `Resource: "*"`. `NotAction` and `NotResource` generate review warnings.
 
+Policy ID: `terraform.iam.no_wildcards`.
+
 ## Kubernetes controls
 
 The policy bundle evaluates the rendered desired state and checks:
 
-- explicit immutable image tags or SHA-256 digests;
-- required application/ownership/environment labels;
-- CPU and memory requests and limits;
-- non-root execution;
-- `allowPrivilegeEscalation=false`;
-- privileged container and host namespace restrictions;
+- explicit immutable image tags or SHA-256 digests — `kubernetes.images.immutable`;
+- required application/ownership/environment labels — `kubernetes.labels.required`;
+- CPU and memory requests and limits — `kubernetes.resources.required`;
+- non-root execution and `allowPrivilegeEscalation=false` — `kubernetes.security.context`;
+- privileged container and host namespace restrictions — `kubernetes.workload.isolation`;
 - advisory read-only-root-filesystem, dropped-capability, and probe guidance.
 
 ## Positive and negative fixtures
@@ -48,24 +55,41 @@ Every blocking policy change must preserve a passing fixture and at least one de
 ./platform-policies/scripts/test-policies.sh
 ```
 
-A test suite that only proves invalid input fails is insufficient; it must also prove the paved-road input remains valid.
+The suite also proves exact exception matching for Kubernetes and Terraform and proves that wrong-scope, expired, global-bypass, and Gatekeeper-bypass fixtures fail closed.
 
 ## Exceptions
 
-The exception registry is validated independently:
+Validate and compile the registry before policy evaluation:
 
 ```bash
 python3 platform-policies/scripts/validate-exceptions.py \
-  platform-policies/policy-exceptions.yaml
+  platform-policies/policy-exceptions.yaml \
+  --output /tmp/goldenpath-policy-exceptions.json
 ```
 
-Each active exception must have a stable ID, policy/resource scope, technical reason, owner email, approver, tracking issue, creation date, and expiry date. Expired exceptions fail validation. The registry cannot globally disable policies.
+Each active exception must have a stable ID, exact policy/resource scope, technical reason, owner email, approver, tracking issue, creation date, and expiry date. Kubernetes exceptions also require an exact namespace. The validator rejects unknown policy IDs, duplicate scopes, expired entries, wildcard Terraform addresses, unsupported fields, and global policy-disable attempts.
 
-The registry is **not yet consumed as a bypass** by Conftest/Gatekeeper. Issue #14 tracks that implementation so the bypass semantics can be designed explicitly and audited.
+The compiled JSON is the only exception data that should be passed to Conftest. Raw registry YAML must not be supplied directly because compilation is the fail-closed validation boundary. Conftest must evaluate through the `goldenpath.kubernetes` or `goldenpath.terraform` wrapper namespace so exact-scope filtering and audit warnings remain part of the enforcement path.
+
+A matched exception suppresses only that policy's `deny` results for that exact resource and emits an audit-visible warning containing the exception ID. It does not silence unrelated warnings or other policy IDs.
+
+### Admission boundary
+
+Gatekeeper remains deliberately stricter than CI: it does **not** consume `policy-exceptions.yaml`. The registry is required to declare:
+
+```yaml
+enforcement:
+  conftest: scoped-exceptions
+  gatekeeper: strict
+```
+
+The validator rejects any other Gatekeeper mode. Therefore a Kubernetes exception can permit a repository/reference Conftest check for its exact scope, but it does not prove the workload can be admitted by a real cluster. Admission remediation or an independently reviewed change to the Gatekeeper constraint scope is still required.
 
 ## Gatekeeper
 
 Gatekeeper templates/constraints under `gitops-config/policies/` provide admission-time defense in depth for selected Kubernetes controls. CI remains responsible for the full policy bundle. Admission resources must be validated together with their `ConstraintTemplate`; a constraint without its template is an invalid baseline.
+
+Static `excludedNamespaces` in Gatekeeper constraints are part of the admission policy's declared base scope. They are not generated from the exception registry and must not be presented as temporary policy exceptions.
 
 ## Rollout
 

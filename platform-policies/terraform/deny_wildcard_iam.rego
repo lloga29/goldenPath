@@ -1,5 +1,5 @@
 # Reject dangerous wildcard IAM permissions for supported inline/managed AWS policies.
-package terraform.security
+package terraform.iam
 
 import rego.v1
 

@@ -1,5 +1,5 @@
 # Prevent unintended public exposure for supported AWS resource types.
-package terraform.security
+package terraform.public_access
 
 import rego.v1
 
