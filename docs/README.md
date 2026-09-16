@@ -28,6 +28,7 @@ All repository documentation, code comments, workflow labels, examples, operatio
 - [Ownership and RBAC](governance/ownership-and-rbac.md)
 - [Change management](governance/change-management.md)
 - [Policy exceptions](governance/policy-exceptions.md)
+- [Public portfolio release](governance/public-release.md)
 - [Branching and releases](standards/branching-and-releases.md)
 - [Naming and metadata](standards/naming-and-metadata.md)
 - [Documentation standard](standards/documentation.md)
