@@ -14,6 +14,7 @@ This checklist tracks gaps between the reference repository and an operational p
 - [x] Reject `*-latest` hosted-runner labels in active root workflows.
 - [x] Verify SHA-256 before extracting or installing executable archives downloaded by active root CI.
 - [x] Install active Python CI tooling only from committed `--require-hashes` lock files under the pinned Python/runtime assumptions.
+- [x] Configure reviewable Dependabot pull requests for GitHub Actions and implemented Go-template Docker base images.
 - [ ] Validate Mermaid diagram rendering rather than only Markdown link structure.
 
 ### terraform-modules/
@@ -52,6 +53,8 @@ This checklist tracks gaps between the reference repository and an operational p
 - [x] Implement the Go microservice template baseline.
 - [x] Pin the root smoke-test runtime to Go 1.26.8.
 - [x] Render the Go template non-interactively and run gofmt, `go vet`, tests, and executable build validation in root CI.
+- [x] Pin Go-template builder and runtime base images to OCI digests and enforce that invariant in the smoke test.
+- [x] Use the supported Distroless Debian 13 nonroot runtime for the implemented Go template and build the generated image in root CI.
 - [ ] Add Python template only when an executable template and full operational contract are ready.
 - [ ] Add Terraform stack template only when an executable template and validation are ready.
 

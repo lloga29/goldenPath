@@ -90,6 +90,8 @@ jobs:
           build-args: |
             VERSION={% raw %}${{ github.sha }}{% endraw %}
             GIT_COMMIT={% raw %}${{ github.sha }}{% endraw %}
+            IMAGE_SOURCE=https://github.com/{{ github_owner }}/{{ project_name }}
+            SERVICE_PORT={{ port }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -124,6 +126,8 @@ jobs:
           build-args: |
             VERSION={% raw %}${{ github.sha }}{% endraw %}
             GIT_COMMIT={% raw %}${{ github.sha }}{% endraw %}
+            IMAGE_SOURCE=https://github.com/{{ github_owner }}/{{ project_name }}
+            SERVICE_PORT={{ port }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           sbom: true
