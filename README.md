@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml"><img src="https://img.shields.io/badge/CI-Repository%20validation-2088FF?logo=githubactions&logoColor=white" alt="Repository validation"></a>
+  <a href="https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml"><img src="https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml/badge.svg?branch=main" alt="Repository validation"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache License 2.0"></a>
 </p>
 
@@ -189,7 +189,7 @@ The reference implementation uses or documents:
 - Prometheus, Grafana, Loki, and Tempo
 - Checkov, tfsec, and Infracost as reference/optional integrations where documented
 
-The former ingress-nginx baseline is retired. Migration guidance is in [docs/operations/ingress-nginx-to-gateway-api.md](docs/operations/ingress-nginx-to-gateway-api.md). Platform dependency refresh work is tracked separately so chart upgrades remain explicit and reviewable rather than being hidden inside structural changes.
+The former ingress-nginx baseline is retired. Migration guidance is in [docs/operations/ingress-nginx-to-gateway-api.md](docs/operations/ingress-nginx-to-gateway-api.md). Platform dependency upgrades remain explicit and reviewable, with maintained chart baselines and migration notes validated as repository/reference evidence rather than hidden inside structural changes.
 
 ## Validation contract
 

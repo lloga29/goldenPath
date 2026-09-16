@@ -26,6 +26,7 @@ A higher evidence status must never be inferred from a lower one.
 - [x] Verify SHA-256 before extracting or installing executable archives downloaded by active root CI.
 - [x] Install active Python CI tooling only from committed `--require-hashes` lock files under the pinned Python/runtime assumptions.
 - [x] Configure reviewable Dependabot pull requests for GitHub Actions and implemented Go-template Docker base images.
+- [x] Add repository ownership, pull-request guidance, and structured issue intake for public contribution workflows.
 - [x] Scan the complete reachable Git history for committed secrets in root CI with a pinned, checksum-verified detector that must first pass a runtime canary.
 - [ ] Validate Mermaid diagram rendering rather than only Markdown link structure.
 
@@ -57,11 +58,11 @@ A higher evidence status must never be inferred from a lower one.
 - [x] Provide module validation and documentation scripts.
 - [x] Validate every currently implemented Terraform module/pattern with Terraform 1.16.2 and its declared provider constraints in root CI.
 - [x] Run Terraform-native VPC tests with mock providers so validation does not require cloud credentials.
-- [ ] Remove or implement any placeholder/empty module directories that could imply unsupported capability.
+- [x] Confirm every currently advertised Terraform module path contains a real implementation rather than an empty/placeholder module directory.
 - [ ] Resolve provider-specific integration placeholders before production use.
 
 ### platform-stacks/
-- [ ] Implement or remove documentation references to `scripts/init-environment.sh` if it is still absent.
+- [x] Confirm no active documentation references the absent `scripts/init-environment.sh`; no unsupported helper is advertised.
 - [x] Validate executable reference stack formatting and Terraform configuration in root CI.
 - [ ] Validate client bootstrap and environment templates end to end in a disposable cloud account.
 - [ ] Activate CI plan/apply workflows in their effective production repository location.
@@ -97,7 +98,7 @@ A higher evidence status must never be inferred from a lower one.
 - [x] Provide Gatekeeper constraint examples.
 - [x] Run positive and intentionally invalid aggregate Kubernetes/Terraform policy fixtures in root CI.
 - [x] Evaluate the executable policy bundle under Conftest 0.70.0 with its default Rego v1 parser and no v0 compatibility flag.
-- [x] Use Rego v1 syntax throughout the executable Conftest Kubernetes and Terraform policy modules (issue #30).
+- [x] Use Rego v1 syntax throughout the executable Conftest Kubernetes and Terraform policy modules.
 - [ ] Add dedicated regression fixtures for every blocking policy rule if aggregate fixtures do not uniquely exercise each rule.
 - [x] Validate policy-exception registry schema, required ownership/approval metadata, date ordering, expiry, duplicate IDs, and prohibition of global `disabled_policies` in root CI.
 - [ ] Prove exception application/approval workflow against a real governed delivery path before relying on it operationally.
@@ -115,7 +116,8 @@ A higher evidence status must never be inferred from a lower one.
 - [ ] Validate runtime admission policies in staged/audit mode before enforcement.
 - [ ] Implement end-to-end build-once promotion using immutable artifact identities in a real delivery repository.
 - [ ] Exercise application rollback and Git reconciliation in a disposable/production-like environment.
-- [ ] Establish a current, supported platform dependency baseline and prove upgrade/rollback procedures.
+- [x] Establish a current, supported platform dependency baseline in repository/reference configuration.
+- [ ] Prove platform dependency upgrade and rollback procedures against an identified disposable or production-like runtime before describing them as runtime-validated.
 - [x] Introduce R0-R4 change-risk classification to select additional gates, reviewers, previews, runtime validation, human approvals, and autonomy without weakening global minimum controls.
 - [ ] Prove the emitted R0-R4 controls against a real governed delivery path before describing them as operational enforcement.
 

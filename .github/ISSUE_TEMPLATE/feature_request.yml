@@ -1,0 +1,89 @@
+name: Feature request
+description: Propose a new GoldenPath capability or a material improvement to an existing one.
+title: "feat: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        GoldenPath favors evidence-backed, operationally useful capabilities over checklist completeness. Describe the problem first and keep runtime claims separate from repository/reference implementation.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or platform need
+      description: What developer, platform, security, or operational problem should be solved?
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the observable outcome rather than only a preferred implementation.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Primary area
+      options:
+        - Developer experience / service templates
+        - Terraform / infrastructure as code
+        - Kubernetes / GitOps / Argo CD
+        - Policy as code / governance
+        - Platform assurance / evidence
+        - Observability / operations
+        - Security / software supply chain
+        - Repository CI / automation
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: Describe the smallest useful implementation and important alternatives or trade-offs.
+
+  - type: dropdown
+    id: target_evidence
+    attributes:
+      label: Intended evidence level
+      description: What evidence level should be required before the capability is described as complete?
+      options:
+        - Implemented / repository evidence
+        - Reference / deterministic repository evidence
+        - Runtime-validated
+        - Production-validated
+        - To be determined
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List objective conditions that would make the work complete.
+      placeholder: |
+        - ...
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and operational considerations
+      description: Include identity, secrets, networking, policy, rollback, recovery, cost, observability, or migration concerns where relevant.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope checks
+      options:
+        - label: The request does not depend on claiming unverified runtime or production behavior.
+          required: true
+        - label: I have not included secrets, private customer information, or private infrastructure identifiers.
+          required: true
