@@ -22,7 +22,7 @@ For each platform dependency:
 | kube-prometheus-stack | `https://prometheus-community.github.io/helm-charts` | `91.4.1` | Refreshed to the current chart / Prometheus Operator baseline | Helm rendering only; CRD upgrade and monitoring runtime not proven |
 | Loki | `https://grafana-community.github.io/helm-charts` | `18.13.1` | Migrated to the current OSS community distribution path | Helm rendering only; storage/runtime not proven |
 | Tempo | `https://grafana-community.github.io/helm-charts` | `3.0.0` | Migrated to the current community single-binary chart | Helm rendering only; trace storage/runtime not proven |
-| Gatekeeper | `https://open-policy-agent.github.io/gatekeeper/charts` | `3.14.0` | Refresh pending under #25 | Admission runtime not proven |
+| Gatekeeper | `https://open-policy-agent.github.io/gatekeeper/charts` | `3.23.1` | Refreshed to the current stable admission-policy baseline | Helm rendering only; CRD/webhook/admission runtime not proven |
 | Envoy Gateway | `docker.io/envoyproxy` OCI | `v1.9.1` | Requires upstream-version verification under #25 before any change | Gateway/DNS/TLS runtime not proven |
 
 ## cert-manager refresh
@@ -65,6 +65,24 @@ The upstream release also publishes a `.tgz.prov` provenance file. GoldenPath re
 
 For an existing environment, review every relevant major-version section in upstream `UPGRADE.md`, update CRDs using the approved cluster procedure before controllers depend on new schemas, and test Prometheus/Alertmanager storage compatibility in staging. Keep a backup/recovery plan for monitoring data and configuration; a Helm downgrade is not a CRD or persisted-data rollback strategy.
 
+## Gatekeeper refresh
+
+The selected Gatekeeper chart is `3.23.1`, matching Gatekeeper `v3.23.1`, the latest stable release published on August 27, 2026. The official Helm source remains `https://open-policy-agent.github.io/gatekeeper/charts`.
+
+Gatekeeper documents its minimum supported Kubernetes version as aligned with the Kubernetes Supported Versions policy. As of September 16, 2026, Kubernetes maintains the `1.35`, `1.36`, and `1.37` release branches. Gatekeeper's chart does not declare a `kubeVersion`, so a successful Helm render must not be interpreted as proof of support on an arbitrary Kubernetes version.
+
+The previous GoldenPath pin `3.14.0` embedded OPA `v0.57.1`; Gatekeeper `3.23.1` embeds OPA `v1.17.1`. GoldenPath keeps its existing classic `targets[].rego` ConstraintTemplate examples unchanged in this dependency refresh. Repository parsing and Kustomize rendering do not prove that every admission decision is semantically identical under the newer Gatekeeper/OPA runtime.
+
+The old GoldenPath values placed a `resources` block at chart root, where Gatekeeper did not consume it. This refresh makes the intended envelope explicit under both `controllerManager.resources` and `audit.resources` while preserving the existing replica count, audit interval, violation limit, and audit-cache choice.
+
+This is a fresh-install/reference baseline update. Gatekeeper owns CRDs and admission webhooks, and `upgradeCRDs.enabled` is enabled by default in both the old and selected charts. Crossing from `3.14.0` to `3.23.1` spans multiple Gatekeeper and OPA minors; GoldenPath does not claim that a Helm render proves a safe direct in-place upgrade for an existing cluster.
+
+Root CI proves the selected chart and committed values can render and that repository policy fixtures retain their expected static outcomes. It does not prove live webhook availability, CRD conversion/storage behavior, audit convergence, failure-policy behavior, constraint enforcement, mutation, external-data integration, or Kubernetes API-server admission behavior.
+
+### Gatekeeper upgrade and rollback boundary
+
+For an existing environment, review the intervening Gatekeeper release and upgrade notes, validate CRDs and ConstraintTemplates in a non-production cluster, and prove both allowed and denied admission paths before promotion. Export critical ConstraintTemplates/Constraints and preserve the previous desired-state revision. A chart downgrade is not a CRD rollback strategy, and rollback must not leave the API server dependent on an unavailable or incompatible webhook.
+
 ## Loki OSS migration
 
 The selected community Loki chart `18.13.1` declares Loki `3.7.7` and Kubernetes `>=1.25.0-0`. GoldenPath explicitly selects Monolithic mode, disables the Simple Scalable targets, uses TSDB schema v13, and keeps local filesystem storage explicit.
@@ -89,7 +107,7 @@ Tempo 3 changes persisted/runtime behavior. Test data compatibility before promo
 
 ## Remaining refresh work
 
-Issue #25 remains open until the remaining platform dependencies have an evidence-backed current support baseline. Gatekeeper and Envoy Gateway remain separate review units because admission-policy runtime and Gateway API/controller compatibility require their own evidence.
+Issue #25 remains open until Envoy Gateway has an evidence-backed current support baseline. Gateway API/controller compatibility and live routing behavior require their own evidence.
 
 ## Upstream references
 
@@ -100,6 +118,9 @@ Issue #25 remains open until the remaining platform dependencies have an evidenc
 - [External Secrets documentation](https://external-secrets.io/)
 - [kube-prometheus-stack chart](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack)
 - [kube-prometheus-stack upgrade guide](https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/UPGRADE.md)
+- [Gatekeeper installation](https://open-policy-agent.github.io/gatekeeper/website/docs/install/)
+- [Gatekeeper OPA versions](https://open-policy-agent.github.io/gatekeeper/website/docs/opa-versions/)
+- [Kubernetes supported releases](https://kubernetes.io/releases/)
 - [Grafana Community Helm charts - Loki](https://github.com/grafana-community/helm-charts/tree/main/charts/loki)
 - [Loki deployment modes](https://grafana.com/docs/loki/latest/get-started/deployment-modes/)
 - [Grafana Community Helm charts - Tempo](https://github.com/grafana-community/helm-charts/tree/main/charts/tempo)
