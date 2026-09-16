@@ -90,11 +90,7 @@ jobs:
           set -euo pipefail
           canary_dir="$(mktemp -d)"
           trap 'rm -rf "$canary_dir"' EXIT
-          {
-            printf '%s%s\n' '-----BEGIN OPENSSH ' 'PRIVATE KEY-----'
-            printf '%s\n' 'canary-only-not-a-real-private-key'
-            printf '%s%s\n' '-----END OPENSSH ' 'PRIVATE KEY-----'
-          } > "$canary_dir/canary.txt"
+          printf 'api_key = "%s%s"\n' '8dyfuiRyq=vVc3RRr_' 'edRk-fK__JItpZ' > "$canary_dir/canary.txt"
 
           set +e
           gitleaks dir --no-banner --redact "$canary_dir"
