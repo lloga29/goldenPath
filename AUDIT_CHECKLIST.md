@@ -2,6 +2,17 @@
 
 This checklist tracks gaps between the reference repository and an operational production Golden Path. A checked item must be supported by repository or runtime evidence, not intent. Static CI evidence must never be presented as proof that an external cloud, cluster, identity system, DNS zone, certificate authority, secret backend, or hosted runner image is operationally immutable.
 
+## Evidence status vocabulary
+
+Use these terms consistently when describing a capability:
+
+- **implemented** — code or configuration exists and is structurally valid;
+- **reference** — an executable repository pattern is demonstrated with deterministic repository evidence;
+- **runtime-validated** — the exact capability and source state were exercised against an identified runtime and have successful runtime evidence;
+- **production-validated** — the exact capability and source state were exercised against the production target and have successful production runtime evidence.
+
+A higher evidence status must never be inferred from a lower one.
+
 ## P0 - Repository correctness and usable paved road
 
 ### Repository-wide
@@ -17,6 +28,21 @@ This checklist tracks gaps between the reference repository and an operational p
 - [x] Configure reviewable Dependabot pull requests for GitHub Actions and implemented Go-template Docker base images.
 - [x] Scan the complete reachable Git history for committed secrets in root CI with a pinned, checksum-verified detector that must first pass a runtime canary.
 - [ ] Validate Mermaid diagram rendering rather than only Markdown link structure.
+
+### Assurance and evidence
+- [x] Define a versioned `goldenpath.evidence/v1` Evidence Manifest schema.
+- [x] Bind evidence to repository, exact source commit, policy digest, architecture digest, desired-state digest, timestamps, and capability/environment context.
+- [x] Distinguish `PASS`, `FAIL`, `INFRASTRUCTURE_FAILURE`, and policy-authorized `SKIP_ALLOWED` gate outcomes.
+- [x] Derive `READY` / `NOT_READY` from evidence instead of accepting a producer-selected readiness claim.
+- [x] Fail closed when a required gate fails or its execution infrastructure cannot establish a trustworthy result.
+- [x] Reject unauthorized skips and require an explicit reason for allowed skips.
+- [x] Require runtime proof for `runtime-validated` and `production-validated` claims.
+- [x] Require `production-validated` claims to target the `prod` environment.
+- [x] Add positive and negative regression fixtures and execute them from active root CI.
+- [x] Reject source-stale evidence through exact commit comparison with `--expected-commit`.
+- [ ] Generate and retain Evidence Manifests from a real delivery repository/runtime rather than fixtures only.
+- [ ] Compute and compare policy, architecture, and desired-state digests automatically at evidence-consumption time.
+- [ ] Add durable retention/signing/provenance for production Evidence Manifests before using them as compliance evidence.
 
 ### terraform-modules/
 - [x] Provide terraform-docs header/footer files.
@@ -83,6 +109,7 @@ This checklist tracks gaps between the reference repository and an operational p
 - [ ] Implement end-to-end build-once promotion using immutable artifact identities in a real delivery repository.
 - [ ] Exercise application rollback and Git reconciliation in a disposable/production-like environment.
 - [ ] Establish a current, supported platform dependency baseline and prove upgrade/rollback procedures.
+- [ ] Introduce R0-R4 change-risk classification to select additional gates, reviewers, previews, and approvals without weakening global minimum controls.
 
 ## P2 - Platform maturity
 
