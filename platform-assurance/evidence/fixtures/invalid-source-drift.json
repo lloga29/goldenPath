@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "goldenpath.evidence/v1",
+  "evidenceId": "invalid-source-drift-001",
+  "generatedAt": "2026-09-16T10:23:00Z",
+  "claimLevel": "reference",
+  "decision": "READY",
+  "source": {
+    "repository": "lloga29/goldenPath",
+    "commitSha": "6666666666666666666666666666666666666666"
+  },
+  "context": {
+    "environment": "repository",
+    "capability": "repository-validation"
+  },
+  "inputs": {
+    "sourceSha": "7777777777777777777777777777777777777777",
+    "policyDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "architectureDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "desiredStateDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "gates": [
+    {
+      "id": "baseline-ci",
+      "required": true,
+      "skipAllowed": false,
+      "result": "PASS",
+      "observedAt": "2026-09-16T10:22:30Z"
+    }
+  ]
+}
