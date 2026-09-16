@@ -25,7 +25,7 @@ spec:
                   release: external-secrets
                   chart: external-secrets
                   repo: https://charts.external-secrets.io
-                  version: 0.9.11
+                  version: 2.10.0
                   namespace: external-secrets
                 - component: kube-prometheus-stack
                   release: kube-prometheus-stack
