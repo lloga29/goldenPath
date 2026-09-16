@@ -14,9 +14,10 @@
   Platform Engineering · Kubernetes · GitOps · Infrastructure as Code · Policy as Code · Observability
 </p>
 
-[![Repository validation](https://img.shields.io/badge/CI-Repository%20validation-2088FF?logo=githubactions&logoColor=white)](https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml)
-[![English-only repository](https://img.shields.io/badge/CI-English--only%20repository-2088FF?logo=githubactions&logoColor=white)](https://github.com/lloga29/goldenPath/actions/workflows/english-only.yaml)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml"><img src="https://img.shields.io/badge/CI-Repository%20validation-2088FF?logo=githubactions&logoColor=white" alt="Repository validation"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache License 2.0"></a>
+</p>
 
 <p align="center">
   <a href="docs/QUICKSTART.md">Quickstart</a> ·
@@ -31,7 +32,43 @@ Its purpose is to make the safe and repeatable path the easiest path for enginee
 
 > **Core idea:** GoldenPath is not a monolithic platform product or a collection of disconnected manifests. It is a reference architecture and implementation baseline that shows how platform teams can standardize software delivery while keeping security, governance, observability, and operational ownership explicit.
 
-## Portfolio highlights
+## Who is this for?
+
+GoldenPath is designed for:
+
+- Platform Engineering teams building or evolving internal developer platforms;
+- DevOps and SRE teams standardizing Kubernetes delivery and operational controls;
+- organizations adopting GitOps, policy as code, and reusable infrastructure patterns;
+- engineering teams that want a documented, auditable paved road without hiding the underlying platform decisions.
+
+## Project status
+
+GoldenPath is an actively developed reference implementation. The repository currently includes the core platform baseline for CI validation, GitOps delivery with Argo CD, reusable Terraform modules, policy as code, operational documentation, and a working Go service template.
+
+**Implemented today:** repository validation, Terraform platform modules, Kubernetes/GitOps baseline, policy controls, observability baseline, runbooks, ADRs, and the Go golden service template.
+
+**On the roadmap:** additional service templates, including Python, and a dedicated Terraform stack template.
+
+See [Current implementation](#current-implementation) for the evidence-backed capability matrix.
+
+## Quick start
+
+The fastest way to exercise the paved road is to generate and validate the implemented Go service template:
+
+```bash
+git clone https://github.com/lloga29/goldenPath.git
+cd goldenPath
+
+copier copy ./service-templates/templates/microservice-golang ./my-service
+cd my-service
+
+go test ./...
+go vet ./...
+```
+
+Continue with the full [15-minute quickstart](docs/QUICKSTART.md) for Terraform validation, GitOps registration, immutable promotion, and runtime checks.
+
+## Platform capabilities
 
 This repository demonstrates an end-to-end Platform Engineering approach rather than a collection of isolated manifests. The implementation is intentionally evidence-driven: capabilities are described as implemented, reference, roadmap, or runtime-dependent according to what the repository can actually prove.
 
@@ -46,7 +83,7 @@ This repository demonstrates an end-to-end Platform Engineering approach rather 
 | Observability | A reference platform baseline for Prometheus, Grafana, Loki, and Tempo integrated into the GitOps model | `gitops-config/platform/values/`, `gitops-config/argocd/applicationsets/` |
 | Operational discipline | Runbooks, ADRs, security guidance, support expectations, rollback procedures, audit checklist, and maturity model | `docs/runbooks/`, `docs/adr/`, `SECURITY.md`, `AUDIT_CHECKLIST.md` |
 
-For reviewers evaluating the project as a portfolio artifact, the fastest path is the [15-minute quickstart](docs/QUICKSTART.md), the [architecture overview](docs/architecture/overview.md), and the [audit checklist](AUDIT_CHECKLIST.md). The audit checklist is deliberately conservative: static CI or desired-state configuration is never presented as proof that an external cloud account, cluster, DNS zone, certificate authority, or secret backend is operational.
+Start with the [15-minute quickstart](docs/QUICKSTART.md), the [architecture overview](docs/architecture/overview.md), and the [audit checklist](AUDIT_CHECKLIST.md). The audit checklist is deliberately conservative: static CI or desired-state configuration is never presented as proof that an external cloud account, cluster, DNS zone, certificate authority, or secret backend is operational.
 
 ## Architecture at a glance
 
@@ -160,7 +197,7 @@ The former ingress-nginx baseline is retired. Migration guidance is in [docs/ope
 
 ## Validation contract
 
-Every pull request runs an always-on baseline that checks English-only content, YAML/JSON parsing, and shell syntax. Changed-domain detection activates deeper checks for documentation, Terraform, GitOps/policy, and service templates. Changes to the root validation workflow or root validation scripts force all domains to run so CI changes test themselves.
+Every pull request runs an always-on baseline that validates repository language conventions, YAML/JSON parsing, and shell syntax. Changed-domain detection activates deeper checks for documentation, Terraform, GitOps/policy, and service templates. Changes to the root validation workflow or root validation scripts force all domains to run so CI changes test themselves.
 
 The GitOps validation contract additionally checks:
 
@@ -194,4 +231,4 @@ Licensed under the [Apache License 2.0](LICENSE). The license permits use, modif
 
 Repository owner and commit identity: **Juan Gallo <lloga29@gmail.com>**.
 
-All new repository content is written in English. Significant platform decisions should be recorded as ADRs, and operationally significant controls should have both documentation and validation evidence.
+Repository documentation and contributions use English as the working language, and CI enforces that repository convention. Significant platform decisions should be recorded as ADRs, and operationally significant controls should have both documentation and validation evidence.
