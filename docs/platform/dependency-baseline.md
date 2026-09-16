@@ -23,7 +23,7 @@ For each platform dependency:
 | Loki | `https://grafana-community.github.io/helm-charts` | `18.13.1` | Migrated to the current OSS community distribution path | Helm rendering only; storage/runtime not proven |
 | Tempo | `https://grafana-community.github.io/helm-charts` | `3.0.0` | Migrated to the current community single-binary chart | Helm rendering only; trace storage/runtime not proven |
 | Gatekeeper | `https://open-policy-agent.github.io/gatekeeper/charts` | `3.23.1` | Refreshed to the current stable admission-policy baseline | Helm rendering only; CRD/webhook/admission runtime not proven |
-| Envoy Gateway | `docker.io/envoyproxy` OCI | `v1.9.1` | Requires upstream-version verification under #25 before any change | Gateway/DNS/TLS runtime not proven |
+| Envoy Gateway | `docker.io/envoyproxy` OCI | `v1.9.1` | Verified as the current stable release and current repository pin | Helm rendering only; Gateway API CRDs, routing, DNS, TLS, and data-plane runtime not proven |
 
 ## cert-manager refresh
 
@@ -83,6 +83,24 @@ Root CI proves the selected chart and committed values can render and that repos
 
 For an existing environment, review the intervening Gatekeeper release and upgrade notes, validate CRDs and ConstraintTemplates in a non-production cluster, and prove both allowed and denied admission paths before promotion. Export critical ConstraintTemplates/Constraints and preserve the previous desired-state revision. A chart downgrade is not a CRD rollback strategy, and rollback must not leave the API server dependent on an unavailable or incompatible webhook.
 
+## Envoy Gateway baseline verification
+
+The selected Envoy Gateway OCI chart remains `docker.io/envoyproxy/gateway-helm:v1.9.1`. Upstream published `v1.9.1` on August 28, 2026, and it is the current stable release as of this review. No version change is needed: keeping an already-current exact pin is preferable to manufacturing an unrelated dependency change.
+
+The Envoy Gateway compatibility matrix for the `v1.9` line specifies Envoy Proxy `distroless-v1.39.x`, Gateway API `v1.6.1`, and tested Kubernetes versions `1.33` through `1.36`; the line reaches end of life on February 14, 2027. Kubernetes `1.37` is therefore outside the published `v1.9` tested matrix at this review point, and GoldenPath does not infer `1.37` runtime support from successful rendering.
+
+The repository-owned values still map to supported `v1.9.1` chart keys: `deployment.replicas`, `deployment.envoyGateway.resources`, and `config.envoyGateway.logging`. The repository's `GatewayClass` already uses `gateway.networking.k8s.io/v1`. A repository search found no `TCPRoute`, `UDPRoute`, or `gateway.networking.k8s.io/v1alpha2` manifests; this is repository/reference evidence only and does not prove that an external or existing cluster has none.
+
+Envoy Gateway `v1.9` bundles Gateway API `v1.6.1`. For upgrades from older installations, upstream requires the Gateway API CRDs to be upgraded before Envoy Gateway. `TCPRoute` and `UDPRoute` move to `gateway.networking.k8s.io/v1`; standard-channel Gateway API `v1.6` no longer serves `v1alpha2` for those resources, while experimental-channel CRDs continue to serve both versions for a transition period. Existing stored objects can therefore require an explicit storage-version migration.
+
+The chart installs Envoy Gateway CRDs, Gateway API CRDs, and Gateway API safe-upgrade policy resources when `crds.enabled=true`, which is the upstream default. Clusters where Gateway API CRDs are provider-managed or separately managed must follow the upstream ownership/disablement procedure instead of allowing two owners to mutate the same CRDs or safe-upgrade policy resources.
+
+Root CI proves that `v1.9.1` can be pulled and rendered with the committed values for dev, staging, and prod. It does not prove GatewayClass acceptance, Gateway/Route reconciliation, LoadBalancer allocation, DNS, TLS issuance/termination, policy behavior, xDS propagation, Envoy data-plane health, traffic continuity, or an in-place CRD/controller upgrade on an existing cluster.
+
+### Envoy Gateway upgrade and rollback boundary
+
+For an existing environment, inventory the installed Gateway API channel and ownership model, migrate incompatible `v1alpha2` TCP/UDP manifests before the Gateway API CRD change, upgrade CRDs first, and then upgrade the controller. Validate Gateway and Route conditions plus real traffic before promotion. Preserve the previous desired-state revision and exported Gateway API/Envoy Gateway resources, but do not treat `helm rollback` or a controller downgrade as a safe CRD/storage-version rollback.
+
 ## Loki OSS migration
 
 The selected community Loki chart `18.13.1` declares Loki `3.7.7` and Kubernetes `>=1.25.0-0`. GoldenPath explicitly selects Monolithic mode, disables the Simple Scalable targets, uses TSDB schema v13, and keeps local filesystem storage explicit.
@@ -105,9 +123,9 @@ Local trace storage is deliberately **not** presented as production-ready. A rea
 
 Tempo 3 changes persisted/runtime behavior. Test data compatibility before promotion and keep a validated trace-storage rollback/recovery path; do not assume an in-place chart downgrade is data-safe.
 
-## Remaining refresh work
+## Dependency refresh status
 
-Issue #25 remains open until Envoy Gateway has an evidence-backed current support baseline. Gateway API/controller compatibility and live routing behavior require their own evidence.
+Issue #25 is complete at the repository/reference-evidence level once this verification is merged: every tracked platform chart has an upstream source, exact pin, compatibility boundary, upgrade/rollback notes, and root-CI render coverage. Runtime evidence and production validation remain separate work and are not implied by closing the dependency-refresh issue.
 
 ## Upstream references
 
@@ -121,6 +139,9 @@ Issue #25 remains open until Envoy Gateway has an evidence-backed current suppor
 - [Gatekeeper installation](https://open-policy-agent.github.io/gatekeeper/website/docs/install/)
 - [Gatekeeper OPA versions](https://open-policy-agent.github.io/gatekeeper/website/docs/opa-versions/)
 - [Kubernetes supported releases](https://kubernetes.io/releases/)
+- [Envoy Gateway compatibility matrix](https://gateway.envoyproxy.io/news/releases/matrix/)
+- [Envoy Gateway Helm installation and upgrade](https://gateway.envoyproxy.io/latest/install/install-helm/)
+- [Envoy Gateway v1.9 release notes](https://gateway.envoyproxy.io/news/releases/v1.9/)
 - [Grafana Community Helm charts - Loki](https://github.com/grafana-community/helm-charts/tree/main/charts/loki)
 - [Loki deployment modes](https://grafana.com/docs/loki/latest/get-started/deployment-modes/)
 - [Grafana Community Helm charts - Tempo](https://github.com/grafana-community/helm-charts/tree/main/charts/tempo)
