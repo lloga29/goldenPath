@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "goldenpath.evidence/v1",
+  "evidenceId": "invalid-gate-ready-001",
+  "generatedAt": "2026-09-16T10:20:00Z",
+  "claimLevel": "reference",
+  "decision": "READY",
+  "source": {
+    "repository": "lloga29/goldenPath",
+    "commitSha": "3333333333333333333333333333333333333333"
+  },
+  "context": {
+    "environment": "repository",
+    "capability": "repository-validation"
+  },
+  "inputs": {
+    "sourceSha": "3333333333333333333333333333333333333333",
+    "policyDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "architectureDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "desiredStateDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "gates": [
+    {
+      "id": "required-policy",
+      "required": true,
+      "skipAllowed": false,
+      "result": "FAIL",
+      "observedAt": "2026-09-16T10:19:00Z",
+      "reason": "Blocking policy violation."
+    }
+  ]
+}
