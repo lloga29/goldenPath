@@ -36,7 +36,7 @@ These controls are exercised by the same active root CI they protect. Changes to
 
 Public repository exposure includes reachable Git history, not just the current working tree. Root CI therefore performs a full-history Gitleaks scan from a `fetch-depth: 0` checkout.
 
-The scanner is deliberately pinned to Gitleaks `8.30.0` rather than blindly tracking `latest`. Gitleaks `8.30.1` has a documented regression in which representative secrets can produce a false `no leaks found` result. The Golden Path also creates a synthetic GitHub-token-shaped canary only at runtime and requires the scanner to reject it before the repository scan is trusted. If the canary does not fail as expected, CI fails closed and the history result is discarded.
+The scanner is deliberately pinned to Gitleaks `8.30.0` rather than blindly tracking `latest`. Gitleaks `8.30.1` has a documented regression in which representative secrets can produce a false `no leaks found` result. The Golden Path also creates a synthetic OpenSSH private-key marker only at runtime and requires the scanner to reject it before the repository scan is trusted. The marker is assembled at runtime so the repository itself does not contain the complete secret-shaped canary. If the canary does not fail as expected, CI fails closed and the history result is discarded.
 
 This control detects secret patterns in reachable commits, including content later removed from `main`. It does not prove that repository history contains no confidential business context, internal names, private URLs, customer identifiers, or other publication-inappropriate material that is not secret-shaped. Public-release review must still cover those categories separately.
 
