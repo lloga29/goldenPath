@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "goldenpath.evidence/v1",
+  "evidenceId": "runtime-staging-001",
+  "generatedAt": "2026-09-16T10:15:00Z",
+  "claimLevel": "runtime-validated",
+  "decision": "READY",
+  "source": {
+    "repository": "lloga29/goldenPath",
+    "commitSha": "2222222222222222222222222222222222222222",
+    "workflowName": "Runtime validation",
+    "workflowRunUrl": "https://github.com/lloga29/goldenPath/actions/runs/1002"
+  },
+  "context": {
+    "environment": "staging",
+    "capability": "golden-service-delivery",
+    "service": "sample-service"
+  },
+  "artifact": {
+    "type": "container",
+    "identity": "ghcr.io/example/sample-service",
+    "digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  },
+  "inputs": {
+    "sourceSha": "2222222222222222222222222222222222222222",
+    "policyDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "architectureDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "desiredStateDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "gates": [
+    {
+      "id": "build-and-test",
+      "required": true,
+      "skipAllowed": false,
+      "result": "PASS",
+      "observedAt": "2026-09-16T10:12:00Z",
+      "evidenceUrl": "https://github.com/lloga29/goldenPath/actions/runs/1002"
+    },
+    {
+      "id": "policy",
+      "required": true,
+      "skipAllowed": false,
+      "result": "PASS",
+      "observedAt": "2026-09-16T10:13:00Z",
+      "evidenceUrl": "https://github.com/lloga29/goldenPath/actions/runs/1002"
+    }
+  ],
+  "runtimeEvidence": [
+    {
+      "kind": "deployment",
+      "result": "PASS",
+      "observedAt": "2026-09-16T10:14:00Z",
+      "evidenceUrl": "https://example.invalid/evidence/deployment/1002"
+    },
+    {
+      "kind": "smoke",
+      "result": "PASS",
+      "observedAt": "2026-09-16T10:14:30Z",
+      "evidenceUrl": "https://example.invalid/evidence/smoke/1002"
+    }
+  ]
+}
