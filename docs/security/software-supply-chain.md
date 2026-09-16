@@ -111,7 +111,11 @@ The template smoke test fails if any generated `FROM` instruction lacks a SHA-25
 
 ## SBOM, signing, and provenance
 
-SBOM generation, artifact signing, provenance publication, and deploy-time verification are documented target controls. They are not yet implemented as active root workflows in this consolidated repository and must not be reported as currently enforced.
+The implemented Go paved-road now has an executable **repository/reference SBOM contract**. Its generated `main` publish job asks BuildKit to attach an SBOM and max-level provenance to the immutable GHCR image, obtains the build output digest, re-addresses the artifact as `IMAGE_NAME@sha256:<digest>`, extracts `.SBOM.SPDX` from the registry attestation, and fails closed unless the payload is a parseable SPDX document with creation metadata and a non-empty package inventory. Root CI renders the template and statically requires the generation, digest binding, registry inspection, and SPDX validation steps, so removal of that contract fails repository validation.
+
+This evidence does **not** mean a generated delivery repository has already published and retrieved an SBOM from GHCR. That becomes runtime evidence only when an actual generated service executes the publish path successfully. The repository must continue to distinguish the implemented reference contract from runtime-validated or production-validated release evidence.
+
+The generated workflow also requests BuildKit provenance and performs keyless Cosign signing with GitHub OIDC after SBOM verification. Those signing/provenance paths are implemented template behavior, but GoldenPath does not yet fail closed on independent post-publication signature/provenance verification, nor has this consolidated repository demonstrated them against a real generated release runtime. Therefore the broader signing, provenance-publication, and deploy-time verification audit items remain open.
 
 ## Registry
 

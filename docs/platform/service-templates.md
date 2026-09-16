@@ -29,7 +29,8 @@ The Go template currently provides:
 - non-root distroless container runtime;
 - PR container builds without registry publication;
 - full-Git-SHA GHCR publication from `main` only;
-- BuildKit SBOM/provenance generation requests;
+- BuildKit SBOM and max-level provenance attestations on published images;
+- post-push retrieval and structural validation of the registry-attached SPDX SBOM by the exact immutable image digest;
 - keyless Cosign image signing through GitHub OIDC;
 - ownership metadata and a runbook placeholder;
 - explicit separation between application source and GitOps desired state.
@@ -44,13 +45,17 @@ The repository includes:
 ./service-templates/scripts/render-go-template-smoke-test.sh
 ```
 
-The script renders representative output, then runs Go formatting validation, vet, tests, and build. Root CI integration is tracked in issue #10.
+The script renders representative output, then runs Go formatting validation, vet, tests, build, container construction, immutable-base checks, and static validation of the generated release-SBOM contract. Root CI executes this smoke test for template-affecting changes.
+
+The root smoke test proves repository/reference behavior only. It does not push a generated service image to GHCR, so the post-push SBOM retrieval remains runtime evidence that must be established by an actual generated service delivery repository.
 
 ## Artifact lifecycle
 
 The application pipeline builds once and identifies an image by the full Git SHA. The GitOps repository promotes that same immutable image through environments. `:latest` publication is not part of the paved road.
 
-External CI Actions and container bases are still version-tag pinned in this phase; immutable dependency pinning is tracked in issue #17.
+On a `main` publication, BuildKit attaches an SBOM to the pushed image. The workflow then addresses the artifact as `IMAGE_NAME@<build-output-digest>`, extracts `.SBOM.SPDX` with `docker buildx imagetools inspect`, and fails closed unless the payload is a parseable SPDX document with creation metadata and a non-empty package inventory. The SBOM therefore follows the immutable registry artifact rather than a mutable tag.
+
+External CI Actions remain version-tag pinned in the generated template; stronger immutable dependency pinning is a separate supply-chain concern from the SBOM contract.
 
 ## Ownership boundary
 

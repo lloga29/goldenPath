@@ -69,13 +69,13 @@ CI never publishes `:latest`. A push to `main` publishes:
 ghcr.io/{{ github_owner }}/{{ project_name }}:<full-git-sha>
 ```
 
-The publish job also requests BuildKit SBOM/provenance and signs the resulting image digest with keyless Cosign using GitHub OIDC. Repository issue #17 tracks stronger digest/SHA pinning for external CI/build dependencies.
+The publish job requests BuildKit SBOM and max-level provenance attestations. It then uses the exact build output digest to retrieve the registry-attached SPDX SBOM and fails closed unless that payload is a valid SPDX document with creation metadata and a non-empty package inventory. Only after that check does the job sign the immutable image digest with keyless Cosign using GitHub OIDC.
 
 ## CI behavior
 
 Pull requests run formatting, vet, lint, race-enabled tests, filesystem/dependency vulnerability scanning, and a container build without publishing.
 
-`main` runs the same quality/security gates, then authenticates to GHCR with `GITHUB_TOKEN`, publishes a full-SHA image, and signs the resulting digest.
+`main` runs the same quality/security gates, then authenticates to GHCR with `GITHUB_TOKEN`, publishes a full-SHA image, verifies the SBOM attached to the exact published digest, and signs that digest.
 
 ## Observability
 

@@ -123,7 +123,7 @@ A higher evidence status must never be inferred from a lower one.
 
 ## P2 - Platform maturity
 
-- [ ] Generate SBOMs for release artifacts.
+- [x] Generate and fail-closed validate a registry-attached SPDX SBOM for the implemented Go-template release image by immutable digest as a repository/reference contract; runtime proof still requires a real generated delivery repository.
 - [ ] Sign artifacts and publish provenance.
 - [ ] Verify signatures/provenance before production deployment.
 - [ ] Implement a service catalog and scorecards.
