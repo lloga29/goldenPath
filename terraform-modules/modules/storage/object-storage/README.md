@@ -12,6 +12,19 @@ The interface defaults to versioning enabled, encryption requested, and public a
 
 Do not interpret `encryption_enabled = true` as proof that equivalent customer-managed encryption is configured on every provider.
 
+## Metadata behavior
+
+AWS uses the common tag map. The current Azure container resource is not taggable and therefore inherits governance from its existing Storage Account.
+
+Google Cloud uses provider-native lowercase labels. The module maps:
+
+- `Environment` → `environment`;
+- `Team` → `team`;
+- `CostCenter` → `cost_center`;
+- `Owner` → `owner`.
+
+Values are lowercased and normalized to GCP label-safe characters. If `Owner` is absent, the generated owner label remains empty so policy-as-code fails closed instead of inventing ownership.
+
 ## AWS example
 
 ```hcl
@@ -28,6 +41,7 @@ module "object_storage" {
   tags = {
     Team       = "platform"
     CostCenter = "cc-001"
+    Owner      = "platform@example.com"
   }
 }
 ```
@@ -49,6 +63,7 @@ module "object_storage" {
   tags = {
     Team       = "platform"
     CostCenter = "cc-001"
+    Owner      = "platform@example.com"
   }
 }
 ```
