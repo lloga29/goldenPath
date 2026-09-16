@@ -25,13 +25,13 @@ spec:
                   release: external-secrets
                   chart: external-secrets
                   repo: https://charts.external-secrets.io
-                  version: 0.9.11
+                  version: 2.10.0
                   namespace: external-secrets
                 - component: kube-prometheus-stack
                   release: kube-prometheus-stack
                   chart: kube-prometheus-stack
                   repo: https://prometheus-community.github.io/helm-charts
-                  version: 56.6.2
+                  version: 91.4.1
                   namespace: observability
                 - component: loki
                   release: loki
@@ -49,7 +49,7 @@ spec:
                   release: gatekeeper
                   chart: gatekeeper
                   repo: https://open-policy-agent.github.io/gatekeeper/charts
-                  version: 3.14.0
+                  version: 3.23.1
                   namespace: gatekeeper-system
                 - component: envoy-gateway
                   release: eg
