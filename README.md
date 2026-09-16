@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/lloga29/goldenPath">
-    <img src="https://github.com/lloga29/goldenPath/blob/main/docs/assets/branding/goldenpath-logo.png?raw=1" alt="GoldenPath logo" width="420">
+    <img src="./docs/assets/branding/goldenpath-logo.png" alt="GoldenPath logo" width="420">
   </a>
 </p>
 
@@ -14,8 +14,8 @@
   Platform Engineering · Kubernetes · GitOps · Infrastructure as Code · Policy as Code · Observability
 </p>
 
-[![Repository validation](https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml/badge.svg?branch=main)](https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml)
-[![English-only repository](https://github.com/lloga29/goldenPath/actions/workflows/english-only.yaml/badge.svg?branch=main)](https://github.com/lloga29/goldenPath/actions/workflows/english-only.yaml)
+[![Repository validation](https://img.shields.io/badge/CI-Repository%20validation-2088FF?logo=githubactions&logoColor=white)](https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml)
+[![English-only repository](https://img.shields.io/badge/CI-English--only%20repository-2088FF?logo=githubactions&logoColor=white)](https://github.com/lloga29/goldenPath/actions/workflows/english-only.yaml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 <p align="center">
