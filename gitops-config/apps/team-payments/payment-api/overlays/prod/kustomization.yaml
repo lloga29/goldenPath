@@ -6,8 +6,10 @@ namespace: payments-prod
 resources:
   - ../../base
 
-commonLabels:
-  environment: prod
+labels:
+  - pairs:
+      environment: prod
+    includeSelectors: true
 
 images:
   - name: ghcr.io/org/payment-api

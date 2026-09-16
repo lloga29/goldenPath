@@ -6,8 +6,10 @@ namespace: payments-dev
 resources:
   - ../../base
 
-commonLabels:
-  environment: dev
+labels:
+  - pairs:
+      environment: dev
+    includeSelectors: true
 
 images:
   - name: ghcr.io/org/payment-api

@@ -1,0 +1,14 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: golden-path
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    platform.goldenpath.io/component: gateway-api
+  annotations:
+    # Envoy Gateway installs the Gateway API CRDs. This prevents Argo CD from
+    # failing client-side dry-run while those CRDs are being established on a
+    # fresh cluster; sync retry remains enabled on the owning Application.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller

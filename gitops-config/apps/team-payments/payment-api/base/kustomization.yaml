@@ -8,6 +8,9 @@ resources:
   - pdb.yaml
   - servicemonitor.yaml
 
-commonLabels:
-  app.kubernetes.io/managed-by: argocd
-  team: payments
+# Preserve the selector/template behavior of the former commonLabels field.
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: argocd
+      team: payments
+    includeSelectors: true

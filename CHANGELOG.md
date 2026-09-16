@@ -2,15 +2,28 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased] - Documentation and Language Standardization
+## [Unreleased] - Repository Validation and GitOps Reconciliation
+
+### Added
+- Active root-level repository validation for English-only content, structured files, shell syntax, Markdown links, Terraform modules/tests/stacks, GitOps/policy contracts, and the Go service template.
+- Argo CD-native multi-source Helm reconciliation for shared platform add-ons.
+- Versioned platform Helm values and 21 chart/environment renders in root CI.
+- Envoy Gateway and a platform-owned `GatewayClass/golden-path` as the Gateway API reference baseline.
+- ADRs for Argo CD-native platform reconciliation and Gateway API/Envoy Gateway.
+- ingress-nginx to Gateway API migration runbook.
+- Executable GitOps contract validation that rejects active Flux dependencies, deprecated Kustomize `commonLabels`, wildcard platform source repositories, mutable chart versions, and an ingress-nginx platform component.
 
 ### Changed
-- Standardized repository documentation on English.
+- Standardized repository documentation on English and enforced the rule in CI.
 - Reframed the repository as a production-oriented Golden Path reference implementation.
 - Added architecture, security, operations, governance, standards, maturity, and roadmap documentation.
 - Added operational runbooks and Architecture Decision Records.
 - Corrected documentation that presented roadmap templates as already implemented.
 - Documented the consolidated-repository limitation for nested GitHub Actions workflows.
+- Made Argo CD the sole authoritative Kubernetes reconciliation engine in the reference platform layer.
+- Migrated Kustomize labels to the current transformer while preserving selector behavior.
+- Moved placeholder secret-store configuration out of active desired state and into an explicit `.invalid` example.
+- Removed ingress-nginx from the recommended new-production baseline; existing deployments require a controlled migration.
 
 ## [0.2.0] - 2024-01-20 - Hardening Release
 
