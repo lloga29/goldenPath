@@ -137,8 +137,9 @@ def build_plan(payload,policy):
     risk,reasons=classify(service,change); controls=levels[risk]
     architecture_digest=canonical_digest(root["architecture"]); policy_digest=canonical_digest(policy)
     plan_core={"schemaVersion":"goldenpath.assurance/v1","riskLevel":risk,"architecture":{"service":service["name"],"owner":service["owner"],"metadataDigest":architecture_digest},"inputs":{"declaredRiskClass":service["riskClass"],"derivedSignals":reasons,"policyDigest":policy_digest},"controls":controls}
-    plan_digest=canonical_digest(plan_core)
-    evidence={"schemaVersion":"goldenpath.assurance/v1","riskLevel":risk,"policyDigest":policy_digest,"planDigest":plan_digest,"architectureMetadataDigest":architecture_digest,"requiredGateIds":controls["requiredGates"],"runtimeValidationRequired":controls["runtimeValidationRequired"],"previewEnvironmentRequired":controls["previewEnvironmentRequired"],"humanApprovalGateIds":controls["humanApprovalGateIds"],"autonomy":controls["autonomy"]}
+    evidence_core={"schemaVersion":"goldenpath.assurance/v1","riskLevel":risk,"policyDigest":policy_digest,"architectureMetadataDigest":architecture_digest,"requiredGateIds":controls["requiredGates"],"runtimeValidationRequired":controls["runtimeValidationRequired"],"previewEnvironmentRequired":controls["previewEnvironmentRequired"],"humanApprovalGateIds":controls["humanApprovalGateIds"],"autonomy":controls["autonomy"]}
+    plan_digest=canonical_digest(evidence_core)
+    evidence={**evidence_core,"planDigest":plan_digest}
     return {**plan_core,"evidenceRequirements":evidence}
 
 def load(path):

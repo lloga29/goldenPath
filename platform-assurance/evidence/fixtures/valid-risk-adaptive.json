@@ -18,16 +18,16 @@
   "artifact": {"type": "none", "identity": "repository-source"},
   "inputs": {
     "sourceSha": "2222222222222222222222222222222222222222",
-    "policyDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-    "architectureDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "policyDigest": "sha256:cb54ea0d5965ef180730ffe88ec0a2babb24eb1434d93c4a402698d55a5602c5",
+    "architectureDigest": "sha256:1b58d6e9dfb792219971f47ea04ad091c9bc2f68952b174100f39ca589897fb0",
     "desiredStateDigest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
   },
   "assurance": {
     "schemaVersion": "goldenpath.assurance/v1",
     "riskLevel": "R2",
-    "policyDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-    "planDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "architectureMetadataDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "policyDigest": "sha256:cb54ea0d5965ef180730ffe88ec0a2babb24eb1434d93c4a402698d55a5602c5",
+    "planDigest": "sha256:653d4257f74a0c47ed7f8f7fd1ffbdb54a2fb7f4d7b9dfd0915db4869820743a",
+    "architectureMetadataDigest": "sha256:1b58d6e9dfb792219971f47ea04ad091c9bc2f68952b174100f39ca589897fb0",
     "requiredGateIds": ["baseline-ci", "evidence-contract", "policy-validation", "unit-tests", "supply-chain-verification", "integration-tests", "architecture-conformance", "preview-environment"],
     "runtimeValidationRequired": true,
     "previewEnvironmentRequired": true,

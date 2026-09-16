@@ -72,16 +72,20 @@ For `runtime-validated` and `production-validated` claims, runtime evidence must
 
 The optional `assurance` object binds a `goldenpath.assurance/v1` plan to the Evidence Manifest. The plan is produced by the R0-R4 engine documented in [R0-R4 Risk-Adaptive Assurance](risk-adaptive-assurance.md).
 
+`assurance.planDigest` is the canonical SHA-256 digest of the assurance requirements snapshot excluding the `planDigest` field itself. An assurance-bearing manifest is accepted only when the consumer supplies `--expected-plan-digest` from an independently generated authoritative assurance plan.
+
 When an assurance snapshot is present, the validator additionally requires:
 
 - `assurance.policyDigest` to equal `inputs.policyDigest`;
 - `assurance.architectureMetadataDigest` to equal `inputs.architectureDigest`;
+- the attached assurance snapshot to recompute to `assurance.planDigest`;
+- `assurance.planDigest` to equal `--expected-plan-digest`;
 - every `requiredGateId` to exist in `gates` and be marked `required: true`;
 - every human-approval gate to be part of the required gate set;
 - `preview-environment` to be a required gate whenever preview is mandatory;
 - passing `runtimeEvidence` whenever the risk plan requires runtime validation, even if the claim level remains `reference`.
 
-This makes the risk plan enforceable evidence, not advisory metadata. A producer cannot attach an R3/R4 plan and then silently omit its stronger controls while still claiming `READY`.
+This makes the risk plan enforceable evidence rather than producer-controlled advisory metadata. Omitting `--expected-plan-digest`, tampering with the attached snapshot, or supplying a snapshot from a different authoritative plan fails closed.
 
 Risk-derived runtime proof does not automatically elevate the claim level. A `reference` claim with risk-mandated runtime evidence remains a `reference` claim unless the producer explicitly satisfies and declares the stronger evidence-status contract.
 
@@ -100,7 +104,7 @@ At minimum, regenerate evidence when any of these change:
 
 The v1 manifest records hashes for source, policy, architecture, and desired state. CI or a higher-level assurance controller can compare those values with current inputs before accepting the evidence.
 
-The `--expected-commit` validator option is the first executable invalidation check in this repository. The R0-R4 plan also carries policy, architecture, and plan digests. Automatic recomputation/comparison of every non-source digest at consumption time remains follow-up operational work.
+`--expected-commit` validates source freshness. `--expected-plan-digest` binds an assurance-bearing manifest to the independently derived risk plan, transitively binding the policy/architecture digest values contained in that snapshot. Automatic recomputation of every non-source input directly from external authoritative stores remains follow-up operational work.
 
 ## Runtime evidence
 
@@ -138,13 +142,14 @@ Evidence consumers should:
 2. compare source and relevant input identities with the current target;
 3. reject stale evidence;
 4. reject unsupported schema versions;
-5. enforce any attached R0-R4 assurance requirements;
-6. never elevate a `reference` claim to runtime or production validation without new runtime evidence;
-7. fail closed when a required validation cannot establish a trustworthy result.
+5. derive the expected R0-R4 plan independently and pass its digest when assurance is present;
+6. enforce any attached R0-R4 assurance requirements;
+7. never elevate a `reference` claim to runtime or production validation without new runtime evidence;
+8. fail closed when a required validation cannot establish a trustworthy result.
 
 ## Local validation
 
-Validate one manifest:
+Validate one manifest without assurance:
 
 ```bash
 python3 scripts/validate-evidence-manifest.py path/to/evidence.json
@@ -158,13 +163,25 @@ python3 scripts/validate-evidence-manifest.py \
   --expected-commit "$GITHUB_SHA"
 ```
 
+For a manifest carrying `assurance`, derive the trusted plan independently and pass its digest:
+
+```bash
+PLAN_DIGEST="$(python3 scripts/evaluate-risk.py \
+  platform-assurance/risk/examples/r2-change.json \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["evidenceRequirements"]["planDigest"])')"
+
+python3 scripts/validate-evidence-manifest.py \
+  path/to/evidence.json \
+  --expected-plan-digest "$PLAN_DIGEST"
+```
+
 Run the contract regression suite:
 
 ```bash
 python3 scripts/test-evidence-contract.py
 ```
 
-The negative fixtures are required. They prove that the validator rejects false `READY` decisions, missing runtime evidence, unauthorized skips, source drift, and omitted risk-required gates.
+The negative coverage proves that the validator rejects false `READY` decisions, missing runtime evidence, unauthorized skips, source drift, omitted risk-required gates, assurance snapshots without an external expected digest, snapshot tampering, and producer-recomputed forged digests that do not match the authoritative plan.
 
 ## Current scope
 

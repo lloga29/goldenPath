@@ -45,17 +45,21 @@ The committed policy stores the full effective control set for every tier. CI re
 
 ## Evidence Manifest binding
 
-`goldenpath.evidence/v1` remains backward compatible and gains an optional `assurance` snapshot. When present, the validator requires:
+`goldenpath.evidence/v1` remains backward compatible and gains an optional `assurance` snapshot. The evaluator computes `planDigest` as the canonical SHA-256 digest of that assurance requirements snapshot, excluding the `planDigest` field itself.
+
+When an assurance snapshot is present, the validator additionally requires:
 
 1. assurance policy digest equals `inputs.policyDigest`;
 2. assurance architecture digest equals `inputs.architectureDigest`;
-3. every `requiredGateId` exists in `gates` and is marked `required: true`;
-4. every human-approval gate is included in the required gate set;
-5. preview plans include the `preview-environment` gate;
-6. runtime evidence exists and passes whenever the plan requires runtime validation, even if the evidence claim level itself remains `reference`;
-7. the final `READY` / `NOT_READY` decision remains derived from evidence.
+3. the attached snapshot recomputes to its own `planDigest`;
+4. `--expected-plan-digest` is supplied by the consumer from an independently generated authoritative assurance plan and equals the attached `planDigest`;
+5. every `requiredGateId` exists in `gates` and is marked `required: true`;
+6. every human-approval gate is included in the required gate set;
+7. preview plans include the `preview-environment` gate;
+8. runtime evidence exists and passes whenever the plan requires runtime validation, even if the evidence claim level itself remains `reference`;
+9. the final `READY` / `NOT_READY` decision remains derived from evidence.
 
-This prevents a risk plan from becoming advisory metadata that a producer can silently ignore.
+The external expected digest is the trust anchor. A producer cannot reduce an R3/R4 snapshot, recompute a matching self-declared digest, and still pass unless that forged digest also matches the independently derived plan accepted by the consumer.
 
 ## Global minimums and additive behavior
 
@@ -69,6 +73,18 @@ python3 scripts/evaluate-risk.py \
 
 python3 scripts/test-risk-adaptive-assurance.py
 python3 scripts/test-evidence-contract.py
+```
+
+A consumer validating a manifest with assurance must first derive the authoritative plan and pass its digest:
+
+```bash
+PLAN_DIGEST="$(python3 scripts/evaluate-risk.py \
+  platform-assurance/risk/examples/r2-change.json \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["evidenceRequirements"]["planDigest"])')"
+
+python3 scripts/validate-evidence-manifest.py \
+  path/to/evidence.json \
+  --expected-plan-digest "$PLAN_DIGEST"
 ```
 
 ## Evidence boundary

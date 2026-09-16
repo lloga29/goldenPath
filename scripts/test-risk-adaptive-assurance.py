@@ -42,6 +42,10 @@ def main() -> int:
             raise RuntimeError(f"{expected}: evidence gate projection drift")
         if expected in {"R2", "R3", "R4"} and not plan["controls"]["runtimeValidationRequired"]:
             raise RuntimeError(f"{expected}: runtime validation unexpectedly disabled")
+        evidence = plan["evidenceRequirements"]
+        digest_input = {key: value for key, value in evidence.items() if key != "planDigest"}
+        if evidence["planDigest"] != module.canonical_digest(digest_input):
+            raise RuntimeError(f"{expected}: assurance requirements digest drift")
 
     try:
         module.build_plan(cases["negative"]["missingOwner"], policy)

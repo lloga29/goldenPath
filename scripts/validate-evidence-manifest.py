@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -81,6 +82,16 @@ def reject_unknown_keys(obj: dict[str, object], allowed: set[str], path: str) ->
     unknown = sorted(obj.keys() - allowed)
     if unknown:
         fail(f"{path} contains unknown keys: {', '.join(unknown)}")
+
+
+def canonical_digest(value: object) -> str:
+    raw = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(raw).hexdigest()
 
 
 def validate_timestamp(value: object, path: str) -> None:
@@ -229,7 +240,6 @@ def validate_gates(
             if "reason" not in gate:
                 fail(f"{path}.reason is required for SKIP_ALLOWED")
         elif skip_allowed and result in {"FAIL", "INFRASTRUCTURE_FAILURE"}:
-            # A skip-capable gate still failed when it actually ran; failure remains blocking.
             pass
 
         if result in {"FAIL", "INFRASTRUCTURE_FAILURE"} and "reason" not in gate:
@@ -304,6 +314,7 @@ def validate_assurance(
     policy_digest: str,
     architecture_digest: str,
     gates: dict[str, dict[str, object]],
+    expected_plan_digest: str | None,
 ) -> bool:
     assurance = require_dict(value, "assurance")
     required = {
@@ -335,7 +346,9 @@ def validate_assurance(
     if assurance_policy_digest != policy_digest:
         fail("assurance.policyDigest must match inputs.policyDigest")
 
-    validate_digest(assurance["planDigest"], "assurance.planDigest")
+    attached_plan_digest = validate_digest(
+        assurance["planDigest"], "assurance.planDigest"
+    )
     assurance_architecture_digest = validate_digest(
         assurance["architectureMetadataDigest"],
         "assurance.architectureMetadataDigest",
@@ -369,6 +382,21 @@ def validate_assurance(
     if autonomy not in AUTONOMY:
         fail(f"assurance.autonomy must be one of {sorted(AUTONOMY)}")
 
+    snapshot_without_digest = {
+        key: assurance[key] for key in required if key != "planDigest"
+    }
+    computed_plan_digest = canonical_digest(snapshot_without_digest)
+    if attached_plan_digest != computed_plan_digest:
+        fail("assurance.planDigest does not match the attached assurance requirements snapshot")
+
+    if expected_plan_digest is None:
+        fail("assurance evidence requires --expected-plan-digest from an authoritative assurance plan")
+    trusted_plan_digest = validate_digest(
+        expected_plan_digest, "--expected-plan-digest"
+    )
+    if attached_plan_digest != trusted_plan_digest:
+        fail("assurance.planDigest does not match --expected-plan-digest; assurance evidence is stale or untrusted")
+
     for gate_id in required_gate_ids:
         gate = gates.get(gate_id)
         if gate is None:
@@ -379,7 +407,11 @@ def validate_assurance(
     return runtime_required
 
 
-def validate_manifest(data: object, expected_commit: str | None = None) -> None:
+def validate_manifest(
+    data: object,
+    expected_commit: str | None = None,
+    expected_plan_digest: str | None = None,
+) -> None:
     manifest = require_dict(data, "manifest")
     required = {
         "schemaVersion",
@@ -433,8 +465,14 @@ def validate_manifest(data: object, expected_commit: str | None = None) -> None:
     assurance_runtime_required = False
     if "assurance" in manifest:
         assurance_runtime_required = validate_assurance(
-            manifest["assurance"], policy_digest, architecture_digest, gates
+            manifest["assurance"],
+            policy_digest,
+            architecture_digest,
+            gates,
+            expected_plan_digest,
         )
+    elif expected_plan_digest is not None:
+        fail("--expected-plan-digest was provided but manifest.assurance is missing")
 
     runtime_required = (
         claim_level in {"runtime-validated", "production-validated"}
@@ -475,6 +513,13 @@ def parse_args() -> argparse.Namespace:
         "--expected-commit",
         help="Optional exact commit SHA that the manifest must be bound to",
     )
+    parser.add_argument(
+        "--expected-plan-digest",
+        help=(
+            "Authoritative goldenpath.assurance/v1 requirements digest required "
+            "when manifest.assurance is present"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -482,7 +527,7 @@ def main() -> int:
     args = parse_args()
     try:
         data = load_json(args.manifest)
-        validate_manifest(data, args.expected_commit)
+        validate_manifest(data, args.expected_commit, args.expected_plan_digest)
     except ValidationError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
