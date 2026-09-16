@@ -8,6 +8,7 @@ TEMPLATE_DIR="$ROOT_DIR/templates/microservice-golang"
 OUTPUT_DIR="$(mktemp -d)"
 PROJECT_NAME="golden-smoke"
 GENERATED_DIR="$OUTPUT_DIR/$PROJECT_NAME"
+BUILD_OUTPUT="$OUTPUT_DIR/${PROJECT_NAME}-binary"
 trap 'rm -rf "$OUTPUT_DIR"' EXIT
 
 for command in copier go; do
@@ -46,7 +47,12 @@ fi
 
 go vet ./...
 go test ./...
-go build ./cmd
+go build -o "$BUILD_OUTPUT" ./cmd
+
+if [[ ! -x "$BUILD_OUTPUT" ]]; then
+    echo "ERROR: generated Go service did not produce an executable binary." >&2
+    exit 1
+fi
 
 if grep -Eq 'ghcr\.io/[^[:space:]]+:latest' .github/workflows/ci.yaml; then
     echo "ERROR: generated CI contains a mutable :latest publication tag." >&2
