@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased] - Repository Validation and GitOps Reconciliation
+## [Unreleased] - Repository Validation, GitOps Reconciliation, and CI Supply-Chain Hardening
 
 ### Added
 - Active root-level repository validation for English-only content, structured files, shell syntax, Markdown links, Terraform modules/tests/stacks, GitOps/policy contracts, and the Go service template.
@@ -11,7 +11,9 @@ All notable changes to this project are documented here.
 - Envoy Gateway and a platform-owned `GatewayClass/golden-path` as the Gateway API reference baseline.
 - ADRs for Argo CD-native platform reconciliation and Gateway API/Envoy Gateway.
 - ingress-nginx to Gateway API migration runbook.
-- Executable GitOps contract validation that rejects active Flux dependencies, deprecated Kustomize `commonLabels`, wildcard platform source repositories, mutable chart versions, and an ingress-nginx platform component.
+- Executable GitOps contract validation that rejects active Flux dependencies, deprecated Kustomize `commonLabels`, wildcard platform source repositories, non-exact chart version expressions, and an ingress-nginx platform component.
+- Executable root-CI supply-chain validation for immutable action references, explicit runner families, verified tool downloads, and hash-locked Python installs.
+- CPython 3.13.15-specific hash locks for structured-file tooling and the complete Copier CI dependency graph on Ubuntu 24.04 x86_64.
 
 ### Changed
 - Standardized repository documentation on English and enforced the rule in CI.
@@ -24,6 +26,11 @@ All notable changes to this project are documented here.
 - Migrated Kustomize labels to the current transformer while preserving selector behavior.
 - Moved placeholder secret-store configuration out of active desired state and into an explicit `.invalid` example.
 - Removed ingress-nginx from the recommended new-production baseline; existing deployments require a controlled migration.
+- Pinned every active external GitHub Action to a full commit SHA and replaced `ubuntu-latest` with the explicit `ubuntu-24.04` runner family.
+- Added SHA-256 verification for Kustomize, Helm, and Conftest executable archives before extraction/installation.
+- Upgraded Conftest to 0.70.0 while keeping current Rego v0 policy semantics explicit through `--rego-version v0`; Rego v1 migration is tracked in issue #30.
+- Pinned the Go template smoke-test runtime to Go 1.26.8.
+- Documented that exact version pins, commit SHAs, checksums, signatures, provenance, and hosted-runner labels provide different assurance properties and must not be conflated.
 
 ## [0.2.0] - 2024-01-20 - Hardening Release
 

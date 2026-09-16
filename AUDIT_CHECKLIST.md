@@ -1,6 +1,6 @@
 # Golden Path Audit Checklist
 
-This checklist tracks gaps between the reference repository and an operational production Golden Path. A checked item must be supported by repository or runtime evidence, not intent. Static CI evidence must never be presented as proof that an external cloud, cluster, identity system, DNS zone, certificate authority, or secret backend is operational.
+This checklist tracks gaps between the reference repository and an operational production Golden Path. A checked item must be supported by repository or runtime evidence, not intent. Static CI evidence must never be presented as proof that an external cloud, cluster, identity system, DNS zone, certificate authority, secret backend, or hosted runner image is operationally immutable.
 
 ## P0 - Repository correctness and usable paved road
 
@@ -10,6 +10,10 @@ This checklist tracks gaps between the reference repository and an operational p
 - [x] Enforce English-only text for tracked repository content through active root CI.
 - [x] Run active repository-root CI for the consolidated repository.
 - [x] Validate repository-local Markdown links in root CI.
+- [x] Pin every external action used by active root workflows to a full commit SHA and validate that invariant in root CI.
+- [x] Reject `*-latest` hosted-runner labels in active root workflows.
+- [x] Verify SHA-256 before extracting or installing executable archives downloaded by active root CI.
+- [x] Install active Python CI tooling only from committed `--require-hashes` lock files under the pinned Python/runtime assumptions.
 - [ ] Validate Mermaid diagram rendering rather than only Markdown link structure.
 
 ### terraform-modules/
@@ -46,6 +50,7 @@ This checklist tracks gaps between the reference repository and an operational p
 
 ### service-templates/
 - [x] Implement the Go microservice template baseline.
+- [x] Pin the root smoke-test runtime to Go 1.26.8.
 - [x] Render the Go template non-interactively and run gofmt, `go vet`, tests, and executable build validation in root CI.
 - [ ] Add Python template only when an executable template and full operational contract are ready.
 - [ ] Add Terraform stack template only when an executable template and validation are ready.
@@ -54,6 +59,8 @@ This checklist tracks gaps between the reference repository and an operational p
 - [x] Provide Terraform and Kubernetes OPA policy baselines.
 - [x] Provide Gatekeeper constraint examples.
 - [x] Run positive and intentionally invalid aggregate Kubernetes/Terraform policy fixtures in root CI.
+- [x] Run the existing Rego v0 bundle explicitly under Conftest 0.70.0 compatibility mode without changing fixture outcomes.
+- [ ] Migrate the policy bundle to Rego v1 and remove the explicit Conftest v0 compatibility mode (issue #30).
 - [ ] Add dedicated regression fixtures for every blocking policy rule if aggregate fixtures do not uniquely exercise each rule.
 - [x] Validate policy-exception registry schema, required ownership/approval metadata, date ordering, expiry, duplicate IDs, and prohibition of global `disabled_policies` in root CI.
 - [ ] Prove exception application/approval workflow against a real governed delivery path before relying on it operationally.
@@ -61,6 +68,8 @@ This checklist tracks gaps between the reference repository and an operational p
 ## P1 - Security and production correctness
 
 - [x] Reject mutable `:latest` publication in the implemented Go template smoke contract and require exact platform chart version pins.
+- [x] Pin the active root CI language/tool baseline where controlled: CPython 3.13.15, Go 1.26.8, Terraform 1.16.2, Kustomize 5.8.1, Helm 4.3.0, and Conftest 0.70.0.
+- [ ] Use a separately versioned/attested runner image if bit-for-bit CI environment reproducibility becomes a requirement; `ubuntu-24.04` fixes the OS family but not the hosted image build.
 - [ ] Configure cloud OIDC/workload federation for the selected target environments.
 - [ ] Verify least privilege for CI/CD, Argo CD, Kubernetes service accounts, and cloud roles in the real target environment.
 - [ ] Configure a real external secret backend and rotation process; examples/placeholders are intentionally not reconciled.
