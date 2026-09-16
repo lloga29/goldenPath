@@ -2,16 +2,16 @@
 
 ## Evidence status versus maturity
 
-GoldenPath separates **evidence status** from **platform maturity**. Evidence status describes what is proven for one capability and exact state; maturity describes platform breadth and operating model.
+GoldenPath separates **evidence status** from **platform maturity**. Evidence status describes what is proven for one capability and one exact source/runtime state; maturity describes the breadth and operating model of the platform as a whole.
 
-Evidence vocabulary:
+Use the following evidence vocabulary consistently:
 
-- `implemented` — code/configuration exists and is structurally valid;
-- `reference` — executable repository pattern with deterministic repository evidence;
-- `runtime-validated` — exact capability/source state exercised against an identified runtime with successful runtime evidence;
-- `production-validated` — exact capability/source state exercised against production with successful production runtime evidence.
+- `implemented` — code or configuration exists and is structurally valid;
+- `reference` — an executable repository pattern is demonstrated with deterministic repository evidence;
+- `runtime-validated` — the exact capability/source state was exercised against an identified runtime with successful runtime evidence;
+- `production-validated` — the exact capability/source state was exercised against the production target with successful production runtime evidence.
 
-`goldenpath.evidence/v1` defines the evidence contract. `goldenpath.assurance/v1` adds R0-R4 risk-derived control requirements without changing evidence status semantics.
+The machine-readable rules are defined by `goldenpath.evidence/v1`; see [Evidence contract](assurance/evidence-contract.md). R0-R4 change assurance is defined separately by `goldenpath.assurance/v1`; it adds risk-derived controls without changing these evidence-status meanings.
 
 ## Level 0 — Ad hoc
 
@@ -19,22 +19,37 @@ Teams provision and deploy independently. Credentials, environments, and operati
 
 ## Level 1 — Standardized baseline
 
-Reusable modules, service template, CI, GitOps layout, documentation, policy, fail-closed Evidence Manifest, Architecture as Code metadata, and deterministic R0-R4 risk-adaptive assurance exist. The current repository remains primarily a **Level 1 reference baseline**, with Level 2 design elements.
+Reusable modules, a service template, basic CI, GitOps layout, documentation, initial policy, and a machine-readable assurance contract exist. The current repository is primarily a **Level 1 reference baseline**, with some Level 2 design elements.
 
-Repository CI now proves that risk classification is deterministic, higher risk cannot remove lower-tier/global controls, invalid metadata fails closed, and an Evidence Manifest cannot ignore an attached assurance plan. This remains `reference` evidence, not proof that real preview/runtime/approval systems are operational.
+The reference baseline also includes versioned Architecture as Code metadata and deterministic R0-R4 risk classification. Repository CI can prove classification, monotonic control selection, and fail-closed Evidence Manifest enforcement. It cannot prove that preview environments, reviewers, approvals, or external runtimes are operational.
+
+A Level 1 repository can contain `reference` evidence. That does not make external dependencies runtime-validated.
 
 ## Level 2 — Operational paved road
 
-A real team uses the platform end to end. Root CI, federated identity, real clusters/registries/secrets/observability, protected production changes, SLOs, tested rollback, retained runtime evidence, and enforcement of the emitted risk plan are operational. Reviewer-role resolution and human approvals are connected to real identities and protected change paths.
+A real team uses the platform end to end. Root/active CI workflows, federated identity, real clusters, registries, secrets, observability, protected production changes, SLOs, tested rollback, and retained runtime evidence are operational.
+
+At this level, R0-R4 plans should also be enforced by the real delivery path: reviewer roles must resolve to governed identities, required preview/runtime gates must execute against identified targets, and human approvals must be retained as evidence.
+
+Capabilities claimed as operational should produce `runtime-validated` or, where appropriate, `production-validated` Evidence Manifests bound to exact source and artifact identities.
 
 ## Level 3 — Scaled platform product
 
-Multiple teams use self-service onboarding. Catalog/scorecards, standardized telemetry, automated exceptions/upgrades, capacity/product feedback loops, and evidence retention/aggregation are established. Risk signals and policy are managed as platform product contracts across many services.
+Multiple teams use self-service onboarding. A service catalog, scorecards, standardized telemetry, automated policy exceptions, upgrade automation, capacity management, product feedback loops, and evidence retention/aggregation are established.
 
 ## Level 4 — Optimized and evidence-driven
 
-Outcome metrics continuously improve delivery/reliability. Provenance, automated compliance evidence, tested disaster recovery, cost controls, and low-touch upgrades operate at scale. Evidence collection, risk classification, invalidation, and reconciliation are normal platform operations rather than manual audit activities.
+The platform uses outcome metrics to continuously improve delivery and reliability. Supply-chain provenance/verification, automated compliance evidence, tested disaster recovery, sophisticated cost controls, and low-touch platform upgrades operate at scale.
+
+At this level, evidence collection and invalidation should be integrated into normal platform reconciliation rather than treated as a manual audit activity.
 
 ## Advancement rule
 
-Do not advance maturity from repository files or green CI alone. Require repository evidence for `implemented/reference`, runtime proof for `runtime-validated`, production proof for `production-validated`, and adoption/operating evidence for platform maturity. Stale evidence must be regenerated when source, policy, architecture metadata, desired state, artifact identity, or relevant target configuration changes.
+Do not advance a maturity claim based only on repository files, manifests, or a green CI run. Require evidence appropriate to the claim:
+
+1. repository evidence for `implemented` and `reference` claims;
+2. runtime evidence for `runtime-validated` claims;
+3. production runtime evidence for `production-validated` claims;
+4. adoption and operating evidence before advancing the platform-level maturity tier.
+
+Evidence becomes stale when its bound source, policy, architecture metadata, desired state, artifact identity, or relevant target configuration changes. Stale evidence must be regenerated rather than reinterpreted.
