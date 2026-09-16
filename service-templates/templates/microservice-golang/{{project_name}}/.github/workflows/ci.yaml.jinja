@@ -133,6 +133,57 @@ jobs:
           sbom: true
           provenance: mode=max
 
+      - name: Verify published SPDX SBOM by immutable digest
+        env:
+          DIGEST: {% raw %}${{ steps.build.outputs.digest }}{% endraw %}
+          SBOM_PATH: {% raw %}${{ runner.temp }}{% endraw %}/sbom.spdx.json
+        run: |
+          if [[ ! "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "ERROR: build output digest is missing or malformed: $DIGEST" >&2
+            exit 1
+          fi
+
+          IMAGE_REF="${IMAGE_NAME}@${DIGEST}"
+          docker buildx imagetools inspect "$IMAGE_REF" \
+            --format '{% raw %}{{ json .SBOM.SPDX }}{% endraw %}' > "$SBOM_PATH"
+
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          path = Path(os.environ["SBOM_PATH"])
+          try:
+              document = json.loads(path.read_text(encoding="utf-8"))
+          except (OSError, json.JSONDecodeError) as exc:
+              print(f"ERROR: cannot read a valid SPDX SBOM from {path}: {exc}", file=sys.stderr)
+              raise SystemExit(1)
+
+          if not isinstance(document, dict):
+              print("ERROR: published SBOM payload is not a JSON object", file=sys.stderr)
+              raise SystemExit(1)
+          if document.get("SPDXID") != "SPDXRef-DOCUMENT":
+              print("ERROR: published SBOM is missing SPDXRef-DOCUMENT identity", file=sys.stderr)
+              raise SystemExit(1)
+          version = document.get("spdxVersion")
+          if not isinstance(version, str) or not version.startswith("SPDX-"):
+              print("ERROR: published SBOM has an invalid spdxVersion", file=sys.stderr)
+              raise SystemExit(1)
+          creation_info = document.get("creationInfo")
+          if not isinstance(creation_info, dict) or not creation_info.get("created"):
+              print("ERROR: published SBOM is missing SPDX creation metadata", file=sys.stderr)
+              raise SystemExit(1)
+          packages = document.get("packages")
+          if not isinstance(packages, list) or not packages:
+              print("ERROR: published SBOM contains no package inventory", file=sys.stderr)
+              raise SystemExit(1)
+
+          print(f"PASS: verified {version} SBOM with {len(packages)} package entries")
+          PY
+
+          echo "Verified registry-attached SPDX SBOM for ${IMAGE_REF}" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Install Cosign
         uses: sigstore/cosign-installer@v4.1.2
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Render, compile, and container-build the Go paved-road template using representative answers.
+# Render, compile, container-build, and validate the Go paved-road template using representative answers.
 
 set -euo pipefail
 
@@ -66,10 +66,25 @@ if [[ ! -x "$BUILD_OUTPUT" ]]; then
     exit 1
 fi
 
-if grep -Eq 'ghcr\.io/[^[:space:]]+:latest' .github/workflows/ci.yaml; then
+CI_WORKFLOW=".github/workflows/ci.yaml"
+if grep -Eq 'ghcr\.io/[^[:space:]]+:latest' "$CI_WORKFLOW"; then
     echo "ERROR: generated CI contains a mutable :latest publication tag." >&2
     exit 1
 fi
+
+for required_ci_contract in \
+    'sbom: true' \
+    'steps.build.outputs.digest' \
+    'IMAGE_REF="${IMAGE_NAME}@${DIGEST}"' \
+    'docker buildx imagetools inspect "$IMAGE_REF"' \
+    '{{ json .SBOM.SPDX }}' \
+    'SPDXRef-DOCUMENT' \
+    'published SBOM contains no package inventory'; do
+    if ! grep -F "$required_ci_contract" "$CI_WORKFLOW" >/dev/null; then
+        echo "ERROR: generated CI is missing required release-SBOM contract: $required_ci_contract" >&2
+        exit 1
+    fi
+done
 
 mapfile -t base_images < <(grep -E '^FROM[[:space:]]+' Dockerfile)
 if [[ "${#base_images[@]}" -eq 0 ]]; then
