@@ -5,13 +5,15 @@ A multi-provider Terraform reference module for network creation across AWS, Azu
 ## Capabilities
 
 - AWS VPC, subnets, Internet Gateway, and optional VPC Flow Logs.
-- Azure Virtual Network, subnets, a default NSG, and a reference Network Watcher flow-log resource.
+- Azure Virtual Network, subnets, and a reference Network Security Group.
 - Google Cloud custom VPC, subnets with flow logging, and a Cloud Router reference.
 - Common environment/ownership metadata.
 
 ## Production limitations
 
-This module demonstrates a shared interface, but it is not a complete production network foundation. Notable gaps include provider-specific NAT/egress design, route tables, private endpoints, firewalls/security rules, IPAM, DNS design, Azure flow-log storage configuration, production deletion protection, and explicit provider-specific validation. Treat it as a reference to evolve, not a drop-in secure landing zone.
+This module demonstrates a shared interface, but it is not a complete production network foundation. Notable gaps include provider-specific NAT/egress design, route tables, private endpoints, firewalls/security rules, IPAM, DNS design, Azure provider-native flow-log integration, production deletion protection, and explicit provider-specific validation. Treat it as a reference to evolve, not a drop-in secure landing zone.
+
+The previous Azure Network Watcher flow-log placeholder was intentionally removed because it contained an invalid empty Storage Account resource ID and did not represent an executable deployment contract. Azure logging must be implemented by the consuming platform using a supported provider-native design.
 
 ## AWS example
 
@@ -58,8 +60,6 @@ module "vnet" {
   }
 }
 ```
-
-> The current Azure flow-log resource contains a placeholder storage account ID. Settle the Azure logging architecture before applying this reference with flow logs enabled.
 
 ## Google Cloud example
 

@@ -6,6 +6,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEMPLATE_DIR="$ROOT_DIR/templates/microservice-golang"
 OUTPUT_DIR="$(mktemp -d)"
+PROJECT_NAME="golden-smoke"
+GENERATED_DIR="$OUTPUT_DIR/$PROJECT_NAME"
 trap 'rm -rf "$OUTPUT_DIR"' EXIT
 
 for command in copier go; do
@@ -16,7 +18,7 @@ for command in copier go; do
 done
 
 copier copy --trust --defaults \
-    --data project_name=golden-smoke \
+    --data project_name="$PROJECT_NAME" \
     --data github_owner=example \
     --data team=platform \
     --data description="Golden Path smoke-test service" \
@@ -25,10 +27,15 @@ copier copy --trust --defaults \
     --data go_version=1.26 \
     "$TEMPLATE_DIR" "$OUTPUT_DIR"
 
-cd "$OUTPUT_DIR"
+if [[ ! -f "$GENERATED_DIR/go.mod" ]]; then
+    echo "ERROR: Copier did not render the expected Go module at $GENERATED_DIR." >&2
+    find "$OUTPUT_DIR" -maxdepth 3 -type f -print >&2
+    exit 1
+fi
+
+cd "$GENERATED_DIR"
 
 go mod tidy
-git diff --no-index --exit-code /dev/null /dev/null >/dev/null 2>&1 || true
 
 unformatted="$(gofmt -l .)"
 if [[ -n "$unformatted" ]]; then

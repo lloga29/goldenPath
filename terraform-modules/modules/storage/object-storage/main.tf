@@ -141,7 +141,7 @@ resource "aws_s3_bucket" "this" {
 }
 
 resource "aws_s3_bucket_versioning" "this" {
-  count = var.cloud_provider == "aws" ? 1 : 0
+  count  = var.cloud_provider == "aws" ? 1 : 0
   bucket = aws_s3_bucket.this[0].id
 
   versioning_configuration {
@@ -221,10 +221,8 @@ resource "google_storage_bucket" "this" {
     enabled = var.versioning_enabled
   }
 
-  encryption {
-    default_kms_key_name = null # Uses Google-managed encryption when no CMEK is configured externally.
-  }
-
+  # Google Cloud Storage uses provider-managed encryption by default. A CMEK
+  # block must only be added when a non-null KMS key name is supplied.
   public_access_prevention = var.public_access_blocked ? "enforced" : "inherited"
 
   dynamic "lifecycle_rule" {
