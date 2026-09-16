@@ -1,0 +1,17 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_iam_role_policy_attachment.administrator",
+      "mode": "managed",
+      "type": "aws_iam_role_policy_attachment",
+      "name": "administrator",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "role": "application-role",
+          "policy_arn": "arn:aws:iam::aws:policy/AdministratorAccess"
+        }
+      }
+    }
+  ]
+}

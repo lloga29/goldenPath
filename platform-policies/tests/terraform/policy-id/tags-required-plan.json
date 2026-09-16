@@ -1,0 +1,21 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_vpc.missing_owner",
+      "mode": "managed",
+      "type": "aws_vpc",
+      "name": "missing_owner",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "cidr_block": "10.42.0.0/16",
+          "tags": {
+            "Environment": "dev",
+            "Team": "platform",
+            "CostCenter": "cc-platform-001"
+          }
+        }
+      }
+    }
+  ]
+}

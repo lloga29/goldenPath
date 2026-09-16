@@ -99,7 +99,7 @@ A higher evidence status must never be inferred from a lower one.
 - [x] Run positive and intentionally invalid aggregate Kubernetes/Terraform policy fixtures in root CI.
 - [x] Evaluate the executable policy bundle under Conftest 0.70.0 with its default Rego v1 parser and no v0 compatibility flag.
 - [x] Use Rego v1 syntax throughout the executable Conftest Kubernetes and Terraform policy modules.
-- [ ] Add dedicated regression fixtures for every blocking policy rule if aggregate fixtures do not uniquely exercise each rule.
+- [x] Add dedicated single-policy regression fixtures for every blocking Conftest policy ID so aggregate fixtures cannot mask a policy-level regression.
 - [x] Validate policy-exception registry schema, required ownership/approval metadata, date ordering, expiry, duplicate IDs, and prohibition of global `disabled_policies` in root CI.
 - [ ] Prove exception application/approval workflow against a real governed delivery path before relying on it operationally.
 

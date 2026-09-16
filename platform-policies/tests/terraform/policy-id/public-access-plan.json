@@ -1,0 +1,20 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_security_group_rule.public_ssh",
+      "mode": "managed",
+      "type": "aws_security_group_rule",
+      "name": "public_ssh",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "type": "ingress",
+          "from_port": 22,
+          "to_port": 22,
+          "protocol": "tcp",
+          "cidr_blocks": ["0.0.0.0/0"]
+        }
+      }
+    }
+  ]
+}

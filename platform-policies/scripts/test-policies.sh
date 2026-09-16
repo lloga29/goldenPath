@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run positive/negative policy fixtures, multi-provider parity, and fail-closed exception-contract tests.
+# Run positive/negative policy fixtures, policy-ID isolation, multi-provider parity, and fail-closed exception-contract tests.
 
 set -euo pipefail
 
@@ -54,6 +54,32 @@ expect_policy_failure() {
     fi
 }
 
+expect_policy_failure_with_message() {
+    local input="$1"
+    local policy_dir="$2"
+    local data_file="$3"
+    local namespace="$4"
+    local expected_message="$5"
+    local output
+    local status
+
+    set +e
+    output="$(run_policy "$input" "$policy_dir" "$data_file" "$namespace" 2>&1)"
+    status=$?
+    set -e
+
+    printf '%s\n' "$output"
+    if [[ "$status" -eq 0 ]]; then
+        echo "ERROR: dedicated negative fixture unexpectedly passed policy evaluation: $input" >&2
+        exit 1
+    fi
+    if ! grep -F "$expected_message" <<<"$output" >/dev/null; then
+        echo "ERROR: dedicated negative fixture failed without the expected target-policy denial: $input" >&2
+        echo "ERROR: expected message fragment: $expected_message" >&2
+        exit 1
+    fi
+}
+
 BASELINE_DATA="$TMP_DIR/baseline-exceptions.json"
 compile_registry "$ROOT_DIR/policy-exceptions.yaml" "$BASELINE_DATA"
 
@@ -75,6 +101,50 @@ for fixture in \
     "$ROOT_DIR/tests/terraform/gcp-invalid-plan.json"; do
     expect_policy_failure "$fixture" "$ROOT_DIR/terraform" "$BASELINE_DATA" goldenpath.terraform
 done
+
+# Every blocking wrapper policy ID has an otherwise paved-road negative fixture.
+# The target denial text must be present so an unrelated policy failure cannot satisfy the case.
+expect_policy_failure_with_message \
+    "$ROOT_DIR/tests/kubernetes/policy-id/image-immutable.yaml" \
+    "$ROOT_DIR/kubernetes" "$BASELINE_DATA" goldenpath.kubernetes \
+    "must use an explicit immutable tag or SHA-256 digest"
+expect_policy_failure_with_message \
+    "$ROOT_DIR/tests/kubernetes/policy-id/labels-required.yaml" \
+    "$ROOT_DIR/kubernetes" "$BASELINE_DATA" goldenpath.kubernetes \
+    "is missing required labels:"
+expect_policy_failure_with_message \
+    "$ROOT_DIR/tests/kubernetes/policy-id/resources-required.yaml" \
+    "$ROOT_DIR/kubernetes" "$BASELINE_DATA" goldenpath.kubernetes \
+    "must define resources.limits.cpu."
+expect_policy_failure_with_message \
+    "$ROOT_DIR/tests/kubernetes/policy-id/security-context.yaml" \
+    "$ROOT_DIR/kubernetes" "$BASELINE_DATA" goldenpath.kubernetes \
+    "must set allowPrivilegeEscalation=false."
+expect_policy_failure_with_message \
+    "$ROOT_DIR/tests/kubernetes/policy-id/workload-isolation.yaml" \
+    "$ROOT_DIR/kubernetes" "$BASELINE_DATA" goldenpath.kubernetes \
+    "must not use hostNetwork."
+
+expect_policy_failure_with_message \
+    "$ROOT_DIR/tests/terraform/policy-id/public-access-plan.json" \
+    "$ROOT_DIR/terraform" "$BASELINE_DATA" goldenpath.terraform \
+    "exposes a sensitive port range (22-22) to 0.0.0.0/0."
+expect_policy_failure_with_message \
+    "$ROOT_DIR/tests/terraform/policy-id/iam-no-wildcards-plan.json" \
+    "$ROOT_DIR/terraform" "$BASELINE_DATA" goldenpath.terraform \
+    "contains Allow Action '*'. Use explicit actions."
+expect_policy_failure_with_message \
+    "$ROOT_DIR/tests/terraform/policy-id/identity-least-privilege-plan.json" \
+    "$ROOT_DIR/terraform" "$BASELINE_DATA" goldenpath.terraform \
+    "must not grant AdministratorAccess."
+expect_policy_failure_with_message \
+    "$ROOT_DIR/tests/terraform/policy-id/encryption-required-plan.json" \
+    "$ROOT_DIR/terraform" "$BASELINE_DATA" goldenpath.terraform \
+    "must enable encryption."
+expect_policy_failure_with_message \
+    "$ROOT_DIR/tests/terraform/policy-id/tags-required-plan.json" \
+    "$ROOT_DIR/terraform" "$BASELINE_DATA" goldenpath.terraform \
+    "is missing required tags:"
 
 # Kubernetes: exact policy + kind/name + namespace may suppress only that policy.
 KUBE_EXCEPTION_DATA="$TMP_DIR/kubernetes-image-exception.json"
@@ -150,4 +220,4 @@ expect_validation_failure "$ROOT_DIR/tests/exceptions/malformed-missing-owner.ya
 expect_validation_failure "$ROOT_DIR/tests/exceptions/terraform-type-only.yaml"
 expect_validation_failure "$ROOT_DIR/tests/exceptions/terraform-resource-wildcard.yaml"
 
-echo "Policy fixtures, multi-provider parity, and scoped exception contract passed under Rego v1."
+echo "Policy fixtures, policy-ID isolation, multi-provider parity, and scoped exception contract passed under Rego v1."
