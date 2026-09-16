@@ -7,11 +7,16 @@
 <h3 align="center">The paved road from source code to production.</h3>
 
 <p align="center">
-  <strong>Secure by default · GitOps-driven · Observable · Repeatable</strong>
+  <strong>A production-oriented Platform Engineering reference architecture for secure, self-service, GitOps-driven software delivery.</strong>
+</p>
+
+<p align="center">
+  Platform Engineering · Kubernetes · GitOps · Infrastructure as Code · Policy as Code · Observability
 </p>
 
 [![Repository validation](https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml/badge.svg?branch=main)](https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml)
 [![English-only repository](https://github.com/lloga29/goldenPath/actions/workflows/english-only.yaml/badge.svg?branch=main)](https://github.com/lloga29/goldenPath/actions/workflows/english-only.yaml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 <p align="center">
   <a href="docs/QUICKSTART.md">Quickstart</a> ·
@@ -20,9 +25,11 @@
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
-GoldenPath is a production-oriented **Golden Path reference implementation** for internal developer platforms. It brings together reusable Terraform modules, client and environment stacks, GitOps configuration, Kubernetes platform components, policy-as-code guardrails, service templates, active repository validation, and operational documentation.
+GoldenPath is an evidence-driven **Golden Path reference implementation** for internal developer platforms. It connects developer experience, reusable service templates, CI and policy gates, immutable artifacts, GitOps promotion, Kubernetes runtime, infrastructure as code, observability, governance, and operational practices into one explicit delivery path.
 
-Its purpose is to provide a paved road that teams can adopt and adapt without hiding the underlying platform decisions.
+Its purpose is to make the safe and repeatable path the easiest path for engineering teams without hiding the platform decisions, controls, or runtime responsibilities underneath it.
+
+> **Core idea:** GoldenPath is not a monolithic platform product or a collection of disconnected manifests. It is a reference architecture and implementation baseline that shows how platform teams can standardize software delivery while keeping security, governance, observability, and operational ownership explicit.
 
 ## Portfolio highlights
 
@@ -45,14 +52,17 @@ For reviewers evaluating the project as a portfolio artifact, the fastest path i
 
 ```mermaid
 flowchart LR
-    subgraph Build[Build and validate]
+    subgraph Experience[Developer experience]
         Dev[Developer] --> Template[Golden Service Template]
         Template --> PR[Pull Request]
+    end
+
+    subgraph SupplyChain[Build, verify, and package]
         PR --> Gates[CI and Policy Gates]
         Gates --> Artifact[Immutable Artifact]
     end
 
-    subgraph Deliver[Promote and reconcile]
+    subgraph Delivery[Promote and reconcile]
         Artifact --> Promotion[Promotion PR]
         Promotion --> GitOps[GitOps Desired State]
         GitOps --> Argo[Argo CD]
