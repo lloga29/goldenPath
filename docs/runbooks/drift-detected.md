@@ -1,61 +1,48 @@
-# Runbook: Drift Detectado en Terraform
+# Runbook: Infrastructure Drift Detected
 
-## Alerta
-**Nombre:** Terraform Drift Detected
-**Severidad:** Warning/High (dependiendo del recurso)
+## Trigger
 
-## Descripción
-Se ha detectado una diferencia entre el estado deseado (código) y el estado actual (cloud).
+Use when Terraform plan, scheduled drift detection, cloud posture tooling, or manual review finds a difference between declared infrastructure and real infrastructure.
 
-## Diagnóstico
+## Initial checks
 
-### 1. Verificar el drift
+1. Identify the exact resource and environment.
+2. Determine whether the change was manual, provider-generated, another controller's responsibility, or a legitimate emergency action.
+3. Review cloud audit logs and recent Git/CI changes.
+4. Assess security and availability impact before applying anything.
+
+## Terraform diagnosis
+
 ```bash
-cd platform-stacks/clients/<client>/environments/<env>
 terraform init
-terraform plan -detailed-exitcode
+terraform plan -refresh-only
+terraform plan
 ```
 
-Exit codes:
-- `0`: Sin cambios
-- `1`: Error
-- `2`: Hay cambios (drift)
+Do not automatically apply a plan merely to eliminate drift. Confirm why the difference exists.
 
-### 2. Identificar recursos afectados
-```bash
-terraform plan -out=drift.plan
-terraform show -json drift.plan | jq '.resource_changes[] | select(.change.actions != ["no-op"]) | {address, actions: .change.actions}'
-```
+## Remediation paths
 
-### 3. Determinar causa
-- **Cambio manual:** Alguien modificó el recurso directamente en la consola/CLI
-- **Recurso externo:** Otro proceso/servicio modificó el recurso
-- **Drift natural:** Algunos recursos cambian automáticamente (ej: ASG instances)
+### Revert unauthorized runtime change
 
-## Remediación
+If Git represents the correct desired state and the runtime change is unsafe or unintended, use the normal reviewed apply path to restore declared state.
 
-### Opción A: Reconciliar hacia el código (recomendado)
-```bash
-# Esto revertirá los cambios manuales
-terraform apply drift.plan
-```
+### Adopt a legitimate runtime change
 
-### Opción B: Importar el cambio al código
-1. Actualizar el código Terraform para reflejar el nuevo estado
-2. Verificar con `terraform plan` que no hay diff
-3. Crear PR con la actualización
+If an emergency or external process made a valid change, update Terraform configuration or ownership boundaries so code accurately represents the accepted state, then review the resulting plan.
 
-### Opción C: Refresh del estado (solo si es drift natural)
-```bash
-terraform refresh
-# Luego actualizar código si es necesario
-```
+### Ignore provider-managed attributes intentionally
 
-## Prevención
-- No hacer cambios manuales en recursos gestionados por Terraform
-- Usar tags `ManagedBy: terraform` para identificar recursos
-- Configurar alertas de CloudTrail/Activity Log para detectar cambios
+Use lifecycle ignore rules only when another authoritative controller owns the field and the ownership is documented. Broad ignore rules can hide real drift.
 
-## Escalación
-- Si el drift afecta producción: Escalar a on-call de Platform
-- Si es cambio no autorizado: Reportar a Security
+## Security drift
+
+Escalate immediately when drift affects IAM, public access, encryption, networking boundaries, audit logging, secret access, or production protection settings.
+
+## Validation
+
+A resolved incident ends with a clean, understood Terraform plan and evidence that the runtime matches the approved ownership model.
+
+## Follow-up
+
+Record root cause, actor/process, detection delay, remediation, and whether prevention requires stronger IAM, policy, monitoring, or documentation.
