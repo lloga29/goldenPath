@@ -1,0 +1,63 @@
+# Argo CD ApplicationSet for Git-native cluster platform resources.
+# These resources complement Helm-installed controllers without introducing
+# a second reconciliation engine.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform-resources
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+
+  generators:
+    - list:
+        elements:
+          - env: dev
+            cluster: https://dev-cluster.example.com
+            autoSync: true
+            prune: true
+          - env: staging
+            cluster: https://staging-cluster.example.com
+            autoSync: true
+            prune: false
+          - env: prod
+            cluster: https://prod-cluster.example.com
+            autoSync: false
+            prune: false
+
+  template:
+    metadata:
+      name: 'platform-resources-{{.env}}'
+      labels:
+        component: platform-resources
+        environment: '{{.env}}'
+        app.kubernetes.io/managed-by: argocd
+    spec:
+      project: platform
+      source:
+        repoURL: https://github.com/lloga29/goldenPath.git
+        targetRevision: main
+        path: gitops-config/platform/resources
+      destination:
+        server: '{{.cluster}}'
+        namespace: envoy-gateway-system
+      syncPolicy:
+        syncOptions:
+          - ServerSideApply=true
+          - SkipDryRunOnMissingResource=true
+        retry:
+          limit: 10
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 5m
+
+  templatePatch: |
+    {{- if .autoSync }}
+    spec:
+      syncPolicy:
+        automated:
+          prune: {{ .prune }}
+          selfHeal: true
+    {{- end }}

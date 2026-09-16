@@ -7,18 +7,17 @@ metadata:
 spec:
   description: Shared platform and cluster infrastructure components
 
-  # These repository URLs are reference placeholders and must be replaced when
-  # the blueprint is adopted by a real organization.
+  # Explicit allowlist. Do not replace with '*': chart and Git origins are part
+  # of the platform supply-chain boundary.
   sourceRepos:
-    - git@github.com:org/gitops-config.git
+    - https://github.com/lloga29/goldenPath.git
     - https://charts.jetstack.io
-    - https://kubernetes-sigs.github.io/external-secrets
+    - https://charts.external-secrets.io
     - https://prometheus-community.github.io/helm-charts
     - https://grafana.github.io/helm-charts
+    - https://open-policy-agent.github.io/gatekeeper/charts
+    - docker.io/envoyproxy
 
-  # The platform project intentionally spans multiple namespaces and clusters.
-  # Production authorization must also be enforced through Argo CD RBAC and
-  # protected Git environments.
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc
@@ -29,8 +28,9 @@ spec:
     - namespace: '*'
       server: https://prod-cluster.example.com
 
-  # Platform administrators require cluster-scoped capabilities for CRDs and
-  # policy controllers. Application teams do not receive this project role.
+  # Platform administrators require cluster-scoped capabilities for CRDs,
+  # GatewayClass, admission policy, and other cluster infrastructure. Team
+  # applications use separate AppProjects with narrower authorization.
   clusterResourceWhitelist:
     - group: '*'
       kind: '*'

@@ -1,53 +1,119 @@
-# ApplicationSet for shared platform components.
-# Production reconciliation requires an explicit manual sync.
+# Argo CD ApplicationSet for shared platform Helm add-ons.
+# Argo CD is the only Helm reconciliation engine in the Golden Path baseline.
+# Development and staging reconcile automatically; production requires an explicit sync.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: platform-applications
+  name: platform-addons
   namespace: argocd
 spec:
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
 
   generators:
-    - list:
-        elements:
-          - env: dev
-            cluster: https://dev-cluster.example.com
-            autoSync: true
-            prune: true
-          - env: staging
-            cluster: https://staging-cluster.example.com
-            autoSync: true
-            prune: false
-          - env: prod
-            cluster: https://prod-cluster.example.com
-            autoSync: false
-            prune: false
+    - matrix:
+        generators:
+          - list:
+              elements:
+                - component: cert-manager
+                  release: cert-manager
+                  chart: cert-manager
+                  repo: https://charts.jetstack.io
+                  version: v1.14.2
+                  namespace: cert-manager
+                - component: external-secrets
+                  release: external-secrets
+                  chart: external-secrets
+                  repo: https://charts.external-secrets.io
+                  version: 0.9.11
+                  namespace: external-secrets
+                - component: kube-prometheus-stack
+                  release: kube-prometheus-stack
+                  chart: kube-prometheus-stack
+                  repo: https://prometheus-community.github.io/helm-charts
+                  version: 56.6.2
+                  namespace: observability
+                - component: loki
+                  release: loki
+                  chart: loki
+                  repo: https://grafana.github.io/helm-charts
+                  version: 5.42.0
+                  namespace: observability
+                - component: tempo
+                  release: tempo
+                  chart: tempo
+                  repo: https://grafana.github.io/helm-charts
+                  version: 1.7.1
+                  namespace: observability
+                - component: gatekeeper
+                  release: gatekeeper
+                  chart: gatekeeper
+                  repo: https://open-policy-agent.github.io/gatekeeper/charts
+                  version: 3.14.0
+                  namespace: gatekeeper-system
+                - component: envoy-gateway
+                  release: eg
+                  chart: gateway-helm
+                  repo: docker.io/envoyproxy
+                  version: v1.9.1
+                  namespace: envoy-gateway-system
+
+          - list:
+              elements:
+                - env: dev
+                  cluster: https://dev-cluster.example.com
+                  autoSync: true
+                  prune: true
+                - env: staging
+                  cluster: https://staging-cluster.example.com
+                  autoSync: true
+                  prune: false
+                - env: prod
+                  cluster: https://prod-cluster.example.com
+                  autoSync: false
+                  prune: false
 
   template:
     metadata:
-      name: 'platform-{{.env}}'
+      name: '{{.component}}-{{.env}}'
       labels:
-        component: platform
+        component: '{{.component}}'
         environment: '{{.env}}'
-
+        app.kubernetes.io/managed-by: argocd
     spec:
       project: platform
 
-      source:
-        repoURL: git@github.com:org/gitops-config.git
-        targetRevision: HEAD
-        path: 'platform/overlays/{{.env}}'
+      # The first source is the upstream Helm chart. The second source is this
+      # repository and is referenced as $values so chart configuration remains
+      # reviewable and auditable in Git.
+      sources:
+        - repoURL: '{{.repo}}'
+          chart: '{{.chart}}'
+          targetRevision: '{{.version}}'
+          helm:
+            releaseName: '{{.release}}'
+            valueFiles:
+              - '$values/gitops-config/platform/values/{{.component}}/common.yaml'
+              - '$values/gitops-config/platform/values/{{.component}}/{{.env}}.yaml'
+            ignoreMissingValueFiles: true
+        - repoURL: https://github.com/lloga29/goldenPath.git
+          targetRevision: main
+          ref: values
 
       destination:
         server: '{{.cluster}}'
-        namespace: platform
+        namespace: '{{.namespace}}'
 
       syncPolicy:
         syncOptions:
           - CreateNamespace=true
           - ServerSideApply=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 3m
 
   templatePatch: |
     {{- if .autoSync }}
