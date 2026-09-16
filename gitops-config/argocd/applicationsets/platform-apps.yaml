@@ -1,4 +1,5 @@
-# ApplicationSet para componentes de plataforma
+# ApplicationSet for shared platform components.
+# Production reconciliation requires an explicit manual sync.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -6,19 +7,23 @@ metadata:
   namespace: argocd
 spec:
   goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
 
   generators:
     - list:
         elements:
           - env: dev
             cluster: https://dev-cluster.example.com
-            valuesFile: values-dev.yaml
+            autoSync: true
+            prune: true
           - env: staging
             cluster: https://staging-cluster.example.com
-            valuesFile: values-staging.yaml
+            autoSync: true
+            prune: false
           - env: prod
             cluster: https://prod-cluster.example.com
-            valuesFile: values-prod.yaml
+            autoSync: false
+            prune: false
 
   template:
     metadata:
@@ -40,10 +45,15 @@ spec:
         namespace: platform
 
       syncPolicy:
-        automated:
-          prune: true
-          selfHeal: true
-
         syncOptions:
           - CreateNamespace=true
           - ServerSideApply=true
+
+  templatePatch: |
+    {{- if .autoSync }}
+    spec:
+      syncPolicy:
+        automated:
+          prune: {{ .prune }}
+          selfHeal: true
+    {{- end }}
