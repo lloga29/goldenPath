@@ -36,8 +36,8 @@ spec:
                 - component: loki
                   release: loki
                   chart: loki
-                  repo: https://grafana.github.io/helm-charts
-                  version: 5.42.0
+                  repo: https://grafana-community.github.io/helm-charts
+                  version: 18.13.1
                   namespace: observability
                 - component: tempo
                   release: tempo
