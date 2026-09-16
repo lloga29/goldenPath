@@ -12,8 +12,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VALIDATOR = ROOT / "scripts" / "validate-evidence-manifest.py"
+TRUSTED_CONSUMER = ROOT / "scripts" / "verify-evidence-input-digests.py"
 RISK_EVALUATOR = ROOT / "scripts" / "evaluate-risk.py"
 RISK_INPUT = ROOT / "platform-assurance" / "risk" / "examples" / "r2-change.json"
+RISK_POLICY = ROOT / "platform-assurance" / "risk" / "policy" / "r0-r4-policy.json"
 SCHEMA = ROOT / "platform-assurance" / "evidence" / "schema" / "goldenpath-evidence-v1.schema.json"
 FIXTURES = ROOT / "platform-assurance" / "evidence" / "fixtures"
 
@@ -25,6 +27,10 @@ BASE_CASES = {
     "invalid-skip-not-allowed.json": 1,
     "invalid-source-drift.json": 1,
 }
+
+DESIRED_STATE_DIGEST = (
+    "sha256:10335a01c45e545486a5c4f3cecae555ff73966504c0b1809a75c86c6562ed15"
+)
 
 
 def check_schema_contract() -> None:
@@ -141,13 +147,147 @@ def check_expected_commit_invalidation() -> None:
         raise RuntimeError("Stale evidence unexpectedly passed --expected-commit validation")
 
 
+def run_trusted_consumer(
+    manifest: Path,
+    desired_state: Path,
+    expected_status: int,
+    *,
+    policy: Path = RISK_POLICY,
+    architecture: Path = RISK_INPUT,
+) -> subprocess.CompletedProcess[str]:
+    command = [
+        sys.executable,
+        str(TRUSTED_CONSUMER),
+        str(manifest),
+        "--policy-source",
+        str(policy),
+        "--architecture-source",
+        str(architecture),
+        "--desired-state-source",
+        str(desired_state),
+        "--expected-commit",
+        "2222222222222222222222222222222222222222",
+        "--expected-plan-digest",
+        authoritative_plan_digest(),
+    ]
+    result = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    actual = 0 if result.returncode == 0 else 1
+    if actual != expected_status:
+        raise RuntimeError(
+            f"trusted consumer expected normalized exit {expected_status}, got {result.returncode}\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    return result
+
+
+def check_authoritative_input_binding() -> None:
+    source_manifest = json.loads(
+        (FIXTURES / "valid-risk-adaptive.json").read_text(encoding="utf-8")
+    )
+    source_manifest["inputs"]["desiredStateDigest"] = DESIRED_STATE_DIGEST
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        manifest = root / "evidence.json"
+        manifest.write_text(json.dumps(source_manifest, indent=2) + "\n", encoding="utf-8")
+
+        desired_state = root / "desired-state"
+        desired_state.mkdir()
+        (desired_state / "app.yaml").write_text(
+            "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: orders-api\n",
+            encoding="utf-8",
+        )
+        nested = desired_state / "nested"
+        nested.mkdir()
+        (nested / "values.json").write_text('{"replicas":2}\n', encoding="utf-8")
+
+        run_trusted_consumer(manifest, desired_state, 0)
+
+        (desired_state / "app.yaml").write_text(
+            "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: drifted-orders-api\n",
+            encoding="utf-8",
+        )
+        drift = run_trusted_consumer(manifest, desired_state, 1)
+        if "desiredStateDigest" not in drift.stderr:
+            raise RuntimeError("Desired-state drift did not identify desiredStateDigest")
+
+        (desired_state / "app.yaml").write_text(
+            "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: orders-api\n",
+            encoding="utf-8",
+        )
+
+        policy = root / "policy.json"
+        policy_data = json.loads(RISK_POLICY.read_text(encoding="utf-8"))
+        policy_data["levels"]["R2"]["requiredReviewerRoles"].append("audit")
+        policy.write_text(json.dumps(policy_data, indent=2) + "\n", encoding="utf-8")
+        policy_drift = run_trusted_consumer(
+            manifest,
+            desired_state,
+            1,
+            policy=policy,
+        )
+        if "policyDigest" not in policy_drift.stderr:
+            raise RuntimeError("Policy drift did not identify policyDigest")
+
+        architecture = root / "architecture.json"
+        architecture_data = json.loads(RISK_INPUT.read_text(encoding="utf-8"))
+        architecture_data["architecture"]["service"]["owner"] = "drifted-owner"
+        architecture.write_text(
+            json.dumps(architecture_data, indent=2) + "\n", encoding="utf-8"
+        )
+        architecture_drift = run_trusted_consumer(
+            manifest,
+            desired_state,
+            1,
+            architecture=architecture,
+        )
+        if "architectureDigest" not in architecture_drift.stderr:
+            raise RuntimeError("Architecture drift did not identify architectureDigest")
+
+        symlink_root = root / "symlinked-state"
+        symlink_root.mkdir()
+        target = root / "target.yaml"
+        target.write_text("kind: ConfigMap\n", encoding="utf-8")
+        (symlink_root / "linked.yaml").symlink_to(target)
+        symlink_result = run_trusted_consumer(manifest, symlink_root, 1)
+        if "symlink" not in symlink_result.stderr:
+            raise RuntimeError("Symlinked desired state did not fail closed")
+
+        empty_state = root / "empty-state"
+        empty_state.mkdir()
+        empty_result = run_trusted_consumer(manifest, empty_state, 1)
+        if "no regular files" not in empty_result.stderr:
+            raise RuntimeError("Empty desired state did not fail closed")
+
+        missing_source = subprocess.run(
+            [
+                sys.executable,
+                str(TRUSTED_CONSUMER),
+                str(manifest),
+                "--policy-source",
+                str(RISK_POLICY),
+                "--architecture-source",
+                str(RISK_INPUT),
+            ],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if missing_source.returncode == 0:
+            raise RuntimeError("Trusted consumption unexpectedly accepted missing desired-state source")
+
+
 def main() -> int:
     check_schema_contract()
     for filename, expected_status in BASE_CASES.items():
         run_case(FIXTURES / filename, expected_status)
     check_assurance_binding()
     check_expected_commit_invalidation()
-    print("PASS: evidence contract regression suite with trusted assurance-plan binding")
+    check_authoritative_input_binding()
+    print(
+        "PASS: evidence contract regression suite with trusted assurance-plan and "
+        "authoritative-input binding"
+    )
     return 0
 
 
