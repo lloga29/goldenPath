@@ -39,6 +39,8 @@ def classify(paths: list[str]) -> dict[str, bool]:
             flags["docs"] = True
         if normalized.startswith("terraform-modules/") or normalized.startswith("platform-stacks/"):
             flags["terraform"] = True
+            # Terraform desired-state changes must also exercise policy fixtures.
+            flags["policies"] = True
         if normalized.startswith("gitops-config/"):
             flags["gitops"] = True
         if normalized.startswith("platform-policies/") or normalized.startswith("gitops-config/policies/"):

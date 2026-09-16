@@ -20,6 +20,7 @@ POLICY_TARGETS = {
     "kubernetes.workload.isolation": "kubernetes",
     "terraform.public_access": "terraform",
     "terraform.iam.no_wildcards": "terraform",
+    "terraform.identity.least_privilege": "terraform",
     "terraform.encryption.required": "terraform",
     "terraform.tags.required": "terraform",
 }

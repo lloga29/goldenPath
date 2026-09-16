@@ -1,0 +1,64 @@
+{
+  "resource_changes": [
+    {
+      "address": "google_storage_bucket.assets",
+      "mode": "managed",
+      "type": "google_storage_bucket",
+      "name": "assets",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "public_access_prevention": "inherited",
+          "labels": {
+            "environment": "production",
+            "team": "platform",
+            "cost_center": "bad"
+          }
+        }
+      }
+    },
+    {
+      "address": "google_compute_firewall.public_ssh",
+      "mode": "managed",
+      "type": "google_compute_firewall",
+      "name": "public_ssh",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "source_ranges": [
+            "0.0.0.0/0"
+          ],
+          "allow": [
+            {
+              "protocol": "tcp",
+              "ports": [
+                "22"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "address": "google_project_iam_binding.owner",
+      "mode": "managed",
+      "type": "google_project_iam_binding",
+      "name": "owner",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "role": "roles/owner",
+          "members": [
+            "serviceAccount:app@example.iam.gserviceaccount.com"
+          ]
+        }
+      }
+    }
+  ]
+}

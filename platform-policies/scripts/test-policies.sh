@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run positive/negative policy fixtures and fail-closed exception-contract tests.
+# Run positive/negative policy fixtures, multi-provider parity, and fail-closed exception-contract tests.
 
 set -euo pipefail
 
@@ -22,6 +22,19 @@ compile_registry() {
     python3 "$VALIDATOR" "$registry" --output "$output"
 }
 
+run_policy() {
+    local input="$1"
+    local policy_dir="$2"
+    local data_file="$3"
+    local namespace="$4"
+    conftest test "$input" \
+        --policy "$policy_dir" \
+        --policy "$LIB_DIR" \
+        --policy "$WRAPPER_DIR" \
+        --data "$data_file" \
+        --namespace "$namespace"
+}
+
 expect_validation_failure() {
     local registry="$1"
     if python3 "$VALIDATOR" "$registry" >/dev/null 2>&1; then
@@ -35,12 +48,7 @@ expect_policy_failure() {
     local policy_dir="$2"
     local data_file="$3"
     local namespace="$4"
-    if conftest test "$input" \
-        --policy "$policy_dir" \
-        --policy "$LIB_DIR" \
-        --policy "$WRAPPER_DIR" \
-        --data "$data_file" \
-        --namespace "$namespace"; then
+    if run_policy "$input" "$policy_dir" "$data_file" "$namespace"; then
         echo "ERROR: invalid fixture unexpectedly passed policy evaluation: $input" >&2
         exit 1
     fi
@@ -50,32 +58,28 @@ BASELINE_DATA="$TMP_DIR/baseline-exceptions.json"
 compile_registry "$ROOT_DIR/policy-exceptions.yaml" "$BASELINE_DATA"
 
 # Baseline paved-road fixtures must pass with the validated real registry loaded.
-conftest test "$ROOT_DIR/tests/kubernetes/valid-deployment.yaml" \
-    --policy "$ROOT_DIR/kubernetes" \
-    --policy "$LIB_DIR" \
-    --policy "$WRAPPER_DIR" \
-    --data "$BASELINE_DATA" \
-    --namespace goldenpath.kubernetes
-conftest test "$ROOT_DIR/tests/terraform/valid-plan.json" \
-    --policy "$ROOT_DIR/terraform" \
-    --policy "$LIB_DIR" \
-    --policy "$WRAPPER_DIR" \
-    --data "$BASELINE_DATA" \
-    --namespace goldenpath.terraform
+run_policy "$ROOT_DIR/tests/kubernetes/valid-deployment.yaml" "$ROOT_DIR/kubernetes" "$BASELINE_DATA" goldenpath.kubernetes
 
-# Existing negative fixtures must remain blocked when no exception exists.
+for fixture in \
+    "$ROOT_DIR/tests/terraform/valid-plan.json" \
+    "$ROOT_DIR/tests/terraform/azure-valid-plan.json" \
+    "$ROOT_DIR/tests/terraform/gcp-valid-plan.json"; do
+    run_policy "$fixture" "$ROOT_DIR/terraform" "$BASELINE_DATA" goldenpath.terraform
+done
+
+# Existing and provider-specific negative fixtures must remain blocked when no exception exists.
 expect_policy_failure "$ROOT_DIR/tests/kubernetes/invalid-deployment.yaml" "$ROOT_DIR/kubernetes" "$BASELINE_DATA" goldenpath.kubernetes
-expect_policy_failure "$ROOT_DIR/tests/terraform/invalid-plan.json" "$ROOT_DIR/terraform" "$BASELINE_DATA" goldenpath.terraform
+for fixture in \
+    "$ROOT_DIR/tests/terraform/invalid-plan.json" \
+    "$ROOT_DIR/tests/terraform/azure-invalid-plan.json" \
+    "$ROOT_DIR/tests/terraform/gcp-invalid-plan.json"; do
+    expect_policy_failure "$fixture" "$ROOT_DIR/terraform" "$BASELINE_DATA" goldenpath.terraform
+done
 
 # Kubernetes: exact policy + kind/name + namespace may suppress only that policy.
 KUBE_EXCEPTION_DATA="$TMP_DIR/kubernetes-image-exception.json"
 compile_registry "$ROOT_DIR/tests/exceptions/kubernetes-image.yaml" "$KUBE_EXCEPTION_DATA"
-KUBE_OUTPUT="$(conftest test "$ROOT_DIR/tests/kubernetes/exception-image-deployment.yaml" \
-    --policy "$ROOT_DIR/kubernetes" \
-    --policy "$LIB_DIR" \
-    --policy "$WRAPPER_DIR" \
-    --data "$KUBE_EXCEPTION_DATA" \
-    --namespace goldenpath.kubernetes 2>&1)"
+KUBE_OUTPUT="$(run_policy "$ROOT_DIR/tests/kubernetes/exception-image-deployment.yaml" "$ROOT_DIR/kubernetes" "$KUBE_EXCEPTION_DATA" goldenpath.kubernetes 2>&1)"
 printf '%s\n' "$KUBE_OUTPUT"
 grep -F "EXC-2026-901" <<<"$KUBE_OUTPUT" >/dev/null || {
     echo "ERROR: Kubernetes exception bypass did not emit its audit-visible exception ID." >&2
@@ -103,12 +107,7 @@ expect_policy_failure "$ROOT_DIR/tests/kubernetes/exception-image-deployment.yam
 # Terraform: exact policy + exact resource address may suppress only that policy.
 TF_EXCEPTION_DATA="$TMP_DIR/terraform-public-access-exception.json"
 compile_registry "$ROOT_DIR/tests/exceptions/terraform-public-access.yaml" "$TF_EXCEPTION_DATA"
-TF_OUTPUT="$(conftest test "$ROOT_DIR/tests/terraform/exception-public-access-plan.json" \
-    --policy "$ROOT_DIR/terraform" \
-    --policy "$LIB_DIR" \
-    --policy "$WRAPPER_DIR" \
-    --data "$TF_EXCEPTION_DATA" \
-    --namespace goldenpath.terraform 2>&1)"
+TF_OUTPUT="$(run_policy "$ROOT_DIR/tests/terraform/exception-public-access-plan.json" "$ROOT_DIR/terraform" "$TF_EXCEPTION_DATA" goldenpath.terraform 2>&1)"
 printf '%s\n' "$TF_OUTPUT"
 grep -F "EXC-2026-903" <<<"$TF_OUTPUT" >/dev/null || {
     echo "ERROR: Terraform exception bypass did not emit its audit-visible exception ID." >&2
@@ -118,15 +117,20 @@ grep -F "EXC-2026-903" <<<"$TF_OUTPUT" >/dev/null || {
 # Exception filtering must preserve full plan context for companion-resource policies.
 TF_COMPANION_EXCEPTION_DATA="$TMP_DIR/terraform-public-access-companion-exception.json"
 compile_registry "$ROOT_DIR/tests/exceptions/terraform-public-access-companion.yaml" "$TF_COMPANION_EXCEPTION_DATA"
-TF_COMPANION_OUTPUT="$(conftest test "$ROOT_DIR/tests/terraform/exception-public-access-companion-plan.json" \
-    --policy "$ROOT_DIR/terraform" \
-    --policy "$LIB_DIR" \
-    --policy "$WRAPPER_DIR" \
-    --data "$TF_COMPANION_EXCEPTION_DATA" \
-    --namespace goldenpath.terraform 2>&1)"
+TF_COMPANION_OUTPUT="$(run_policy "$ROOT_DIR/tests/terraform/exception-public-access-companion-plan.json" "$ROOT_DIR/terraform" "$TF_COMPANION_EXCEPTION_DATA" goldenpath.terraform 2>&1)"
 printf '%s\n' "$TF_COMPANION_OUTPUT"
 grep -F "EXC-2026-911" <<<"$TF_COMPANION_OUTPUT" >/dev/null || {
     echo "ERROR: Terraform companion-resource exception did not emit its audit-visible exception ID." >&2
+    exit 1
+}
+
+# Provider-native identity violations use their own semantic policy ID and exact address.
+TF_IDENTITY_EXCEPTION_DATA="$TMP_DIR/terraform-identity-exception.json"
+compile_registry "$ROOT_DIR/tests/exceptions/terraform-identity.yaml" "$TF_IDENTITY_EXCEPTION_DATA"
+TF_IDENTITY_OUTPUT="$(run_policy "$ROOT_DIR/tests/terraform/identity-least-privilege-plan.json" "$ROOT_DIR/terraform" "$TF_IDENTITY_EXCEPTION_DATA" goldenpath.terraform 2>&1)"
+printf '%s\n' "$TF_IDENTITY_OUTPUT"
+grep -F "EXC-2026-915" <<<"$TF_IDENTITY_OUTPUT" >/dev/null || {
+    echo "ERROR: Terraform identity exception did not emit its audit-visible exception ID." >&2
     exit 1
 }
 
@@ -146,4 +150,4 @@ expect_validation_failure "$ROOT_DIR/tests/exceptions/malformed-missing-owner.ya
 expect_validation_failure "$ROOT_DIR/tests/exceptions/terraform-type-only.yaml"
 expect_validation_failure "$ROOT_DIR/tests/exceptions/terraform-resource-wildcard.yaml"
 
-echo "Policy fixtures and scoped exception contract passed under Rego v1."
+echo "Policy fixtures, multi-provider parity, and scoped exception contract passed under Rego v1."

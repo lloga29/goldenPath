@@ -1,0 +1,71 @@
+{
+  "resource_changes": [
+    {
+      "address": "azurerm_storage_container.assets",
+      "mode": "managed",
+      "type": "azurerm_storage_container",
+      "name": "assets",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "name": "assets",
+          "storage_account_name": "goldenpathpublic",
+          "container_access_type": "blob"
+        }
+      }
+    },
+    {
+      "address": "azurerm_storage_account.assets",
+      "mode": "managed",
+      "type": "azurerm_storage_account",
+      "name": "assets",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "public_network_access_enabled": true,
+          "tags": {
+            "Environment": "production",
+            "Team": "platform",
+            "CostCenter": "bad-format"
+          }
+        }
+      }
+    },
+    {
+      "address": "azurerm_network_security_rule.public_ssh",
+      "mode": "managed",
+      "type": "azurerm_network_security_rule",
+      "name": "public_ssh",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "direction": "Inbound",
+          "access": "Allow",
+          "source_address_prefix": "*",
+          "destination_port_range": "22"
+        }
+      }
+    },
+    {
+      "address": "azurerm_role_assignment.owner",
+      "mode": "managed",
+      "type": "azurerm_role_assignment",
+      "name": "owner",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "scope": "/subscriptions/00000000-0000-0000-0000-000000000000",
+          "role_definition_name": "Owner"
+        }
+      }
+    }
+  ]
+}

@@ -61,6 +61,9 @@ jobs:
       - name: Validate R0-R4 risk-adaptive assurance semantics
         run: python3 scripts/test-risk-adaptive-assurance.py
 
+      - name: Validate CI domain routing semantics
+        run: python3 scripts/test-ci-domain-routing.py
+
       - name: Validate shell syntax
         shell: bash
         run: |

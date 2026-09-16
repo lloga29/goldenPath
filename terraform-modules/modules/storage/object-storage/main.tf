@@ -127,6 +127,18 @@ locals {
       ManagedBy   = "terraform"
     }
   )
+
+  # Google Cloud labels use provider-native lowercase keys and normalized values.
+  # Missing Owner remains empty so policy-as-code can fail closed instead of
+  # manufacturing ownership metadata.
+  gcp_labels = {
+    environment = var.environment
+    team        = substr(replace(lower(var.tags["Team"]), "/[^a-z0-9_-]/", "_"), 0, 63)
+    cost_center = substr(replace(lower(var.tags["CostCenter"]), "/[^a-z0-9_-]/", "_"), 0, 63)
+    owner       = substr(replace(lower(lookup(var.tags, "Owner", "")), "/[^a-z0-9_-]/", "_"), 0, 63)
+    module      = "storage_object_storage"
+    managed_by  = "terraform"
+  }
 }
 
 resource "aws_s3_bucket" "this" {
@@ -241,7 +253,7 @@ resource "google_storage_bucket" "this" {
     }
   }
 
-  labels = local.common_tags
+  labels = local.gcp_labels
 }
 
 output "bucket_id" {

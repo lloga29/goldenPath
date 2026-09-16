@@ -4,37 +4,47 @@ This guide describes the current policy-as-code baseline and how to operate it s
 
 ## Terraform controls
 
-The executable Terraform policy bundle is currently AWS-specific. Multi-provider policy parity is tracked in issue #15.
+The executable Terraform policy bundle maps security/governance outcomes across AWS, Azure, and Google Cloud without pretending the providers are semantically identical. See [Terraform Provider Policy Coverage](TERRAFORM_PROVIDER_COVERAGE.md) for the full matrix and explicit non-parity boundaries.
 
 ### Public access
 
-- Reject public S3 ACLs.
-- Require a matching S3 public-access-block companion resource and all four protection flags.
-- Reject public sensitive-port ingress for supported AWS security-group representations.
-- Reject publicly accessible RDS and Redshift instances/clusters.
-
 Policy ID: `terraform.public_access`.
+
+- AWS: block public S3 ACLs, require secure S3 public-access-block companions, block public sensitive-port security-group ingress, and reject publicly accessible supported RDS/Redshift resources.
+- Azure: require private Blob containers, disable public network access on Storage Accounts, and block public inbound sensitive-port NSG rules.
+- Google Cloud: require Cloud Storage public-access prevention and block public sensitive-port firewall rules.
 
 ### Encryption
 
-- Require EBS encryption.
-- Require RDS instance/cluster storage encryption.
-- Require a matching S3 server-side-encryption companion resource.
-- Require ElastiCache at-rest and in-transit encryption.
-
 Policy ID: `terraform.encryption.required`.
+
+AWS plan resources expose explicit encryption controls, so the bundle requires EBS, RDS, S3, and ElastiCache encryption where supported.
+
+Azure Storage and Google Cloud Storage encrypt data at rest by provider guarantee. GoldenPath does not require Azure infrastructure/double encryption or Google Cloud CMEK merely to manufacture symmetry with AWS. Customer-managed keys, double encryption, HSM, and key-separation requirements belong to an explicit higher-assurance profile.
 
 ### Required metadata
 
-Supported taggable resources must carry `Environment`, `Team`, `CostCenter`, and `Owner`. Environment values are constrained to `dev`, `staging`, `prod`, or `ephemeral`.
-
 Policy ID: `terraform.tags.required`.
 
-### IAM wildcard restrictions
+Supported AWS/Azure resources require `Environment`, `Team`, `CostCenter`, and `Owner` tags. Supported Google Cloud resources require provider-native lowercase `environment`, `team`, `cost_center`, and `owner` labels. Environment values are constrained to `dev`, `staging`, `prod`, or `ephemeral`.
 
-Managed and inline IAM policy resources reject `Action: "*"` and reject sensitive IAM/KMS/secret-access actions against `Resource: "*"`. `NotAction` and `NotResource` generate review warnings.
+### Least-privilege identity
+
+Policy ID: `terraform.identity.least_privilege`.
+
+- AWS: direct attachment of AWS managed `AdministratorAccess` is blocked on supported attachment resources.
+- Azure: `Owner`, `Contributor`, `User Access Administrator`, and `Role Based Access Control Administrator` are blocked at subscription/management-group scope.
+- Google Cloud: project/folder/organization IAM bindings/members using `roles/owner` or `roles/editor` are blocked.
+
+This policy maps broad identity grants; it does not claim that AWS IAM, Azure RBAC, and Google Cloud IAM role models are interchangeable.
+
+### AWS IAM wildcard restrictions
 
 Policy ID: `terraform.iam.no_wildcards`.
+
+Supported AWS managed and inline IAM policy resources reject `Action: "*"` and reject sensitive IAM/KMS/secret-access actions against `Resource: "*"`. `NotAction` and `NotResource` generate review warnings.
+
+This policy is intentionally AWS-specific. Azure/GCP least-privilege behavior is handled by `terraform.identity.least_privilege`.
 
 ## Kubernetes controls
 
@@ -55,7 +65,7 @@ Every blocking policy change must preserve a passing fixture and at least one de
 ./platform-policies/scripts/test-policies.sh
 ```
 
-The suite proves baseline failures, exact exception matches, same-resource policy isolation, resource and namespace isolation, audit-visible exception IDs, expired exceptions, unknown policy IDs, malformed entries, wildcard rejection, type-only Terraform selector rejection, global-disable rejection, and the strict Gatekeeper boundary.
+Terraform fixtures cover AWS, Azure, and Google Cloud paved-road and deliberately invalid plans. The suite also proves exact exception matches, identity-policy exception behavior, same-resource policy isolation, resource and namespace isolation, audit-visible exception IDs, expired exceptions, unknown policy IDs, malformed entries, wildcard rejection, type-only Terraform selector rejection, global-disable rejection, and the strict Gatekeeper boundary.
 
 ## Exceptions
 

@@ -39,6 +39,7 @@ Terraform:
 
 - `terraform.public_access`
 - `terraform.iam.no_wildcards`
+- `terraform.identity.least_privilege`
 - `terraform.encryption.required`
 - `terraform.tags.required`
 
@@ -95,7 +96,7 @@ Only the compiled JSON should be passed to Conftest. Policy evaluation must use 
 
 When an exception matches, Conftest emits a warning containing the exception ID, policy ID, and exact resource scope. The deny result for that policy/resource is suppressed; unrelated policies continue evaluating normally.
 
-CI fixtures prove successful exact-scope suppression and fail-closed behavior for wrong policy, wrong resource, wrong namespace, same-resource violations from another policy, expired entries, wildcards, unknown policies, malformed entries, global disabling, and attempts to make Gatekeeper consume registry exceptions.
+CI fixtures prove successful exact-scope suppression and fail-closed behavior for wrong policy, wrong resource, wrong namespace, same-resource violations from another policy, expired entries, wildcards, unknown policies, malformed entries, global disabling, admission-boundary attempts, and provider-native identity controls.
 
 ## Lifecycle
 

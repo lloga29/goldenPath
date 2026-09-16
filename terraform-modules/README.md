@@ -32,6 +32,7 @@ module "vpc" {
   tags = {
     Team       = "platform"
     CostCenter = "cc-001"
+    Owner      = "platform@example.com"
   }
 }
 ```
@@ -44,7 +45,15 @@ See [Module Standards](docs/MODULE_STANDARDS.md) and [Contributing](docs/CONTRIB
 
 ## Cloud-provider note
 
-Some modules expose a multi-provider interface for learning/reference purposes. AWS, Azure, and GCP are not operationally identical. Production modules should preserve provider-specific capabilities and security controls rather than force false feature parity.
+Some modules expose a multi-provider interface for learning/reference purposes. AWS, Azure, and GCP are not operationally identical. GoldenPath maps comparable security/governance outcomes through policy-as-code while preserving provider-specific behavior and explicitly documenting gaps.
+
+See the [Terraform Provider Policy Coverage](../platform-policies/docs/TERRAFORM_PROVIDER_COVERAGE.md) matrix before treating any control as equivalent across providers.
+
+For Google Cloud resources that support labels, modules use provider-native lowercase label keys rather than reusing AWS/Azure tag casing. Provider-managed encryption defaults are not presented as evidence of customer-managed keys.
+
+## CI and policy routing
+
+Changes under `terraform-modules/` and `platform-stacks/` activate both Terraform validation and the policy fixture suite in root CI. A module change therefore cannot rely solely on `terraform validate`; it must also preserve the multi-provider policy contract.
 
 ## Workflow note
 
