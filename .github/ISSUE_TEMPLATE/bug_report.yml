@@ -1,0 +1,90 @@
+name: Bug report
+description: Report a reproducible defect in the GoldenPath reference repository.
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve GoldenPath. Please distinguish repository/reference behavior from runtime behavior and avoid posting secrets or private infrastructure details.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the observed behavior and why it is incorrect.
+      placeholder: What happened?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Repository CI / validation
+        - Terraform modules / platform stacks
+        - GitOps / Argo CD / Kubernetes
+        - Policy as code
+        - Platform assurance / evidence
+        - Service templates / developer experience
+        - Documentation
+        - Security / supply chain
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: Exact source commit
+      description: Provide the exact commit SHA when the defect is tied to a repository state.
+      placeholder: 40-character commit SHA
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest deterministic reproduction possible.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Describe the expected repository or runtime behavior.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: evidence
+    attributes:
+      label: Evidence boundary
+      description: Select the strongest evidence actually available for this report.
+      options:
+        - Repository/reference evidence only
+        - Runtime-validated evidence
+        - Production-validated evidence
+        - Unknown / not yet established
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence_details
+    attributes:
+      label: Validation evidence
+      description: Link or describe workflow runs, logs, manifests, screenshots, or runtime evidence. Redact sensitive values.
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checks
+      options:
+        - label: I have removed credentials, tokens, private keys, customer identifiers, and private infrastructure details.
+          required: true
+        - label: I am not presenting static repository validation as runtime or production proof.
+          required: true
