@@ -55,7 +55,7 @@ Every blocking policy change must preserve a passing fixture and at least one de
 ./platform-policies/scripts/test-policies.sh
 ```
 
-The suite also proves exact exception matching for Kubernetes and Terraform and proves that wrong-scope, expired, global-bypass, and Gatekeeper-bypass fixtures fail closed.
+The suite proves baseline failures, exact exception matches, same-resource policy isolation, resource and namespace isolation, audit-visible exception IDs, expired exceptions, unknown policy IDs, malformed entries, wildcard rejection, type-only Terraform selector rejection, global-disable rejection, and the strict Gatekeeper boundary.
 
 ## Exceptions
 
@@ -67,7 +67,7 @@ python3 platform-policies/scripts/validate-exceptions.py \
   --output /tmp/goldenpath-policy-exceptions.json
 ```
 
-Each active exception must have a stable ID, exact policy/resource scope, technical reason, owner email, approver, tracking issue, creation date, and expiry date. Kubernetes exceptions also require an exact namespace. The validator rejects unknown policy IDs, duplicate scopes, expired entries, wildcard Terraform addresses, unsupported fields, and global policy-disable attempts.
+Each active exception must have a stable ID, exact policy/resource scope, technical reason, owner email, approver, tracking issue, creation date, and expiry date. Kubernetes exceptions also require an exact namespace. Terraform selectors must be absolute resource addresses that include both resource type and logical resource name, such as `aws_s3_bucket.legacy_assets`; a bare resource type is not an exact scope. The validator rejects unknown policy IDs, duplicate scopes, expired entries, wildcard selectors, malformed entries, unsupported fields, and global policy-disable attempts.
 
 The compiled JSON is the only exception data that should be passed to Conftest. Raw registry YAML must not be supplied directly because compilation is the fail-closed validation boundary. Conftest must evaluate through the `goldenpath.kubernetes` or `goldenpath.terraform` wrapper namespace so exact-scope filtering and audit warnings remain part of the enforcement path.
 
@@ -84,6 +84,18 @@ enforcement:
 ```
 
 The validator rejects any other Gatekeeper mode. Therefore a Kubernetes exception can permit a repository/reference Conftest check for its exact scope, but it does not prove the workload can be admitted by a real cluster. Admission remediation or an independently reviewed change to the Gatekeeper constraint scope is still required.
+
+Current admission overlap is explicit rather than assumed:
+
+| Conftest policy ID | Gatekeeper admission control | Relationship |
+|---|---|---|
+| `kubernetes.images.immutable` | `K8sImmutableImages` / `immutable-images` | Overlapping immutable-image control; Gatekeeper remains independently strict. |
+| `kubernetes.labels.required` | `K8sRequiredLabels` / `required-labels` | Overlapping required-label control; admission scope is defined by the constraint and may differ from Conftest resource coverage. |
+| `kubernetes.resources.required` | `K8sContainerResources` / `container-limits` | Overlapping CPU/memory request and limit control; do not infer identical workload-kind coverage. |
+| `kubernetes.security.context` | `K8sSecureContext` / `secure-context` | Overlapping non-root and privilege-escalation control; Gatekeeper does not inherit CI exceptions. |
+| `kubernetes.workload.isolation` | `K8sPSPPrivilegedContainer` / `no-privileged` | Partial overlap only: privileged containers are admission-checked, while Conftest also blocks `hostNetwork`, `hostPID`, and `hostIPC`. |
+
+This table documents control overlap, not semantic parity. In particular, no Gatekeeper constraint consumes the exception registry, and Conftest-only checks must never be represented as admission coverage.
 
 ## Gatekeeper
 

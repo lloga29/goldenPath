@@ -82,10 +82,18 @@ grep -F "EXC-2026-901" <<<"$KUBE_OUTPUT" >/dev/null || {
     exit 1
 }
 
+# The image exception must not suppress a second policy on the same exact resource.
+expect_policy_failure "$ROOT_DIR/tests/kubernetes/exception-image-and-labels-deployment.yaml" "$ROOT_DIR/kubernetes" "$KUBE_EXCEPTION_DATA" goldenpath.kubernetes
+
 # A valid exception for a different resource must not suppress the violation.
 KUBE_WRONG_SCOPE_DATA="$TMP_DIR/kubernetes-wrong-scope.json"
 compile_registry "$ROOT_DIR/tests/exceptions/kubernetes-wrong-resource.yaml" "$KUBE_WRONG_SCOPE_DATA"
 expect_policy_failure "$ROOT_DIR/tests/kubernetes/exception-image-deployment.yaml" "$ROOT_DIR/kubernetes" "$KUBE_WRONG_SCOPE_DATA" goldenpath.kubernetes
+
+# A valid exception for the same resource in another namespace must not suppress the violation.
+KUBE_WRONG_NAMESPACE_DATA="$TMP_DIR/kubernetes-wrong-namespace.json"
+compile_registry "$ROOT_DIR/tests/exceptions/kubernetes-wrong-namespace.yaml" "$KUBE_WRONG_NAMESPACE_DATA"
+expect_policy_failure "$ROOT_DIR/tests/kubernetes/exception-image-deployment.yaml" "$ROOT_DIR/kubernetes" "$KUBE_WRONG_NAMESPACE_DATA" goldenpath.kubernetes
 
 # A valid exception for the same resource but a different policy ID must not suppress the violation.
 KUBE_WRONG_POLICY_DATA="$TMP_DIR/kubernetes-wrong-policy.json"
@@ -112,9 +120,15 @@ TF_WRONG_POLICY_DATA="$TMP_DIR/terraform-wrong-policy.json"
 compile_registry "$ROOT_DIR/tests/exceptions/terraform-wrong-policy.yaml" "$TF_WRONG_POLICY_DATA"
 expect_policy_failure "$ROOT_DIR/tests/terraform/exception-public-access-plan.json" "$ROOT_DIR/terraform" "$TF_WRONG_POLICY_DATA" goldenpath.terraform
 
-# Registry validation fails closed for expired, global, or admission-bypass attempts.
+# Registry validation must reject every broad, malformed, expired, unknown, or admission-bypass shape.
 expect_validation_failure "$ROOT_DIR/tests/exceptions/expired.yaml"
 expect_validation_failure "$ROOT_DIR/tests/exceptions/global-bypass.yaml"
 expect_validation_failure "$ROOT_DIR/tests/exceptions/gatekeeper-bypass.yaml"
+expect_validation_failure "$ROOT_DIR/tests/exceptions/kubernetes-resource-wildcard.yaml"
+expect_validation_failure "$ROOT_DIR/tests/exceptions/kubernetes-namespace-wildcard.yaml"
+expect_validation_failure "$ROOT_DIR/tests/exceptions/unknown-policy.yaml"
+expect_validation_failure "$ROOT_DIR/tests/exceptions/malformed-missing-owner.yaml"
+expect_validation_failure "$ROOT_DIR/tests/exceptions/terraform-type-only.yaml"
+expect_validation_failure "$ROOT_DIR/tests/exceptions/terraform-resource-wildcard.yaml"
 
 echo "Policy fixtures and scoped exception contract passed under Rego v1."

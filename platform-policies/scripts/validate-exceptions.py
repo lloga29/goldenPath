@@ -48,6 +48,11 @@ EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 ID_RE = re.compile(r"^EXC-[0-9]{4}-[0-9]{3,}$")
 K8S_NAME_RE = re.compile(r"^[a-z0-9](?:[-a-z0-9.]*[a-z0-9])?$")
 K8S_NAMESPACE_RE = re.compile(r"^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$")
+TF_IDENT = r"[A-Za-z0-9_-]+"
+TF_INDEX = r'(?:\[(?:0|[1-9][0-9]*|"(?:[^"\\]|\\.)*")\])?'
+TF_ADDRESS_RE = re.compile(
+    rf"^(?:module\.{TF_IDENT}{TF_INDEX}\.)*{TF_IDENT}\.{TF_IDENT}{TF_INDEX}$"
+)
 
 
 def fail(message: str) -> None:
@@ -73,7 +78,7 @@ def non_empty_string(exception: dict[str, object], field: str, exception_id: str
 def validate_kubernetes_scope(exception: dict[str, object], exception_id: str, policy: str) -> None:
     namespace = exception.get("namespace")
     if not isinstance(namespace, str) or not K8S_NAMESPACE_RE.fullmatch(namespace):
-        fail(f"{exception_id}: Kubernetes exceptions require a valid namespace")
+        fail(f"{exception_id}: Kubernetes exceptions require a valid exact namespace")
 
     resource = non_empty_string(exception, "resource", exception_id)
     parts = resource.split("/", 1)
@@ -83,15 +88,18 @@ def validate_kubernetes_scope(exception: dict[str, object], exception_id: str, p
     if kind not in KUBERNETES_POLICY_KINDS[policy]:
         fail(f"{exception_id}: resource kind '{kind}' is not supported by policy '{policy}'")
     if not K8S_NAME_RE.fullmatch(name):
-        fail(f"{exception_id}: Kubernetes resource name is invalid")
+        fail(f"{exception_id}: Kubernetes resource name must be an exact valid name")
 
 
 def validate_terraform_scope(exception: dict[str, object], exception_id: str) -> None:
     if "namespace" in exception:
         fail(f"{exception_id}: Terraform exceptions must not declare namespace")
     resource = non_empty_string(exception, "resource", exception_id)
-    if any(char.isspace() for char in resource) or "*" in resource or "?" in resource:
-        fail(f"{exception_id}: Terraform resource must be an exact address without whitespace or wildcards")
+    if not TF_ADDRESS_RE.fullmatch(resource):
+        fail(
+            f"{exception_id}: Terraform resource must be an exact resource address "
+            "(for example aws_s3_bucket.legacy_assets) without wildcards"
+        )
 
 
 def validate(path: Path) -> dict[str, object]:

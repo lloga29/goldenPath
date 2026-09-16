@@ -76,10 +76,10 @@ Gatekeeper admission templates live under `gitops-config/policies/`; Conftest re
 
 ## Exceptions
 
-`policy-exceptions.yaml` is the authoritative exception registry. CI validates it fail closed before producing the JSON data consumed by Conftest. An exception is matched only by an approved semantic policy ID and an exact resource selector; Kubernetes entries additionally require an exact namespace. Duplicate scopes, expired entries, unknown policy IDs, wildcard Terraform selectors, malformed entries, and global-disable fields are rejected.
+`policy-exceptions.yaml` is the authoritative exception registry. CI validates it fail closed before producing the JSON data consumed by Conftest. An exception is matched only by an approved semantic policy ID and an exact resource selector; Kubernetes entries additionally require an exact namespace. Terraform selectors must include an exact resource type and logical name, not only a resource type. Duplicate scopes, expired entries, unknown policy IDs, wildcard selectors, malformed entries, and global-disable fields are rejected.
 
 Conftest must query the `goldenpath.kubernetes` or `goldenpath.terraform` wrapper namespace; querying the implementation packages directly bypasses the exception contract and is not the supported entrypoint. When a matching exception suppresses a deny result, the wrapper emits an audit-visible warning containing the exception ID.
 
-The admission boundary is deliberately stricter: **Gatekeeper does not consume the exception registry and remains fail closed.** The registry declares `gatekeeper: strict`, and validation rejects attempts to turn it into a registry-driven admission bypass. Existing Gatekeeper `excludedNamespaces` are static constraint scope, not policy exceptions.
+The admission boundary is deliberately stricter: **Gatekeeper does not consume the exception registry and remains fail closed.** The registry declares `gatekeeper: strict`, and validation rejects attempts to turn it into a registry-driven admission bypass. Existing Gatekeeper `excludedNamespaces` are static constraint scope, not policy exceptions. Gatekeeper overlaps selected Kubernetes controls but is not claimed to be semantically identical to Conftest; the exact current overlap and known Conftest-only checks are documented in the [Policy Guide](docs/POLICY_GUIDE.md).
 
 See [Policy Guide](docs/POLICY_GUIDE.md) and [Policy Exceptions](../docs/governance/policy-exceptions.md).

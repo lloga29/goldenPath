@@ -54,14 +54,16 @@ resource: deployment/legacy-api
 namespace: legacy-system
 ```
 
-Terraform resources use the exact Terraform address. Wildcards are prohibited:
+Terraform resources use the exact absolute Terraform resource address, including both type and logical resource name. Wildcards and type-only selectors are prohibited:
 
 ```yaml
 policy: terraform.public_access
 resource: aws_security_group_rule.temporary_ssh
 ```
 
-Duplicate active scopes are rejected. An exception for one policy never suppresses another policy even when both policies are implemented in the same Rego package.
+Module-qualified and indexed addresses are supported when they identify one concrete Terraform resource instance, for example `module.edge[0].aws_security_group_rule.temporary_ssh[0]`.
+
+Duplicate active scopes are rejected. An exception for one policy never suppresses another policy even when implementation packages or resource inputs overlap.
 
 ## Admission boundary
 
@@ -75,6 +77,8 @@ enforcement:
 
 Gatekeeper constraints do not consume registry exceptions. A Kubernetes exception can suppress the matching Conftest deny result, but the runtime admission path remains strict. This prevents a repository exception from silently weakening cluster admission.
 
+The admission bundle overlaps the immutable-image, required-label, resource, secure-context, and privileged-container controls, but it is not a one-to-one copy of the Conftest bundle. In particular, `kubernetes.workload.isolation` also blocks `hostNetwork`, `hostPID`, and `hostIPC` in Conftest while the current Gatekeeper isolation template covers privileged containers only. The detailed overlap matrix is maintained in `platform-policies/docs/POLICY_GUIDE.md`.
+
 Existing Gatekeeper `excludedNamespaces` are static policy scope and are not temporary exception entries.
 
 ## Validation and compilation
@@ -85,13 +89,13 @@ python3 platform-policies/scripts/validate-exceptions.py \
   --output /tmp/goldenpath-policy-exceptions.json
 ```
 
-Only the compiled JSON should be passed to Conftest. Policy evaluation must use the `goldenpath.kubernetes` or `goldenpath.terraform` wrapper namespace; direct queries of the implementation packages are not the supported exception-aware entrypoint. The validator fails on malformed fields, future creation dates, expired entries, duplicate IDs/scopes, unknown policies, invalid Kubernetes selectors, Terraform wildcards, unsupported top-level bypass fields, or a non-strict Gatekeeper mode.
+Only the compiled JSON should be passed to Conftest. Policy evaluation must use the `goldenpath.kubernetes` or `goldenpath.terraform` wrapper namespace; direct queries of the implementation packages are not the supported exception-aware entrypoint. The validator fails on malformed fields, future creation dates, expired entries, duplicate IDs/scopes, unknown policies, invalid Kubernetes selectors, broad or wildcard Terraform selectors, unsupported top-level bypass fields, or a non-strict Gatekeeper mode.
 
 ## Audit behavior
 
 When an exception matches, Conftest emits a warning containing the exception ID, policy ID, and exact resource scope. The deny result for that policy/resource is suppressed; unrelated policies continue evaluating normally.
 
-CI fixtures prove both successful exact-scope suppression and fail-closed wrong-scope behavior.
+CI fixtures prove successful exact-scope suppression and fail-closed behavior for wrong policy, wrong resource, wrong namespace, same-resource violations from another policy, expired entries, wildcards, unknown policies, malformed entries, global disabling, and attempts to make Gatekeeper consume registry exceptions.
 
 ## Lifecycle
 
