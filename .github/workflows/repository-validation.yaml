@@ -62,6 +62,49 @@ jobs:
             bash -n "$script"
           done < <(find . -type f -name '*.sh' -not -path './.git/*' -print0)
 
+  security-history:
+    runs-on: ubuntu-24.04
+    env:
+      GITLEAKS_VERSION: '8.30.0'
+      GITLEAKS_LINUX_X64_SHA256: '79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e'
+    steps:
+      - name: Check out complete repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pinned Gitleaks
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSLo gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_LINUX_X64_SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Prove detector fails closed on a canary secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          canary_dir="$(mktemp -d)"
+          trap 'rm -rf "$canary_dir"' EXIT
+          printf 'token = "%s%s"\n' 'ghp_' 'aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789' > "$canary_dir/canary.txt"
+
+          set +e
+          gitleaks dir --no-banner --redact "$canary_dir"
+          status=$?
+          set -e
+
+          if [[ "$status" -ne 1 ]]; then
+            echo "ERROR: Gitleaks canary was not detected; refusing to trust a silent secret scan." >&2
+            exit 1
+          fi
+
+      - name: Scan complete reachable Git history for secrets
+        run: gitleaks git --no-banner --redact --log-opts="--all" .
+
   documentation:
     needs: changes
     if: needs.changes.outputs.docs == 'true'
