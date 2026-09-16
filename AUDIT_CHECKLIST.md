@@ -37,8 +37,9 @@ This checklist tracks gaps between the reference repository and an operational p
 - [x] Validate every Kustomize target with Kustomize 5.8.1 in root CI.
 - [x] Replace deprecated `commonLabels` usage while preserving explicit selector behavior.
 - [x] Validate the Argo CD platform contract, source allowlists, environment sync semantics, and GatewayClass ownership in root CI.
-- [x] Render every pinned platform Helm chart for dev/staging/prod values in root CI.
+- [x] Require exact semantic-style chart version pins and render every platform Helm chart for dev/staging/prod values in root CI.
 - [x] Remove ingress-nginx from the recommended new-production baseline and declare Envoy Gateway/Gateway API as the reference direction.
+- [ ] Add provenance/digest verification for upstream platform chart artifacts where the upstream distribution supports it.
 - [ ] Validate ApplicationSets and AppProjects against a real Argo CD control plane.
 - [ ] Exercise Envoy Gateway, Gateway API routes, TLS/cert-manager integration, DNS, and rollback in a disposable target cluster.
 - [ ] Verify promotion and rollback scripts with a disposable GitOps repository/branch.
@@ -59,7 +60,7 @@ This checklist tracks gaps between the reference repository and an operational p
 
 ## P1 - Security and production correctness
 
-- [x] Reject mutable `:latest` publication in the implemented Go template smoke contract and require immutable chart versions in the Argo platform contract.
+- [x] Reject mutable `:latest` publication in the implemented Go template smoke contract and require exact platform chart version pins.
 - [ ] Configure cloud OIDC/workload federation for the selected target environments.
 - [ ] Verify least privilege for CI/CD, Argo CD, Kubernetes service accounts, and cloud roles in the real target environment.
 - [ ] Configure a real external secret backend and rotation process; examples/placeholders are intentionally not reconciled.

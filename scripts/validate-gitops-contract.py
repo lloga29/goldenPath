@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -31,6 +32,10 @@ EXPECTED_ENVIRONMENTS = {
     "prod": {"autoSync": False, "prune": False},
 }
 GIT_VALUES_REPO = "https://github.com/lloga29/goldenPath.git"
+# Accept exact semantic-style chart versions, including a conventional leading
+# v and optional prerelease/build suffix. Floating refs such as latest/main are
+# therefore rejected by structure rather than by a short denylist.
+EXACT_VERSION_RE = re.compile(r"^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z][0-9A-Za-z.-]*)?$")
 
 
 def load_yaml(path: Path) -> dict:
@@ -119,8 +124,10 @@ def validate() -> tuple[list[str], list[dict], list[dict]]:
         if repo not in project_repos:
             errors.append(f"component {name} repository {repo} is not allowlisted by the platform AppProject")
         version = str(component["version"])
-        if version.lower() in {"latest", "main", "master", "head"}:
-            errors.append(f"component {name} must use an immutable chart version, not {version!r}")
+        if not EXACT_VERSION_RE.fullmatch(version):
+            errors.append(
+                f"component {name} must use an exact semantic-style chart version pin, not {version!r}"
+            )
         common_values = VALUES_ROOT / str(name) / "common.yaml"
         if not common_values.is_file():
             errors.append(f"component {name} is missing {common_values.relative_to(ROOT)}")
