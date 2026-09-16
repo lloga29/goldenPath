@@ -1,0 +1,96 @@
+name: Runtime validation gap
+description: Track a capability that has repository/reference evidence but still requires real runtime proof.
+title: "validation: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when repository/reference implementation exists but runtime or production evidence is still missing. Do not use a Helm render, Terraform plan, fixture, or static CI result as runtime proof.
+
+  - type: input
+    id: capability
+    attributes:
+      label: Capability
+      description: Name the capability whose evidence status should be advanced.
+      placeholder: Gateway API TLS integration
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: Exact source commit
+      description: Commit SHA to which the runtime evidence must be bound.
+      placeholder: 40-character commit SHA
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Target environment
+      options:
+        - dev
+        - staging
+        - prod
+        - ephemeral / disposable
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: target
+    attributes:
+      label: Runtime target
+      description: Identify the runtime sufficiently for evidence binding without exposing sensitive identifiers.
+      placeholder: Disposable Kubernetes cluster / cloud and region / relevant controller versions
+    validations:
+      required: true
+
+  - type: dropdown
+    id: current_status
+    attributes:
+      label: Current evidence status
+      options:
+        - implemented
+        - reference
+    validations:
+      required: true
+
+  - type: dropdown
+    id: target_status
+    attributes:
+      label: Target evidence status
+      options:
+        - runtime-validated
+        - production-validated
+    validations:
+      required: true
+
+  - type: textarea
+    id: procedure
+    attributes:
+      label: Validation procedure
+      description: Describe the exact runtime actions, success criteria, rollback checks, and negative/fail-closed cases to exercise.
+    validations:
+      required: true
+
+  - type: textarea
+    id: artifacts
+    attributes:
+      label: Evidence to retain
+      description: Describe the Evidence Manifest, logs, artifact identities, runtime observations, approvals, or other durable evidence that will be retained.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Evidence guardrails
+      options:
+        - label: Evidence will be bound to the exact source commit and relevant artifact/desired-state identities.
+          required: true
+        - label: Infrastructure failure will not be reported as a passing runtime validation.
+          required: true
+        - label: Sensitive runtime identifiers and credentials will be redacted before evidence is attached publicly.
+          required: true
