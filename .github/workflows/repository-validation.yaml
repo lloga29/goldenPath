@@ -242,3 +242,61 @@ jobs:
 
       - name: Render and validate Go paved-road template
         run: ./service-templates/scripts/render-go-template-smoke-test.sh
+
+  repository-gate:
+    name: Repository validation gate
+    needs:
+      - changes
+      - baseline
+      - security-history
+      - documentation
+      - terraform
+      - gitops-policy
+      - service-template
+    if: always()
+    runs-on: ubuntu-24.04
+    env:
+      CHANGES_RESULT: ${{ needs.changes.result }}
+      BASELINE_RESULT: ${{ needs.baseline.result }}
+      SECURITY_HISTORY_RESULT: ${{ needs.security-history.result }}
+      DOCUMENTATION_RESULT: ${{ needs.documentation.result }}
+      TERRAFORM_RESULT: ${{ needs.terraform.result }}
+      GITOPS_POLICY_RESULT: ${{ needs.gitops-policy.result }}
+      SERVICE_TEMPLATE_RESULT: ${{ needs.service-template.result }}
+    steps:
+      - name: Require every applicable validation domain
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          require_success() {
+            local name="$1"
+            local result="$2"
+            if [[ "$result" != "success" ]]; then
+              echo "ERROR: required job '$name' concluded '$result'." >&2
+              exit 1
+            fi
+          }
+
+          require_success_or_skipped() {
+            local name="$1"
+            local result="$2"
+            case "$result" in
+              success|skipped)
+                ;;
+              *)
+                echo "ERROR: applicable job '$name' concluded '$result'." >&2
+                exit 1
+                ;;
+            esac
+          }
+
+          require_success "changes" "$CHANGES_RESULT"
+          require_success "baseline" "$BASELINE_RESULT"
+          require_success "security-history" "$SECURITY_HISTORY_RESULT"
+          require_success_or_skipped "documentation" "$DOCUMENTATION_RESULT"
+          require_success_or_skipped "terraform" "$TERRAFORM_RESULT"
+          require_success_or_skipped "gitops-policy" "$GITOPS_POLICY_RESULT"
+          require_success_or_skipped "service-template" "$SERVICE_TEMPLATE_RESULT"
+
+          echo "All required and applicable repository validation domains passed."
