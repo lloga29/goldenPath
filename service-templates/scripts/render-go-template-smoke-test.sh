@@ -9,7 +9,8 @@ OUTPUT_DIR="$(mktemp -d)"
 PROJECT_NAME="golden-smoke"
 GENERATED_DIR="$OUTPUT_DIR/$PROJECT_NAME"
 BUILD_OUTPUT="$OUTPUT_DIR/${PROJECT_NAME}-binary"
-CONTAINER_IMAGE="${PROJECT_NAME}:smoke"
+SMOKE_PORT=18080
+CONTAINER_IMAGE="local/${PROJECT_NAME}:smoke"
 
 cleanup() {
     docker image rm --force "$CONTAINER_IMAGE" >/dev/null 2>&1 || true
@@ -17,7 +18,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for command in copier go docker; do
+for command in copier go docker make; do
     command -v "$command" >/dev/null 2>&1 || {
         echo "ERROR: $command is required for the template smoke test." >&2
         exit 1
@@ -29,7 +30,7 @@ copier copy --trust --defaults \
     --data github_owner=example \
     --data team=platform \
     --data description="Golden Path smoke-test service" \
-    --data port=8080 \
+    --data port="$SMOKE_PORT" \
     --data owner_email=platform@example.com \
     --data go_version=1.26 \
     "$TEMPLATE_DIR" "$OUTPUT_DIR"
@@ -37,6 +38,11 @@ copier copy --trust --defaults \
 if [[ ! -f "$GENERATED_DIR/go.mod" ]]; then
     echo "ERROR: Copier did not render the expected Go module at $GENERATED_DIR." >&2
     find "$OUTPUT_DIR" -maxdepth 3 -type f -print >&2
+    exit 1
+fi
+
+if grep -R -nE '\{\{[[:space:]]*(project_name|github_owner|team|description|port|owner_email|go_version)([[:space:]]|\||\}\})' "$GENERATED_DIR"; then
+    echo "ERROR: generated service still contains unresolved Copier placeholders." >&2
     exit 1
 fi
 
@@ -88,6 +94,18 @@ if ! grep -Eq '^FROM[[:space:]]+gcr\.io/distroless/static-debian13:nonroot@sha25
     exit 1
 fi
 
-docker build --pull --tag "$CONTAINER_IMAGE" .
+make docker-build REGISTRY=local VERSION=smoke
+
+exposed_ports="$(docker image inspect "$CONTAINER_IMAGE" --format '{{json .Config.ExposedPorts}}')"
+if [[ "$exposed_ports" != *"\"${SMOKE_PORT}/tcp\""* ]]; then
+    echo "ERROR: generated container does not expose the selected service port ${SMOKE_PORT}." >&2
+    exit 1
+fi
+
+image_source="$(docker image inspect "$CONTAINER_IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.source" }}')"
+if [[ "$image_source" != "https://github.com/example/${PROJECT_NAME}" ]]; then
+    echo "ERROR: generated container has unexpected OCI source label: $image_source" >&2
+    exit 1
+fi
 
 echo "Go template smoke test passed."

@@ -6,6 +6,8 @@ GIT_COMMIT := $(shell git rev-parse --short=12 HEAD 2>/dev/null || echo unknown)
 VERSION ?= $(GIT_COMMIT)
 REGISTRY ?= ghcr.io/{{ github_owner }}
 IMAGE := $(REGISTRY)/$(APP_NAME):$(VERSION)
+IMAGE_SOURCE := https://github.com/{{ github_owner }}/{{ project_name }}
+SERVICE_PORT := {{ port }}
 GO := go
 LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.GitCommit=$(GIT_COMMIT) -w -s"
 
@@ -38,8 +40,11 @@ run: ## Run the service locally
 
 docker-build: ## Build an immutable-tagged local container image
 	docker build \
+		--pull \
 		--build-arg VERSION=$(VERSION) \
 		--build-arg GIT_COMMIT=$(GIT_COMMIT) \
+		--build-arg IMAGE_SOURCE=$(IMAGE_SOURCE) \
+		--build-arg SERVICE_PORT=$(SERVICE_PORT) \
 		-t $(IMAGE) .
 
 docker-push: docker-build ## Push the selected immutable image tag

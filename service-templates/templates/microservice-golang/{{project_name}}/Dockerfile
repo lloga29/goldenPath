@@ -20,14 +20,16 @@ FROM gcr.io/distroless/static-debian13:nonroot@sha256:f7f8f729987ad0fdf6b05eeeae
 
 ARG VERSION=dev
 ARG GIT_COMMIT=unknown
+ARG IMAGE_SOURCE=https://github.com/unknown/unknown
+ARG SERVICE_PORT=8080
 
-LABEL org.opencontainers.image.source="https://github.com/{{ github_owner }}/{{ project_name }}"
-LABEL org.opencontainers.image.description="{{ description }}"
+LABEL org.opencontainers.image.source="${IMAGE_SOURCE}"
+LABEL org.opencontainers.image.description="Golden Path Go service"
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.revision="${GIT_COMMIT}"
 
 COPY --from=builder /out/server /server
 
 USER nonroot:nonroot
-EXPOSE {{ port }}
+EXPOSE ${SERVICE_PORT}
 ENTRYPOINT ["/server"]
