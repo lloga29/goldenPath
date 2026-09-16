@@ -40,6 +40,13 @@ A higher evidence status must never be inferred from a lower one.
 - [x] Require `production-validated` claims to target the `prod` environment.
 - [x] Add positive and negative regression fixtures and execute them from active root CI.
 - [x] Reject source-stale evidence through exact commit comparison with `--expected-commit`.
+- [x] Define versioned `goldenpath.architecture/v1` metadata for owner, service type, data sensitivity, dependencies, runtime, SLO tier, deployment unit, and declared risk class.
+- [x] Implement deterministic R0-R4 classification where declared `riskClass` is a floor and derived signals may only raise the effective risk.
+- [x] Define versioned `goldenpath.assurance/v1` plans that select additional gates, reviewer roles, preview requirements, runtime validation, human approval gates, and autonomy.
+- [x] Enforce monotonic risk policy: higher tiers cannot remove global or lower-tier gates, reviewers, approvals, preview requirements, or runtime requirements.
+- [x] Bind the assurance plan into the Evidence Manifest so risk-required gates and runtime proof fail closed when omitted.
+- [x] Add positive and negative R0-R4 regression fixtures and execute them from active root CI.
+- [ ] Resolve emitted reviewer roles to real organization identities and enforce reviewer requests/approvals in the hosting platform.
 - [ ] Generate and retain Evidence Manifests from a real delivery repository/runtime rather than fixtures only.
 - [ ] Compute and compare policy, architecture, and desired-state digests automatically at evidence-consumption time.
 - [ ] Add durable retention/signing/provenance for production Evidence Manifests before using them as compliance evidence.
@@ -109,7 +116,8 @@ A higher evidence status must never be inferred from a lower one.
 - [ ] Implement end-to-end build-once promotion using immutable artifact identities in a real delivery repository.
 - [ ] Exercise application rollback and Git reconciliation in a disposable/production-like environment.
 - [ ] Establish a current, supported platform dependency baseline and prove upgrade/rollback procedures.
-- [ ] Introduce R0-R4 change-risk classification to select additional gates, reviewers, previews, and approvals without weakening global minimum controls.
+- [x] Introduce R0-R4 change-risk classification to select additional gates, reviewers, previews, runtime validation, human approvals, and autonomy without weakening global minimum controls.
+- [ ] Prove the emitted R0-R4 controls against a real governed delivery path before describing them as operational enforcement.
 
 ## P2 - Platform maturity
 
