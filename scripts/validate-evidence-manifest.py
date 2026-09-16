@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -12,6 +13,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 SCHEMA_VERSION = "goldenpath.evidence/v1"
+ASSURANCE_VERSION = "goldenpath.assurance/v1"
 CLAIM_LEVELS = {
     "implemented",
     "reference",
@@ -23,6 +25,14 @@ GATE_RESULTS = {"PASS", "FAIL", "INFRASTRUCTURE_FAILURE", "SKIP_ALLOWED"}
 RUNTIME_RESULTS = {"PASS", "FAIL", "INFRASTRUCTURE_FAILURE"}
 ENVIRONMENTS = {"repository", "dev", "staging", "prod", "ephemeral"}
 RUNTIME_KINDS = {"deployment", "health", "rollout", "smoke", "slo", "rollback"}
+RISK_LEVELS = {"R0", "R1", "R2", "R3", "R4"}
+AUTONOMY = {
+    "automated",
+    "policy-bounded",
+    "guarded",
+    "supervised",
+    "human-authorized",
+}
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,127}$")
@@ -74,6 +84,16 @@ def reject_unknown_keys(obj: dict[str, object], allowed: set[str], path: str) ->
         fail(f"{path} contains unknown keys: {', '.join(unknown)}")
 
 
+def canonical_digest(value: object) -> str:
+    raw = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(raw).hexdigest()
+
+
 def validate_timestamp(value: object, path: str) -> None:
     text = require_string(value, path)
     candidate = text[:-1] + "+00:00" if text.endswith("Z") else text
@@ -109,7 +129,11 @@ def validate_digest(value: object, path: str) -> str:
 def validate_source(value: object) -> str:
     source = require_dict(value, "source")
     require_keys(source, {"repository", "commitSha"}, "source")
-    reject_unknown_keys(source, {"repository", "commitSha", "workflowName", "workflowRunUrl"}, "source")
+    reject_unknown_keys(
+        source,
+        {"repository", "commitSha", "workflowName", "workflowRunUrl"},
+        "source",
+    )
 
     repository = require_string(source["repository"], "source.repository")
     if not REPOSITORY_RE.fullmatch(repository):
@@ -136,17 +160,19 @@ def validate_context(value: object) -> str:
     return environment
 
 
-def validate_inputs(value: object) -> str:
+def validate_inputs(value: object) -> tuple[str, str, str]:
     inputs = require_dict(value, "inputs")
     required = {"sourceSha", "policyDigest", "architectureDigest", "desiredStateDigest"}
     require_keys(inputs, required, "inputs")
     reject_unknown_keys(inputs, required, "inputs")
 
     source_sha = validate_sha(inputs["sourceSha"], "inputs.sourceSha")
-    validate_digest(inputs["policyDigest"], "inputs.policyDigest")
-    validate_digest(inputs["architectureDigest"], "inputs.architectureDigest")
+    policy_digest = validate_digest(inputs["policyDigest"], "inputs.policyDigest")
+    architecture_digest = validate_digest(
+        inputs["architectureDigest"], "inputs.architectureDigest"
+    )
     validate_digest(inputs["desiredStateDigest"], "inputs.desiredStateDigest")
-    return source_sha
+    return source_sha, policy_digest, architecture_digest
 
 
 def validate_artifact(value: object) -> None:
@@ -163,14 +189,25 @@ def validate_artifact(value: object) -> None:
         fail("artifact.digest is required unless artifact.type is none")
 
 
-def validate_gates(value: object) -> tuple[bool, list[str]]:
+def validate_gates(
+    value: object,
+) -> tuple[bool, list[str], dict[str, dict[str, object]]]:
     gates = require_list(value, "gates")
     if not gates:
         fail("gates must contain at least one gate")
 
     seen: set[str] = set()
     blocking: list[str] = []
-    allowed = {"id", "required", "skipAllowed", "result", "observedAt", "evidenceUrl", "reason"}
+    by_id: dict[str, dict[str, object]] = {}
+    allowed = {
+        "id",
+        "required",
+        "skipAllowed",
+        "result",
+        "observedAt",
+        "evidenceUrl",
+        "reason",
+    }
     required_keys = {"id", "required", "skipAllowed", "result", "observedAt"}
 
     for index, raw_gate in enumerate(gates):
@@ -203,24 +240,27 @@ def validate_gates(value: object) -> tuple[bool, list[str]]:
             if "reason" not in gate:
                 fail(f"{path}.reason is required for SKIP_ALLOWED")
         elif skip_allowed and result in {"FAIL", "INFRASTRUCTURE_FAILURE"}:
-            # A skip-capable gate still failed when it actually ran; failure remains blocking.
             pass
 
         if result in {"FAIL", "INFRASTRUCTURE_FAILURE"} and "reason" not in gate:
             fail(f"{path}.reason is required for {result}")
 
         if required:
-            satisfied = result == "PASS" or (result == "SKIP_ALLOWED" and skip_allowed)
+            satisfied = result == "PASS" or (
+                result == "SKIP_ALLOWED" and skip_allowed
+            )
             if not satisfied:
                 blocking.append(gate_id)
 
-    return not blocking, blocking
+        by_id[gate_id] = gate
+
+    return not blocking, blocking, by_id
 
 
-def validate_runtime_evidence(value: object, claim_level: str) -> bool:
+def validate_runtime_evidence(value: object, required: bool) -> bool:
     runtime = require_list(value, "runtimeEvidence")
-    if claim_level in {"runtime-validated", "production-validated"} and not runtime:
-        fail(f"runtimeEvidence is required for claimLevel {claim_level}")
+    if required and not runtime:
+        fail("runtimeEvidence is required by the claim or assurance plan")
 
     all_pass = True
     allowed = {"kind", "result", "observedAt", "evidenceUrl", "reason"}
@@ -250,7 +290,128 @@ def validate_runtime_evidence(value: object, claim_level: str) -> bool:
     return all_pass
 
 
-def validate_manifest(data: object, expected_commit: str | None = None) -> None:
+def validate_gate_id_list(
+    value: object, path: str, *, require_nonempty: bool = False
+) -> list[str]:
+    items = require_list(value, path)
+    if require_nonempty and not items:
+        fail(f"{path} must not be empty")
+
+    result: list[str] = []
+    for index, item in enumerate(items):
+        gate_id = require_string(item, f"{path}[{index}]")
+        if not GATE_ID_RE.fullmatch(gate_id):
+            fail(f"{path}[{index}] has an invalid gate id")
+        result.append(gate_id)
+
+    if len(result) != len(set(result)):
+        fail(f"{path} must not contain duplicates")
+    return result
+
+
+def validate_assurance(
+    value: object,
+    policy_digest: str,
+    architecture_digest: str,
+    gates: dict[str, dict[str, object]],
+    expected_plan_digest: str | None,
+) -> bool:
+    assurance = require_dict(value, "assurance")
+    required = {
+        "schemaVersion",
+        "riskLevel",
+        "policyDigest",
+        "planDigest",
+        "architectureMetadataDigest",
+        "requiredGateIds",
+        "runtimeValidationRequired",
+        "previewEnvironmentRequired",
+        "humanApprovalGateIds",
+        "autonomy",
+    }
+    require_keys(assurance, required, "assurance")
+    reject_unknown_keys(assurance, required, "assurance")
+
+    schema_version = require_string(assurance["schemaVersion"], "assurance.schemaVersion")
+    if schema_version != ASSURANCE_VERSION:
+        fail(f"assurance.schemaVersion must be {ASSURANCE_VERSION}")
+
+    risk_level = require_string(assurance["riskLevel"], "assurance.riskLevel")
+    if risk_level not in RISK_LEVELS:
+        fail(f"assurance.riskLevel must be one of {sorted(RISK_LEVELS)}")
+
+    assurance_policy_digest = validate_digest(
+        assurance["policyDigest"], "assurance.policyDigest"
+    )
+    if assurance_policy_digest != policy_digest:
+        fail("assurance.policyDigest must match inputs.policyDigest")
+
+    attached_plan_digest = validate_digest(
+        assurance["planDigest"], "assurance.planDigest"
+    )
+    assurance_architecture_digest = validate_digest(
+        assurance["architectureMetadataDigest"],
+        "assurance.architectureMetadataDigest",
+    )
+    if assurance_architecture_digest != architecture_digest:
+        fail("assurance.architectureMetadataDigest must match inputs.architectureDigest")
+
+    required_gate_ids = validate_gate_id_list(
+        assurance["requiredGateIds"],
+        "assurance.requiredGateIds",
+        require_nonempty=True,
+    )
+    approval_gate_ids = validate_gate_id_list(
+        assurance["humanApprovalGateIds"], "assurance.humanApprovalGateIds"
+    )
+    if not set(approval_gate_ids).issubset(required_gate_ids):
+        fail("assurance.humanApprovalGateIds must be a subset of requiredGateIds")
+
+    runtime_required = require_bool(
+        assurance["runtimeValidationRequired"],
+        "assurance.runtimeValidationRequired",
+    )
+    preview_required = require_bool(
+        assurance["previewEnvironmentRequired"],
+        "assurance.previewEnvironmentRequired",
+    )
+    if preview_required and "preview-environment" not in required_gate_ids:
+        fail("preview assurance requires preview-environment in requiredGateIds")
+
+    autonomy = require_string(assurance["autonomy"], "assurance.autonomy")
+    if autonomy not in AUTONOMY:
+        fail(f"assurance.autonomy must be one of {sorted(AUTONOMY)}")
+
+    snapshot_without_digest = {
+        key: assurance[key] for key in required if key != "planDigest"
+    }
+    computed_plan_digest = canonical_digest(snapshot_without_digest)
+    if attached_plan_digest != computed_plan_digest:
+        fail("assurance.planDigest does not match the attached assurance requirements snapshot")
+
+    if expected_plan_digest is None:
+        fail("assurance evidence requires --expected-plan-digest from an authoritative assurance plan")
+    trusted_plan_digest = validate_digest(
+        expected_plan_digest, "--expected-plan-digest"
+    )
+    if attached_plan_digest != trusted_plan_digest:
+        fail("assurance.planDigest does not match --expected-plan-digest; assurance evidence is stale or untrusted")
+
+    for gate_id in required_gate_ids:
+        gate = gates.get(gate_id)
+        if gate is None:
+            fail(f"assurance-required gate is missing from evidence: {gate_id}")
+        if gate["required"] is not True:
+            fail(f"assurance-required gate must be marked required: {gate_id}")
+
+    return runtime_required
+
+
+def validate_manifest(
+    data: object,
+    expected_commit: str | None = None,
+    expected_plan_digest: str | None = None,
+) -> None:
     manifest = require_dict(data, "manifest")
     required = {
         "schemaVersion",
@@ -263,7 +424,7 @@ def validate_manifest(data: object, expected_commit: str | None = None) -> None:
         "inputs",
         "gates",
     }
-    allowed = required | {"artifact", "runtimeEvidence"}
+    allowed = required | {"artifact", "runtimeEvidence", "assurance"}
     require_keys(manifest, required, "manifest")
     reject_unknown_keys(manifest, allowed, "manifest")
 
@@ -285,7 +446,9 @@ def validate_manifest(data: object, expected_commit: str | None = None) -> None:
 
     commit_sha = validate_source(manifest["source"])
     environment = validate_context(manifest["context"])
-    input_source_sha = validate_inputs(manifest["inputs"])
+    input_source_sha, policy_digest, architecture_digest = validate_inputs(
+        manifest["inputs"]
+    )
     if commit_sha != input_source_sha:
         fail("source.commitSha and inputs.sourceSha must match; evidence is invalidated by source drift")
     if expected_commit is not None:
@@ -297,19 +460,38 @@ def validate_manifest(data: object, expected_commit: str | None = None) -> None:
     if "artifact" in manifest:
         validate_artifact(manifest["artifact"])
 
-    gates_ready, blocking_gates = validate_gates(manifest["gates"])
+    gates_ready, blocking_gates, gates = validate_gates(manifest["gates"])
 
-    runtime_required = claim_level in {"runtime-validated", "production-validated"}
+    assurance_runtime_required = False
+    if "assurance" in manifest:
+        assurance_runtime_required = validate_assurance(
+            manifest["assurance"],
+            policy_digest,
+            architecture_digest,
+            gates,
+            expected_plan_digest,
+        )
+    elif expected_plan_digest is not None:
+        fail("--expected-plan-digest was provided but manifest.assurance is missing")
+
+    runtime_required = (
+        claim_level in {"runtime-validated", "production-validated"}
+        or assurance_runtime_required
+    )
     if runtime_required and "runtimeEvidence" not in manifest:
-        fail(f"runtimeEvidence is required for claimLevel {claim_level}")
+        fail("runtimeEvidence is required by the claim or assurance plan")
     runtime_ready = True
     if "runtimeEvidence" in manifest:
-        runtime_ready = validate_runtime_evidence(manifest["runtimeEvidence"], claim_level)
+        runtime_ready = validate_runtime_evidence(
+            manifest["runtimeEvidence"], runtime_required
+        )
 
     if claim_level == "production-validated" and environment != "prod":
         fail("production-validated evidence must target context.environment=prod")
 
-    expected_decision = "READY" if gates_ready and (not runtime_required or runtime_ready) else "NOT_READY"
+    expected_decision = (
+        "READY" if gates_ready and (not runtime_required or runtime_ready) else "NOT_READY"
+    )
     if decision != expected_decision:
         details = f" blocking gates={blocking_gates}" if blocking_gates else ""
         fail(f"decision must be derived from evidence: expected {expected_decision}.{details}")
@@ -331,6 +513,13 @@ def parse_args() -> argparse.Namespace:
         "--expected-commit",
         help="Optional exact commit SHA that the manifest must be bound to",
     )
+    parser.add_argument(
+        "--expected-plan-digest",
+        help=(
+            "Authoritative goldenpath.assurance/v1 requirements digest required "
+            "when manifest.assurance is present"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -338,7 +527,7 @@ def main() -> int:
     args = parse_args()
     try:
         data = load_json(args.manifest)
-        validate_manifest(data, args.expected_commit)
+        validate_manifest(data, args.expected_commit, args.expected_plan_digest)
     except ValidationError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

@@ -1,0 +1,126 @@
+{
+  "schemaVersion": "goldenpath.risk-policy/v1",
+  "globalMinimum": {
+    "requiredGates": [
+      "baseline-ci",
+      "evidence-contract"
+    ],
+    "requiredReviewerRoles": [
+      "owner"
+    ]
+  },
+  "levels": {
+    "R0": {
+      "requiredGates": [
+        "baseline-ci",
+        "evidence-contract"
+      ],
+      "requiredReviewerRoles": [
+        "owner"
+      ],
+      "previewEnvironmentRequired": false,
+      "runtimeValidationRequired": false,
+      "humanApprovalGateIds": [],
+      "autonomy": "automated"
+    },
+    "R1": {
+      "requiredGates": [
+        "baseline-ci",
+        "evidence-contract",
+        "policy-validation",
+        "unit-tests",
+        "supply-chain-verification"
+      ],
+      "requiredReviewerRoles": [
+        "owner"
+      ],
+      "previewEnvironmentRequired": false,
+      "runtimeValidationRequired": false,
+      "humanApprovalGateIds": [],
+      "autonomy": "policy-bounded"
+    },
+    "R2": {
+      "requiredGates": [
+        "baseline-ci",
+        "evidence-contract",
+        "policy-validation",
+        "unit-tests",
+        "supply-chain-verification",
+        "integration-tests",
+        "architecture-conformance",
+        "preview-environment"
+      ],
+      "requiredReviewerRoles": [
+        "owner",
+        "domain"
+      ],
+      "previewEnvironmentRequired": true,
+      "runtimeValidationRequired": true,
+      "humanApprovalGateIds": [],
+      "autonomy": "guarded"
+    },
+    "R3": {
+      "requiredGates": [
+        "baseline-ci",
+        "evidence-contract",
+        "policy-validation",
+        "unit-tests",
+        "supply-chain-verification",
+        "integration-tests",
+        "architecture-conformance",
+        "preview-environment",
+        "least-privilege",
+        "security-review",
+        "rollback-test",
+        "slo-check",
+        "human-approval-owner"
+      ],
+      "requiredReviewerRoles": [
+        "owner",
+        "domain",
+        "security"
+      ],
+      "previewEnvironmentRequired": true,
+      "runtimeValidationRequired": true,
+      "humanApprovalGateIds": [
+        "human-approval-owner"
+      ],
+      "autonomy": "supervised"
+    },
+    "R4": {
+      "requiredGates": [
+        "baseline-ci",
+        "evidence-contract",
+        "policy-validation",
+        "unit-tests",
+        "supply-chain-verification",
+        "integration-tests",
+        "architecture-conformance",
+        "preview-environment",
+        "least-privilege",
+        "security-review",
+        "rollback-test",
+        "slo-check",
+        "human-approval-owner",
+        "gitops-authority",
+        "production-change-control",
+        "human-approval-platform",
+        "human-approval-security"
+      ],
+      "requiredReviewerRoles": [
+        "owner",
+        "domain",
+        "security",
+        "platform"
+      ],
+      "previewEnvironmentRequired": true,
+      "runtimeValidationRequired": true,
+      "humanApprovalGateIds": [
+        "human-approval-owner",
+        "human-approval-platform",
+        "human-approval-security"
+      ],
+      "autonomy": "human-authorized"
+    }
+  }
+}

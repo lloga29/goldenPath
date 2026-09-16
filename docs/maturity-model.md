@@ -11,7 +11,7 @@ Use the following evidence vocabulary consistently:
 - `runtime-validated` — the exact capability/source state was exercised against an identified runtime with successful runtime evidence;
 - `production-validated` — the exact capability/source state was exercised against the production target with successful production runtime evidence.
 
-The machine-readable rules are defined by `goldenpath.evidence/v1`; see [Evidence contract](assurance/evidence-contract.md).
+The machine-readable rules are defined by `goldenpath.evidence/v1`; see [Evidence contract](assurance/evidence-contract.md). R0-R4 change assurance is defined separately by `goldenpath.assurance/v1`; it adds risk-derived controls without changing these evidence-status meanings.
 
 ## Level 0 — Ad hoc
 
@@ -21,11 +21,15 @@ Teams provision and deploy independently. Credentials, environments, and operati
 
 Reusable modules, a service template, basic CI, GitOps layout, documentation, initial policy, and a machine-readable assurance contract exist. The current repository is primarily a **Level 1 reference baseline**, with some Level 2 design elements.
 
+The reference baseline also includes versioned Architecture as Code metadata and deterministic R0-R4 risk classification. Repository CI can prove classification, monotonic control selection, and fail-closed Evidence Manifest enforcement. It cannot prove that preview environments, reviewers, approvals, or external runtimes are operational.
+
 A Level 1 repository can contain `reference` evidence. That does not make external dependencies runtime-validated.
 
 ## Level 2 — Operational paved road
 
 A real team uses the platform end to end. Root/active CI workflows, federated identity, real clusters, registries, secrets, observability, protected production changes, SLOs, tested rollback, and retained runtime evidence are operational.
+
+At this level, R0-R4 plans should also be enforced by the real delivery path: reviewer roles must resolve to governed identities, required preview/runtime gates must execute against identified targets, and human approvals must be retained as evidence.
 
 Capabilities claimed as operational should produce `runtime-validated` or, where appropriate, `production-validated` Evidence Manifests bound to exact source and artifact identities.
 

@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://goldenpath.dev/schemas/assurance/goldenpath-assurance-v1.schema.json",
+  "title": "GoldenPath Risk-Adaptive Assurance Plan v1",
+  "description": "Deterministic R0-R4 assurance plan derived from structured architecture and change context.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "riskLevel",
+    "architecture",
+    "inputs",
+    "controls",
+    "evidenceRequirements"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "goldenpath.assurance/v1"
+    },
+    "riskLevel": {
+      "type": "string",
+      "enum": [
+        "R0",
+        "R1",
+        "R2",
+        "R3",
+        "R4"
+      ]
+    },
+    "architecture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "service",
+        "owner",
+        "metadataDigest"
+      ],
+      "properties": {
+        "service": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metadataDigest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "declaredRiskClass",
+        "derivedSignals",
+        "policyDigest"
+      ],
+      "properties": {
+        "declaredRiskClass": {
+          "type": "string",
+          "enum": [
+            "R0",
+            "R1",
+            "R2",
+            "R3",
+            "R4"
+          ]
+        },
+        "derivedSignals": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "policyDigest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "controls": {
+      "$ref": "#/$defs/controls"
+    },
+    "evidenceRequirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "riskLevel",
+        "policyDigest",
+        "planDigest",
+        "architectureMetadataDigest",
+        "requiredGateIds",
+        "runtimeValidationRequired",
+        "previewEnvironmentRequired",
+        "humanApprovalGateIds",
+        "autonomy"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "goldenpath.assurance/v1"
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": [
+            "R0",
+            "R1",
+            "R2",
+            "R3",
+            "R4"
+          ]
+        },
+        "policyDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "planDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "architectureMetadataDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "requiredGateIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/gateId"
+          }
+        },
+        "runtimeValidationRequired": {
+          "type": "boolean"
+        },
+        "previewEnvironmentRequired": {
+          "type": "boolean"
+        },
+        "humanApprovalGateIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/gateId"
+          }
+        },
+        "autonomy": {
+          "type": "string",
+          "enum": [
+            "automated",
+            "policy-bounded",
+            "guarded",
+            "supervised",
+            "human-authorized"
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "gateId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$"
+    },
+    "controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredGates",
+        "requiredReviewerRoles",
+        "previewEnvironmentRequired",
+        "runtimeValidationRequired",
+        "humanApprovalGateIds",
+        "autonomy"
+      ],
+      "properties": {
+        "requiredGates": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/gateId"
+          }
+        },
+        "requiredReviewerRoles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "previewEnvironmentRequired": {
+          "type": "boolean"
+        },
+        "runtimeValidationRequired": {
+          "type": "boolean"
+        },
+        "humanApprovalGateIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/gateId"
+          }
+        },
+        "autonomy": {
+          "type": "string",
+          "enum": [
+            "automated",
+            "policy-bounded",
+            "guarded",
+            "supervised",
+            "human-authorized"
+          ]
+        }
+      }
+    }
+  }
+}

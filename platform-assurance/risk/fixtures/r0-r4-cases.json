@@ -1,0 +1,175 @@
+{
+  "positive": {
+    "R0": {
+      "architecture": {
+        "schemaVersion": "goldenpath.architecture/v1",
+        "service": {
+          "name": "docs",
+          "owner": "platform",
+          "serviceType": "documentation",
+          "dataSensitivity": "public",
+          "dependencies": [],
+          "runtime": "none",
+          "sloTier": "none",
+          "deploymentUnit": "none",
+          "riskClass": "R0"
+        }
+      },
+      "change": {
+        "changeType": "docs",
+        "touchesProduction": false,
+        "changesPolicy": false,
+        "changesArchitecture": false,
+        "changesDesiredState": false,
+        "changesIdentity": false,
+        "changesNetwork": false,
+        "changesData": false
+      }
+    },
+    "R1": {
+      "architecture": {
+        "schemaVersion": "goldenpath.architecture/v1",
+        "service": {
+          "name": "catalog-api",
+          "owner": "catalog-team",
+          "serviceType": "application",
+          "dataSensitivity": "internal",
+          "dependencies": [
+            "identity-api"
+          ],
+          "runtime": "serverless",
+          "sloTier": "tier3",
+          "deploymentUnit": "function",
+          "riskClass": "R1"
+        }
+      },
+      "change": {
+        "changeType": "code",
+        "touchesProduction": false,
+        "changesPolicy": false,
+        "changesArchitecture": false,
+        "changesDesiredState": false,
+        "changesIdentity": false,
+        "changesNetwork": false,
+        "changesData": false
+      }
+    },
+    "R2": {
+      "architecture": {
+        "schemaVersion": "goldenpath.architecture/v1",
+        "service": {
+          "name": "orders-api",
+          "owner": "orders-team",
+          "serviceType": "api",
+          "dataSensitivity": "confidential",
+          "dependencies": [
+            "postgres",
+            "identity-api"
+          ],
+          "runtime": "kubernetes",
+          "sloTier": "tier2",
+          "deploymentUnit": "helm",
+          "riskClass": "R1"
+        }
+      },
+      "change": {
+        "changeType": "architecture",
+        "touchesProduction": false,
+        "changesPolicy": false,
+        "changesArchitecture": true,
+        "changesDesiredState": true,
+        "changesIdentity": false,
+        "changesNetwork": false,
+        "changesData": false
+      }
+    },
+    "R3": {
+      "architecture": {
+        "schemaVersion": "goldenpath.architecture/v1",
+        "service": {
+          "name": "platform-network",
+          "owner": "platform",
+          "serviceType": "infrastructure",
+          "dataSensitivity": "restricted",
+          "dependencies": [
+            "identity",
+            "dns",
+            "kubernetes"
+          ],
+          "runtime": "kubernetes",
+          "sloTier": "tier1",
+          "deploymentUnit": "terraform",
+          "riskClass": "R2"
+        }
+      },
+      "change": {
+        "changeType": "infrastructure",
+        "touchesProduction": false,
+        "changesPolicy": true,
+        "changesArchitecture": true,
+        "changesDesiredState": true,
+        "changesIdentity": true,
+        "changesNetwork": true,
+        "changesData": false
+      }
+    },
+    "R4": {
+      "architecture": {
+        "schemaVersion": "goldenpath.architecture/v1",
+        "service": {
+          "name": "production-platform",
+          "owner": "platform",
+          "serviceType": "platform",
+          "dataSensitivity": "restricted",
+          "dependencies": [
+            "identity",
+            "dns",
+            "kubernetes",
+            "secrets"
+          ],
+          "runtime": "kubernetes",
+          "sloTier": "tier1",
+          "deploymentUnit": "terraform",
+          "riskClass": "R3"
+        }
+      },
+      "change": {
+        "changeType": "infrastructure",
+        "touchesProduction": true,
+        "changesPolicy": true,
+        "changesArchitecture": true,
+        "changesDesiredState": true,
+        "changesIdentity": true,
+        "changesNetwork": true,
+        "changesData": true
+      }
+    }
+  },
+  "negative": {
+    "missingOwner": {
+      "architecture": {
+        "schemaVersion": "goldenpath.architecture/v1",
+        "service": {
+          "name": "broken",
+          "serviceType": "api",
+          "dataSensitivity": "internal",
+          "dependencies": [],
+          "runtime": "serverless",
+          "sloTier": "tier3",
+          "deploymentUnit": "function",
+          "riskClass": "R1"
+        }
+      },
+      "change": {
+        "changeType": "code",
+        "touchesProduction": false,
+        "changesPolicy": false,
+        "changesArchitecture": false,
+        "changesDesiredState": false,
+        "changesIdentity": false,
+        "changesNetwork": false,
+        "changesData": false
+      }
+    }
+  }
+}
