@@ -28,6 +28,23 @@ GoldenPath is a production-oriented **Golden Path reference implementation** for
 
 Its purpose is to provide a paved road that teams can adopt and adapt without hiding the underlying platform decisions.
 
+## Portfolio highlights
+
+This repository demonstrates an end-to-end Platform Engineering approach rather than a collection of isolated manifests. The implementation is intentionally evidence-driven: capabilities are described as implemented, reference, roadmap, or runtime-dependent according to what the repository can actually prove.
+
+| Engineering area | What the repository demonstrates | Evidence |
+|---|---|---|
+| Platform Engineering | A reusable paved-road model with service templates, environment conventions, governance, and operational documentation | `service-templates/`, `docs/`, `platform-stacks/` |
+| Kubernetes and GitOps | Argo CD as the authoritative reconciler, ApplicationSets/AppProjects, Kustomize overlays, explicit environment promotion, and manual production synchronization | `gitops-config/`, `docs/architecture/`, `docs/operations/` |
+| Infrastructure as Code | Reusable Terraform modules, executable reference stacks, validation, testing, and cloud-provider abstractions | `terraform-modules/`, `platform-stacks/` |
+| Policy as code | OPA/Conftest controls, Gatekeeper examples, negative/positive fixtures, and governed policy exceptions | `platform-policies/`, `gitops-config/policies/` |
+| CI/CD engineering | Root validation with changed-domain detection, pinned toolchains, build/test gates, and reviewable promotion semantics | `.github/workflows/`, `scripts/` |
+| Software supply chain | SHA-pinned external Actions, checksum-verified executable downloads, hash-locked Python tooling, immutable artifact expectations, and provenance-aware service templates | `.github/workflows/`, `.github/requirements/`, `service-templates/` |
+| Observability | A reference platform baseline for Prometheus, Grafana, Loki, and Tempo integrated into the GitOps model | `gitops-config/platform/values/`, `gitops-config/argocd/applicationsets/` |
+| Operational discipline | Runbooks, ADRs, security guidance, support expectations, rollback procedures, audit checklist, and maturity model | `docs/runbooks/`, `docs/adr/`, `SECURITY.md`, `AUDIT_CHECKLIST.md` |
+
+For reviewers evaluating the project as a portfolio artifact, the fastest path is the [15-minute quickstart](docs/QUICKSTART.md), the [architecture overview](docs/architecture/overview.md), and the [audit checklist](AUDIT_CHECKLIST.md). The audit checklist is deliberately conservative: static CI or desired-state configuration is never presented as proof that an external cloud account, cluster, DNS zone, certificate authority, or secret backend is operational.
+
 ## Architecture at a glance
 
 ```mermaid
@@ -162,6 +179,10 @@ Passing static validation does **not** prove a real cluster, cloud account, DNS 
 ## Production adoption rule
 
 Nothing in this repository should be considered production-enabled merely because a manifest or workflow exists. A capability is production-ready only after it is integrated with real identity, secrets, cloud accounts, clusters, registries, DNS, observability, alerting, ownership, backup/recovery, and organization-level protection rules, and after those controls have been validated in the target environment.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE). The license permits use, modification, and distribution subject to its terms and preserves the patent grant and attribution obligations defined by Apache-2.0.
 
 ## Ownership
 
