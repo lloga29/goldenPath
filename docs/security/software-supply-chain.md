@@ -75,17 +75,18 @@ Do not describe a version string or mutable tag as cryptographic immutability.
 
 ## Dependency update procedure
 
-Every active CI dependency update should follow the same reviewed sequence:
+Every active CI or paved-road dependency update should follow the same reviewed sequence:
 
 1. identify the authoritative upstream release and compatibility requirements;
 2. for GitHub Actions, resolve the reviewed release/tag to its full commit SHA and update the human-readable version comment;
 3. for downloaded executables, obtain the exact upstream release artifact and its published checksum or stronger integrity evidence;
-4. for Python tooling, resolve the complete graph under the pinned runtime/platform, review all transitive changes, and regenerate every SHA-256 entry;
-5. update compatibility documentation when a new tool changes parser, schema, or behavior defaults;
-6. run the complete root validation contract, including negative fixtures and domains not directly changed when the workflow itself changed;
-7. merge only after the exact proposed head is green and authorship/commit identity has been verified.
+4. for container base images, retain a human-readable tag for review context while treating the OCI digest as the immutable identity, and update both together when the upstream dependency changes;
+5. for Python tooling, resolve the complete graph under the pinned runtime/platform, review all transitive changes, and regenerate every SHA-256 entry;
+6. update compatibility documentation when a new tool changes parser, schema, operating-system, or behavior defaults;
+7. run the complete root validation contract, including negative fixtures and domains not directly changed when the workflow itself changed;
+8. merge only after the exact proposed head is green and authorship/commit identity has been verified.
 
-Automated dependency tooling may propose updates, but it must not bypass these review and validation requirements.
+Dependabot is configured to propose reviewable GitHub Actions and Go-template Docker dependency updates. Automated dependency tooling may propose updates, but it must not bypass these review and validation requirements.
 
 ## Rollback
 
@@ -94,6 +95,10 @@ If a toolchain update changes semantics or breaks validation, revert the reviewe
 ## Container images
 
 Prefer minimal runtime images, non-root execution, explicit versions, vulnerability scanning, and registry immutability. Distroless images are useful when they fit debugging and operational requirements.
+
+The implemented Go paved-road template pins both build and runtime `FROM` references to OCI SHA-256 digests. The builder uses the repository's Go 1.26.8 baseline, while the runtime uses the supported `gcr.io/distroless/static-debian13:nonroot` line. Human-readable tags remain in the Dockerfile so dependency-review pull requests show what upstream release a digest represents; the digest is the immutable build identity.
+
+The template smoke test fails if any generated `FROM` instruction lacks a SHA-256 digest, rejects Distroless Debian 12, requires the Debian 13 nonroot runtime, and performs a real container build so an invalid or unavailable pinned image cannot pass the root service-template validation path.
 
 ## SBOM, signing, and provenance
 

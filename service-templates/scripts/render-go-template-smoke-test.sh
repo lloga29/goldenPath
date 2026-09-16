@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Render and compile the Go paved-road template using representative answers.
+# Render, compile, and container-build the Go paved-road template using representative answers.
 
 set -euo pipefail
 
@@ -9,9 +9,15 @@ OUTPUT_DIR="$(mktemp -d)"
 PROJECT_NAME="golden-smoke"
 GENERATED_DIR="$OUTPUT_DIR/$PROJECT_NAME"
 BUILD_OUTPUT="$OUTPUT_DIR/${PROJECT_NAME}-binary"
-trap 'rm -rf "$OUTPUT_DIR"' EXIT
+CONTAINER_IMAGE="${PROJECT_NAME}:smoke"
 
-for command in copier go; do
+cleanup() {
+    docker image rm --force "$CONTAINER_IMAGE" >/dev/null 2>&1 || true
+    rm -rf "$OUTPUT_DIR"
+}
+trap cleanup EXIT
+
+for command in copier go docker; do
     command -v "$command" >/dev/null 2>&1 || {
         echo "ERROR: $command is required for the template smoke test." >&2
         exit 1
@@ -58,5 +64,30 @@ if grep -Eq 'ghcr\.io/[^[:space:]]+:latest' .github/workflows/ci.yaml; then
     echo "ERROR: generated CI contains a mutable :latest publication tag." >&2
     exit 1
 fi
+
+mapfile -t base_images < <(grep -E '^FROM[[:space:]]+' Dockerfile)
+if [[ "${#base_images[@]}" -eq 0 ]]; then
+    echo "ERROR: generated Dockerfile does not contain any FROM instructions." >&2
+    exit 1
+fi
+
+for base_image in "${base_images[@]}"; do
+    if [[ ! "$base_image" =~ @sha256:[0-9a-f]{64}([[:space:]]|$) ]]; then
+        echo "ERROR: generated Dockerfile contains a base image that is not digest-pinned: $base_image" >&2
+        exit 1
+    fi
+done
+
+if grep -q 'gcr.io/distroless/.*-debian12' Dockerfile; then
+    echo "ERROR: generated Dockerfile references deprecated Distroless Debian 12." >&2
+    exit 1
+fi
+
+if ! grep -Eq '^FROM[[:space:]]+gcr\.io/distroless/static-debian13:nonroot@sha256:[0-9a-f]{64}([[:space:]]|$)' Dockerfile; then
+    echo "ERROR: generated Dockerfile must use a digest-pinned Distroless Debian 13 nonroot runtime." >&2
+    exit 1
+fi
+
+docker build --pull --tag "$CONTAINER_IMAGE" .
 
 echo "Go template smoke test passed."
