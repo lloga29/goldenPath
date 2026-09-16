@@ -22,7 +22,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .tmp/logo.part1.b64 .tmp/logo.part2.b64 .tmp/logo.part3.b64 \
+          cat .tmp/logo.part1.b64 .tmp/logo.part2.b64 .tmp/logo.part3.b64 .tmp/logo.part4.b64 .tmp/logo.part5.b64 \
             | tr -d '\r\n ' \
             | base64 --decode \
             > docs/assets/branding/goldenpath-logo.png
