@@ -46,7 +46,7 @@ jobs:
         run: python3 scripts/validate-ci-supply-chain.py
 
       - name: Install structured-file parser
-        run: python3 -m pip install --disable-pip-version-check 'PyYAML==6.0.2'
+        run: python3 -m pip install --disable-pip-version-check --require-hashes -r .github/requirements/ci-structured.lock
 
       - name: Enforce English-only content
         run: python3 scripts/check-english-only.py
@@ -114,7 +114,7 @@ jobs:
           python-version: '3.13.15'
 
       - name: Install policy dependencies
-        run: python3 -m pip install --disable-pip-version-check 'PyYAML==6.0.2'
+        run: python3 -m pip install --disable-pip-version-check --require-hashes -r .github/requirements/ci-structured.lock
 
       - name: Validate Argo CD platform contract
         run: python3 scripts/validate-gitops-contract.py
@@ -181,33 +181,11 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.26'
+          go-version: '1.26.8'
           cache: false
 
-      - name: Report Python dependency resolution for hash lock
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 -m pip install --disable-pip-version-check --dry-run --ignore-installed \
-            --report /tmp/ci-python-report.json 'PyYAML==6.0.2' 'copier==9.15.2'
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          report = json.loads(Path('/tmp/ci-python-report.json').read_text(encoding='utf-8'))
-          for item in sorted(report['install'], key=lambda entry: entry['metadata']['name'].lower()):
-              name = item['metadata']['name']
-              version = item['metadata']['version']
-              hashes = item['download_info'].get('archive_info', {}).get('hashes', {})
-              sha256 = hashes.get('sha256')
-              url = item['download_info'].get('url', '')
-              if not sha256:
-                  raise SystemExit(f'Missing SHA-256 for {name}=={version}: {url}')
-              print(f'LOCK_CANDIDATE {name}=={version} --hash=sha256:{sha256}')
-          PY
-
-      - name: Install safe Copier baseline
-        run: python3 -m pip install --disable-pip-version-check 'copier==9.15.2'
+      - name: Install hash-locked Copier toolchain
+        run: python3 -m pip install --disable-pip-version-check --require-hashes -r .github/requirements/ci-template.lock
 
       - name: Render and validate Go paved-road template
         run: ./service-templates/scripts/render-go-template-smoke-test.sh
