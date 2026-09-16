@@ -1,4 +1,4 @@
-// Package handlers contiene los handlers HTTP del servicio
+// Package handlers contains reusable HTTP handlers for the service.
 package handlers
 
 import (
@@ -7,36 +7,32 @@ import (
 	"sync/atomic"
 )
 
-// HealthChecker gestiona el estado de salud del servicio
+// HealthChecker manages liveness/readiness state.
 type HealthChecker struct {
 	ready atomic.Bool
 }
 
-// NewHealthChecker crea un nuevo HealthChecker
+// NewHealthChecker creates a checker that starts as not ready.
 func NewHealthChecker() *HealthChecker {
-	hc := &HealthChecker{}
-	hc.ready.Store(false)
-	return hc
+	return &HealthChecker{}
 }
 
-// SetReady marca el servicio como listo
+// SetReady changes readiness state. Call it only after startup dependencies are usable.
 func (hc *HealthChecker) SetReady(ready bool) {
 	hc.ready.Store(ready)
 }
 
-// HealthResponse estructura de respuesta de health
+// HealthResponse is the stable health endpoint response contract.
 type HealthResponse struct {
 	Status  string `json:"status"`
 	Service string `json:"service"`
 	Version string `json:"version,omitempty"`
 }
 
-// Health handler para /health (liveness probe)
+// Health serves the liveness endpoint. It does not perform dependency checks.
 func (hc *HealthChecker) Health(version string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(HealthResponse{
+	return func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, HealthResponse{
 			Status:  "healthy",
 			Service: "{{ project_name }}",
 			Version: version,
@@ -44,24 +40,26 @@ func (hc *HealthChecker) Health(version string) http.HandlerFunc {
 	}
 }
 
-// Ready handler para /ready (readiness probe)
+// Ready serves the readiness endpoint and reflects the service's dependency readiness state.
 func (hc *HealthChecker) Ready() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
+	return func(w http.ResponseWriter, _ *http.Request) {
 		if !hc.ready.Load() {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			json.NewEncoder(w).Encode(HealthResponse{
+			writeJSON(w, http.StatusServiceUnavailable, HealthResponse{
 				Status:  "not_ready",
 				Service: "{{ project_name }}",
 			})
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(HealthResponse{
+		writeJSON(w, http.StatusOK, HealthResponse{
 			Status:  "ready",
 			Service: "{{ project_name }}",
 		})
 	}
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload HealthResponse) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
 }

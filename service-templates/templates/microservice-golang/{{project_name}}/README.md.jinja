@@ -2,78 +2,95 @@
 
 {{ description }}
 
-## Equipo
+## Ownership
 
-- **Team:** {{ team }}
-- **Owner:** {{ owner_email }}
+- **Team:** `{{ team }}`
+- **Owner:** `{{ owner_email }}`
+- **Repository:** `github.com/{{ github_owner }}/{{ project_name }}`
 
-## Requisitos
+## Paved-road contract
+
+This repository is generated from the Golden Path Go HTTP service template. It provides a secure HTTP server baseline, structured JSON logging, liveness/readiness endpoints, Prometheus metrics, unit tests, non-root/distroless container packaging, and a CI pipeline that publishes immutable GHCR images from `main`.
+
+The application team owns business logic, dependency readiness, SLOs, domain-specific telemetry, data migrations, and service-specific incident procedures.
+
+## Prerequisites
 
 - Go {{ go_version }}+
-- Docker
+- Docker/BuildKit
 - Make
+- `golangci-lint` for `make verify`
+- optional: pre-commit
 
-## Desarrollo Local
+## Local development
 
 ```bash
-# Instalar dependencias
-go mod download
-
-# Ejecutar tests
+go mod tidy
 make test
-
-# Ejecutar localmente
 make run
+```
 
-# Build
-make build
+Run the complete local quality gate:
+
+```bash
+make verify
 ```
 
 ## Endpoints
 
-| Endpoint | Método | Descripción |
-|----------|--------|-------------|
-| /health  | GET    | Health check |
-| /ready   | GET    | Readiness check |
-| /metrics | GET    | Métricas Prometheus |
-| /api/v1/ | *      | API principal |
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/health` | GET | Process liveness. Must not depend on downstream systems. |
+| `/ready` | GET | Readiness for receiving traffic. Extend it for required dependencies. |
+| `/metrics` | GET | Prometheus metrics endpoint. |
+| `/api/v1/` | GET | Example API endpoint. Replace with service routes. |
 
-## Configuración
+## Configuration
 
-Variables de entorno:
+| Variable | Required | Default | Description |
+|---|---:|---|---|
+| `PORT` | No | `{{ port }}` | HTTP listen port. |
+| `ENVIRONMENT` | No | `local` | `local`, `dev`, `staging`, `prod`, or `ephemeral`. |
+| `LOG_LEVEL` | No | `info` | `debug`, `info`, `warn`, or `error`. |
 
-| Variable | Descripción | Default |
-|----------|-------------|---------|
-| PORT | Puerto HTTP | {{ port }} |
-| LOG_LEVEL | Nivel de logs | info |
-| OTEL_EXPORTER_OTLP_ENDPOINT | Endpoint de traces | - |
+Secrets must enter through the runtime secret-management integration. Do not commit `.env` files containing credentials.
 
-## Docker
+## Container and image identity
+
+Local images use a commit-derived tag by default:
 
 ```bash
-# Build imagen
 make docker-build
-
-# Push a registry
-make docker-push
 ```
 
-## CI/CD
+CI never publishes `:latest`. A push to `main` publishes:
 
-El pipeline de CI ejecuta automáticamente:
-1. Lint (golangci-lint)
-2. Tests unitarios
-3. Scan de seguridad (Trivy)
-4. Build y push de imagen Docker
-
-## Arquitectura
-
+```text
+ghcr.io/{{ github_owner }}/{{ project_name }}:<full-git-sha>
 ```
-cmd/
-  main.go           # Punto de entrada
-internal/
-  handlers/         # HTTP handlers
-  middleware/       # Middlewares
-  config/           # Configuración
-pkg/                # Paquetes públicos
+
+The publish job also requests BuildKit SBOM/provenance and signs the resulting image digest with keyless Cosign using GitHub OIDC. Repository issue #17 tracks stronger digest/SHA pinning for external CI/build dependencies.
+
+## CI behavior
+
+Pull requests run formatting, vet, lint, race-enabled tests, filesystem/dependency vulnerability scanning, and a container build without publishing.
+
+`main` runs the same quality/security gates, then authenticates to GHCR with `GITHUB_TOKEN`, publishes a full-SHA image, and signs the resulting digest.
+
+## Observability
+
+The template provides structured JSON request logs and Prometheus metrics. Distributed tracing is an explicit extension point rather than a pretend default: add OpenTelemetry instrumentation/exporters when the service has a trace backend and propagate context across outbound dependencies.
+
+## GitOps onboarding
+
+Application deployment state belongs in the Golden Path GitOps repository, not in this application repository. The expected service path is:
+
+```text
+gitops-config/apps/team-{{ team }}/{{ project_name }}/
 ```
+
+Reference the immutable image produced by this repository and promote the same artifact through dev -> staging -> prod. Do not rebuild per environment.
+
+## Operations
+
+See [`docs/RUNBOOK.md`](docs/RUNBOOK.md) before production onboarding. Replace placeholders with the real SLO, dashboards, alerts, dependency checks, and escalation path.

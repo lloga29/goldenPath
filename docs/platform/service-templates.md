@@ -4,45 +4,65 @@ Service templates are the primary self-service entry point into the Golden Path.
 
 ## Implemented template
 
-The repository currently contains one implemented Copier template:
+The repository currently contains one executable Copier template:
 
 ```text
 service-templates/templates/microservice-golang/
 ```
 
-It generates a Go service baseline with application structure, build/container configuration, pre-commit configuration, and a CI workflow blueprint.
+It generates a Go HTTP service baseline that is intentionally narrow and operationally complete rather than feature-rich scaffolding.
 
-Python and Terraform stack templates were previously described in documentation but are not present in the repository. They remain roadmap items until executable templates and validation exist.
+Python and Terraform stack templates remain roadmap items until executable templates and validation exist.
 
-## Template contract
+## Go paved-road contract
 
-A golden service template should produce a repository that is usable without deleting large amounts of irrelevant scaffolding. The generated service should include, when applicable:
+The Go template currently provides:
 
-- application bootstrap and graceful shutdown;
-- liveness and readiness behavior;
-- structured logging;
-- metrics and tracing integration points;
-- secure container defaults;
-- tests;
-- dependency management;
-- CI baseline;
-- ownership metadata;
-- deployment metadata;
-- local developer commands;
-- documentation and runbook placeholders.
+- Go {{ go_version | default('1.26') }}-line service structure using `net/http`;
+- validated port/environment/log-level configuration;
+- graceful SIGINT/SIGTERM shutdown;
+- `/health`, `/ready`, and `/metrics` endpoints;
+- structured JSON request logging and panic recovery;
+- health/readiness/config unit tests;
+- race-enabled tests and lint/vet/format CI gates;
+- Trivy high/critical vulnerability blocking;
+- non-root distroless container runtime;
+- PR container builds without registry publication;
+- full-Git-SHA GHCR publication from `main` only;
+- BuildKit SBOM/provenance generation requests;
+- keyless Cosign image signing through GitHub OIDC;
+- ownership metadata and a runbook placeholder;
+- explicit separation between application source and GitOps desired state.
 
-## Template versioning
+The template does **not** pretend to provide database, cache, gRPC, or distributed-tracing implementations. Add those capabilities only with real code, tests, dependency readiness behavior, and runbook changes.
 
-Templates are products. Version them, publish release notes, and test upgrades. Copier update support is valuable only when template changes preserve compatibility and teams can understand the resulting diff.
+## Template validation
 
-## Avoid hidden coupling
+The repository includes:
 
-Do not bake real account IDs, production domains, secret values, cluster names, or customer-specific configuration into a generic template. Generate metadata fields or configuration hooks instead.
+```bash
+./service-templates/scripts/render-go-template-smoke-test.sh
+```
 
-## Validation
+The script renders representative output, then runs Go formatting validation, vet, tests, and build. Root CI integration is tracked in issue #10.
 
-Test both template rendering and the generated project. A template test should verify that representative answers generate a repository that formats, builds, tests, and passes the baseline security checks.
+## Artifact lifecycle
 
-## Extending the catalog
+The application pipeline builds once and identifies an image by the full Git SHA. The GitOps repository promotes that same immutable image through environments. `:latest` publication is not part of the paved road.
 
-Add a new template only when its operational contract is equivalent to existing paved-road services. A language-specific scaffold without deployment, security, observability, ownership, and support integration is not yet a Golden Path template.
+External CI Actions and container bases are still version-tag pinned in this phase; immutable dependency pinning is tracked in issue #17.
+
+## Ownership boundary
+
+The platform template owns safe defaults and integration contracts. Application teams own:
+
+- business/domain code;
+- downstream dependency readiness;
+- service-specific metrics/traces;
+- SLO selection and error-budget response;
+- data migration/recovery semantics;
+- service-specific incident procedures and escalation.
+
+## Adding another template
+
+A new template is complete only when representative generated output formats, builds, tests, passes security checks, publishes immutable artifacts, integrates with GitOps, and carries the same ownership/operability contract. A language skeleton alone is not a Golden Path.

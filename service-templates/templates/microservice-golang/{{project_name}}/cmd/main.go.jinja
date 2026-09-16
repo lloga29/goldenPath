@@ -1,105 +1,130 @@
-// {{ project_name }} - {{ description }}
-// Equipo: {{ team }}
+// {{ project_name }} is owned by {{ team }}.
 package main
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/{{ github_owner }}/{{ project_name }}/internal/config"
+	"github.com/{{ github_owner }}/{{ project_name }}/internal/handlers"
+	"github.com/{{ github_owner }}/{{ project_name }}/internal/middleware"
 )
 
-// Variables inyectadas en build time via -ldflags
 var (
 	Version   = "dev"
-	BuildTime = "unknown"
 	GitCommit = "unknown"
 )
 
-const (
-	defaultPort = "{{ port }}"
-)
-
 func main() {
-	// Configurar logger estructurado
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
+	if err := run(); err != nil {
+		slog.Error("service stopped with an error", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("load configuration: %w", err)
+	}
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: parseLogLevel(cfg.LogLevel)}))
 	slog.SetDefault(logger)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPort
-	}
-
-	// Router principal
+	health := handlers.NewHealthChecker()
 	mux := http.NewServeMux()
-
-	// Health checks
-	mux.HandleFunc("/health", healthHandler)
-	mux.HandleFunc("/ready", readyHandler)
-
-	// Métricas Prometheus
+	mux.HandleFunc("/health", health.Health(Version))
+	mux.HandleFunc("/ready", health.Ready())
 	mux.Handle("/metrics", promhttp.Handler())
-
-	// API endpoints
 	mux.HandleFunc("/api/v1/", apiHandler)
 
-	// Servidor HTTP
 	server := &http.Server{
-		Addr:         ":" + port,
-		Handler:      mux,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:              cfg.Address(),
+		Handler:           middleware.Recovery(middleware.Logging(mux)),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
-	// Graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	serverErrors := make(chan error, 1)
 	go func() {
-		slog.Info("Iniciando servidor", "port", port)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("Error en servidor", "error", err)
-			os.Exit(1)
+		slog.Info("HTTP server starting",
+			"address", server.Addr,
+			"environment", cfg.Environment,
+			"version", Version,
+			"git_commit", GitCommit,
+		)
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErrors <- err
+			return
 		}
+		serverErrors <- nil
 	}()
 
-	// Esperar señal de terminación
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	health.SetReady(true)
 
-	slog.Info("Apagando servidor...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := server.Shutdown(ctx); err != nil {
-		slog.Error("Error en shutdown", "error", err)
+	select {
+	case <-ctx.Done():
+		slog.Info("shutdown signal received")
+	case err := <-serverErrors:
+		if err != nil {
+			return fmt.Errorf("HTTP server: %w", err)
+		}
+		return nil
 	}
 
-	slog.Info("Servidor apagado correctamente")
+	health.SetReady(false)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("graceful shutdown: %w", err)
+	}
+
+	slog.Info("service stopped cleanly")
+	return nil
 }
 
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "OK")
-}
-
-func readyHandler(w http.ResponseWriter, r *http.Request) {
-	// Verificar dependencias (DB, cache, etc.)
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "Ready")
+func parseLogLevel(value string) slog.Level {
+	switch strings.ToLower(value) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }
 
 func apiHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `{"service": "{{ project_name }}", "status": "running"}`)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"service": "{{ project_name }}",
+		"status":  "running",
+		"version": Version,
+	})
 }

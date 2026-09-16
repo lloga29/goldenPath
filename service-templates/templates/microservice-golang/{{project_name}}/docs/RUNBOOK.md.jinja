@@ -1,0 +1,54 @@
+# {{ project_name }} Runbook
+
+## Ownership
+
+- Team: `{{ team }}`
+- Operational owner: `{{ owner_email }}`
+
+## Service checks
+
+```bash
+curl -fsS http://<service>/health
+curl -fsS http://<service>/ready
+curl -fsS http://<service>/metrics
+```
+
+`/health` verifies process liveness. `/ready` controls traffic eligibility and must be extended when the service gains required databases, caches, message brokers, or other startup/runtime dependencies.
+
+## Deployment
+
+The application repository publishes an immutable image using the full Git SHA. Deployment is a GitOps change in `gitops-config`; the same image must be promoted through environments without rebuilding.
+
+## Rollback
+
+Revert desired state in Git to the previously verified immutable image reference, open the required pull request, and allow the GitOps reconciler to restore that state. Follow the platform rollback procedure for emergency runtime intervention.
+
+## Observability
+
+Before production onboarding, record:
+
+- service dashboard: `<add URL>`
+- logs query/dashboard: `<add URL>`
+- trace view when tracing is enabled: `<add URL>`
+- primary SLO: `<define target and SLI>`
+- paging alerts: `<list alerts>`
+
+## Common failure modes
+
+### Readiness fails
+
+1. Inspect `/ready` response and application logs.
+2. Confirm required dependencies are healthy and reachable.
+3. Confirm configuration/secrets are present.
+4. Keep the instance out of traffic until readiness is restored.
+
+### Elevated HTTP errors
+
+1. Confirm scope by route/status code in metrics and structured logs.
+2. Check dependency and saturation signals.
+3. Compare the deployed image SHA with the last known-good release.
+4. Roll back desired state if the release is causal and mitigation is safer than a forward fix.
+
+## Escalation
+
+Use `{{ owner_email }}` as the initial service ownership route. Replace this placeholder model with the team's actual on-call schedule and incident channel before production readiness approval.

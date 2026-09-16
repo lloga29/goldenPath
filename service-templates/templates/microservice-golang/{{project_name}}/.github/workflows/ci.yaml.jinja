@@ -1,75 +1,138 @@
-name: CI Pipeline
+name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
+  cancel-in-progress: true
 
 env:
-  REGISTRY: ghcr.io
-
-permissions:
-  contents: read
-  packages: write
-  security-events: write
+  IMAGE_NAME: ghcr.io/{{ github_owner }}/{{ project_name }}
 
 jobs:
-  lint-test:
+  quality:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
-          go-version: "{{ go_version }}"
+          go-version-file: go.mod
           cache: true
 
+      - name: Verify modules
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+          go mod verify
+
+      - name: Check formatting
+        run: |
+          files="$(gofmt -l .)"
+          if [[ -n "$files" ]]; then
+            echo "The following files require gofmt:"
+            echo "$files"
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
       - name: Lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          version: v2.12.0
 
       - name: Test
-        run: |
-          go test -v -race -coverprofile=coverage.out ./...
-          go tool cover -func=coverage.out
+        run: go test -race -coverprofile=coverage.out ./...
 
-  security-scan:
-    needs: lint-test
+  security:
+    needs: quality
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+      - name: Scan source and dependencies with Trivy
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           scan-type: fs
-          format: sarif
-          output: trivy-results.sarif
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
 
-  build-push:
-    needs: [lint-test, security-scan]
+  container-build:
+    if: {% raw %}${{ github.event_name == 'pull_request' }}{% endraw %}
+    needs: [quality, security]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
-      - name: Login to Registry
-        uses: docker/login-action@v3
+      - name: Build container without publishing
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          build-args: |
+            VERSION={% raw %}${{ github.sha }}{% endraw %}
+            GIT_COMMIT={% raw %}${{ github.sha }}{% endraw %}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish:
+    if: {% raw %}${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}{% endraw %}
+    needs: [quality, security]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Authenticate to GHCR
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
-          username: github-actor
-          password: github-token
+          username: {% raw %}${{ github.actor }}{% endraw %}
+          password: {% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}
 
-      - name: Build and push
-        uses: docker/build-push-action@v5
+      - name: Build and publish immutable image
+        id: build
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ghcr.io/org/{{ project_name }}:latest
+          tags: {% raw %}${{ env.IMAGE_NAME }}:${{ github.sha }}{% endraw %}
+          build-args: |
+            VERSION={% raw %}${{ github.sha }}{% endraw %}
+            GIT_COMMIT={% raw %}${{ github.sha }}{% endraw %}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          sbom: true
+          provenance: mode=max
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.1.2
+
+      - name: Sign published image with GitHub OIDC
+        env:
+          DIGEST: {% raw %}${{ steps.build.outputs.digest }}{% endraw %}
+        run: cosign sign --yes "{% raw %}${{ env.IMAGE_NAME }}{% endraw %}@${DIGEST}"
