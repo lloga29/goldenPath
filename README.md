@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="docs/assets/branding/goldenpath-logo.png" alt="GoldenPath" width="520">
+  <a href="https://github.com/lloga29/goldenPath">
+    <img src="https://github.com/lloga29/goldenPath/blob/main/docs/assets/branding/goldenpath-logo.png?raw=1" alt="GoldenPath logo" width="420">
+  </a>
 </p>
 
 <h3 align="center">The paved road from source code to production.</h3>
@@ -8,14 +10,8 @@
   <strong>Secure by default · GitOps-driven · Observable · Repeatable</strong>
 </p>
 
-<p align="center">
-  <a href="https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml">
-    <img src="https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml/badge.svg?branch=main" alt="Repository validation">
-  </a>
-  <a href="https://github.com/lloga29/goldenPath/actions/workflows/english-only.yaml">
-    <img src="https://github.com/lloga29/goldenPath/actions/workflows/english-only.yaml/badge.svg?branch=main" alt="English-only repository">
-  </a>
-</p>
+[![Repository validation](https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml/badge.svg?branch=main)](https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml)
+[![English-only repository](https://github.com/lloga29/goldenPath/actions/workflows/english-only.yaml/badge.svg?branch=main)](https://github.com/lloga29/goldenPath/actions/workflows/english-only.yaml)
 
 <p align="center">
   <a href="docs/QUICKSTART.md">Quickstart</a> ·
