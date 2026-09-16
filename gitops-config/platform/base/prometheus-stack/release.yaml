@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: kube-prometheus-stack
-      version: "56.6.2"  # Versión fija
+      version: "56.6.2"  # Pinned version
       sourceRef:
         kind: HelmRepository
         name: prometheus-community
@@ -28,7 +28,7 @@ spec:
         podMonitorSelectorNilUsesHelmValues: false
     grafana:
       enabled: true
-      adminPassword: ""  # Usar external-secrets
+      adminPassword: ""  # Inject through External Secrets
       persistence:
         enabled: true
         size: 10Gi
