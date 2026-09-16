@@ -59,8 +59,8 @@ This checklist tracks gaps between the reference repository and an operational p
 - [x] Provide Terraform and Kubernetes OPA policy baselines.
 - [x] Provide Gatekeeper constraint examples.
 - [x] Run positive and intentionally invalid aggregate Kubernetes/Terraform policy fixtures in root CI.
-- [x] Run the existing Rego v0 bundle explicitly under Conftest 0.70.0 compatibility mode without changing fixture outcomes.
-- [ ] Migrate the policy bundle to Rego v1 and remove the explicit Conftest v0 compatibility mode (issue #30).
+- [x] Evaluate the executable policy bundle under Conftest 0.70.0 with its default Rego v1 parser and no v0 compatibility flag.
+- [x] Use Rego v1 syntax throughout the executable Conftest Kubernetes and Terraform policy modules (issue #30).
 - [ ] Add dedicated regression fixtures for every blocking policy rule if aggregate fixtures do not uniquely exercise each rule.
 - [x] Validate policy-exception registry schema, required ownership/approval metadata, date ordering, expiry, duplicate IDs, and prohibition of global `disabled_policies` in root CI.
 - [ ] Prove exception application/approval workflow against a real governed delivery path before relying on it operationally.

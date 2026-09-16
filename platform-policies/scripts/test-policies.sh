@@ -10,9 +10,8 @@ command -v conftest >/dev/null 2>&1 || {
     exit 1
 }
 
-# The current policy bundle is Rego v0. Conftest 0.70+ defaults to Rego v1,
-# so compatibility is explicit until issue #30 migrates every rule to Rego v1.
-CONFTST_ARGS=(--all-namespaces --rego-version v0)
+# Conftest 0.70+ evaluates the policy bundle with its default Rego v1 parser.
+CONFTST_ARGS=(--all-namespaces)
 
 conftest test "$ROOT_DIR/tests/kubernetes/valid-deployment.yaml" --policy "$ROOT_DIR/kubernetes" "${CONFTST_ARGS[@]}"
 conftest test "$ROOT_DIR/tests/terraform/valid-plan.json" --policy "$ROOT_DIR/terraform" "${CONFTST_ARGS[@]}"
@@ -27,4 +26,4 @@ if conftest test "$ROOT_DIR/tests/terraform/invalid-plan.json" --policy "$ROOT_D
     exit 1
 fi
 
-echo "Policy fixtures passed."
+echo "Policy fixtures passed under Rego v1."

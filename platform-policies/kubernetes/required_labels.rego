@@ -1,7 +1,7 @@
 # Require standard ownership and application labels on Kubernetes resources.
 package kubernetes.compliance
 
-import future.keywords.in
+import rego.v1
 
 required_labels := {
     "app.kubernetes.io/name",
@@ -14,7 +14,7 @@ required_labels := {
 labeled_resources := {"Pod", "Deployment", "StatefulSet", "DaemonSet", "Service", "Ingress", "Job", "CronJob"}
 controller_kinds := {"Deployment", "StatefulSet", "DaemonSet", "Job"}
 
-deny[msg] {
+deny contains msg if {
     input.kind in labeled_resources
     labels := object.get(input.metadata, "labels", {})
     present := {key | labels[key]}
@@ -23,7 +23,7 @@ deny[msg] {
     msg := sprintf("%s '%s' is missing required labels: %v", [input.kind, input.metadata.name, missing])
 }
 
-deny[msg] {
+deny contains msg if {
     input.kind in controller_kinds
     labels := object.get(input.spec.template.metadata, "labels", {})
     present := {key | labels[key]}
@@ -32,7 +32,7 @@ deny[msg] {
     msg := sprintf("%s '%s' pod template is missing required labels: %v", [input.kind, input.metadata.name, missing])
 }
 
-deny[msg] {
+deny contains msg if {
     input.kind == "CronJob"
     labels := object.get(input.spec.jobTemplate.spec.template.metadata, "labels", {})
     present := {key | labels[key]}
@@ -41,7 +41,7 @@ deny[msg] {
     msg := sprintf("CronJob '%s' pod template is missing required labels: %v", [input.metadata.name, missing])
 }
 
-deny[msg] {
+deny contains msg if {
     input.kind in labeled_resources
     labels := object.get(input.metadata, "labels", {})
     env := object.get(labels, "environment", "")
@@ -50,11 +50,11 @@ deny[msg] {
     msg := sprintf("%s '%s' has invalid environment label '%s'. Allowed values: dev, staging, prod, ephemeral.", [input.kind, input.metadata.name, env])
 }
 
-valid_environment(env) {
+valid_environment(env) if {
     env in ["dev", "staging", "prod", "ephemeral"]
 }
 
-warn[msg] {
+warn contains msg if {
     input.kind in labeled_resources
     labels := object.get(input.metadata, "labels", {})
     not labels["app.kubernetes.io/managed-by"]
