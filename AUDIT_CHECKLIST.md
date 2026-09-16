@@ -15,6 +15,7 @@ This checklist tracks gaps between the reference repository and an operational p
 - [x] Verify SHA-256 before extracting or installing executable archives downloaded by active root CI.
 - [x] Install active Python CI tooling only from committed `--require-hashes` lock files under the pinned Python/runtime assumptions.
 - [x] Configure reviewable Dependabot pull requests for GitHub Actions and implemented Go-template Docker base images.
+- [x] Scan the complete reachable Git history for committed secrets in root CI with a pinned, checksum-verified detector that must first pass a runtime canary.
 - [ ] Validate Mermaid diagram rendering rather than only Markdown link structure.
 
 ### terraform-modules/

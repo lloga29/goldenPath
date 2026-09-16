@@ -26,10 +26,19 @@ The consolidated repository currently enforces these controls for active root wo
 - the Go template validation uses Go `1.26.8`;
 - Terraform validation uses Terraform `1.16.2`;
 - Kustomize `5.8.1`, Helm `4.3.0`, and Conftest `0.70.0` are downloaded at exact versions and verified with SHA-256 before extraction or installation;
+- Gitleaks `8.30.0` is downloaded by exact version, verified with SHA-256, required to detect a runtime canary before use, and then scans the complete reachable Git history;
 - Python CI tooling is installed with `pip --require-hashes` from committed lock files under `.github/requirements/`;
 - `scripts/validate-ci-supply-chain.py` rejects mutable external action references, `*-latest` runner labels, executable download blocks without pre-use SHA-256 verification, un-hashed pip installation, malformed lock entries, and unreferenced CI lock files.
 
 These controls are exercised by the same active root CI they protect. Changes to root validation workflows or root validation scripts deliberately force all validation domains to run.
+
+## Historical secret scanning
+
+Public repository exposure includes reachable Git history, not just the current working tree. Root CI therefore performs a full-history Gitleaks scan from a `fetch-depth: 0` checkout.
+
+The scanner is deliberately pinned to Gitleaks `8.30.0` rather than blindly tracking `latest`. Gitleaks `8.30.1` has a documented regression in which representative secrets can produce a false `no leaks found` result. The Golden Path also creates a synthetic high-entropy generic API-key assignment only at runtime and requires the scanner to reject it before the repository scan is trusted. The value is assembled at runtime so the repository itself does not contain the complete secret-shaped canary. If the canary does not fail as expected, CI fails closed and the history result is discarded.
+
+This control detects secret patterns in reachable commits, including content later removed from `main`. It does not prove that repository history contains no confidential business context, internal names, private URLs, customer identifiers, or other publication-inappropriate material that is not secret-shaped. Public-release review must still cover those categories separately.
 
 ## Runner reproducibility boundary
 
