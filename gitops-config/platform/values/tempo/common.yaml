@@ -1,4 +1,15 @@
+# Reference Tempo baseline for a small monolithic installation.
+# Local trace storage is suitable for repository rendering and disposable
+# environments only. Production adopters must provide durable trace storage,
+# retention, backup/recovery, identity, and capacity evidence.
 tempo:
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+      wal:
+        path: /var/tempo/wal
   resources:
     requests:
       cpu: 100m
