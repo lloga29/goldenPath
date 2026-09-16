@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: loki
-      version: "5.42.0"  # Versión fija
+      version: "5.42.0"  # Pinned version
       sourceRef:
         kind: HelmRepository
         name: grafana

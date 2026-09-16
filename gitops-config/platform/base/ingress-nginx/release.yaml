@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: ingress-nginx
-      version: "4.9.0"  # Versión fija, NO latest
+      version: "4.9.0"  # Pinned version; never use latest
       sourceRef:
         kind: HelmRepository
         name: ingress-nginx

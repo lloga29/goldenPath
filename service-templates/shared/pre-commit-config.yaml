@@ -1,4 +1,4 @@
-# Pre-commit hooks estándar para todos los servicios
+# Standard pre-commit hooks for all services
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
