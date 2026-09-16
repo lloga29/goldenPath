@@ -1,5 +1,5 @@
 # Argo CD ApplicationSet for shared platform Helm add-ons.
-# Argo CD is the only Helm reconciliation engine in the Golden Path baseline.
+# Argo CD is the only Kubernetes reconciliation engine in the Golden Path baseline.
 # Development and staging reconcile automatically; production requires an explicit sync.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
@@ -18,8 +18,8 @@ spec:
                 - component: cert-manager
                   release: cert-manager
                   chart: cert-manager
-                  repo: https://charts.jetstack.io
-                  version: v1.14.2
+                  repo: quay.io/jetstack/charts
+                  version: v1.21.2
                   namespace: cert-manager
                 - component: external-secrets
                   release: external-secrets
