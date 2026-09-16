@@ -1,13 +1,14 @@
-# Proyecto Argo CD para componentes de plataforma
+# Argo CD project for shared platform components.
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
   name: platform
   namespace: argocd
 spec:
-  description: Componentes de plataforma (infraestructura core)
+  description: Shared platform and cluster infrastructure components
 
-  # Repositorios permitidos
+  # These repository URLs are reference placeholders and must be replaced when
+  # the blueprint is adopted by a real organization.
   sourceRepos:
     - git@github.com:org/gitops-config.git
     - https://charts.jetstack.io
@@ -15,7 +16,9 @@ spec:
     - https://prometheus-community.github.io/helm-charts
     - https://grafana.github.io/helm-charts
 
-  # Destinos permitidos
+  # The platform project intentionally spans multiple namespaces and clusters.
+  # Production authorization must also be enforced through Argo CD RBAC and
+  # protected Git environments.
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc
@@ -26,7 +29,8 @@ spec:
     - namespace: '*'
       server: https://prod-cluster.example.com
 
-  # Recursos permitidos
+  # Platform administrators require cluster-scoped capabilities for CRDs and
+  # policy controllers. Application teams do not receive this project role.
   clusterResourceWhitelist:
     - group: '*'
       kind: '*'
@@ -35,17 +39,16 @@ spec:
     - group: '*'
       kind: '*'
 
-  # Roles del proyecto
   roles:
     - name: admin
-      description: Administradores de plataforma
+      description: Platform administrators
       policies:
         - p, proj:platform:admin, applications, *, platform/*, allow
       groups:
         - platform-team
 
     - name: readonly
-      description: Acceso de solo lectura
+      description: Read-only platform visibility
       policies:
         - p, proj:platform:readonly, applications, get, platform/*, allow
       groups:

@@ -1,5 +1,4 @@
-# Validación de manifiestos GitOps
-
+# Validation blueprint for a standalone GitOps repository.
 name: Validate Manifests
 
 on:
@@ -7,6 +6,9 @@ on:
     branches: [main]
   push:
     branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   validate:
@@ -25,35 +27,68 @@ jobs:
           kustomize-version: '5.3.0'
 
       - name: Validate Kustomize builds
+        shell: bash
         run: |
-          find . -name "kustomization.yaml" -exec dirname {} \; | while read dir; do
-            echo "Validating: $dir"
-            kustomize build "$dir" > /dev/null || exit 1
-          done
+          set -euo pipefail
+          while IFS= read -r dir; do
+            echo "Validating Kustomize build: $dir"
+            kustomize build "$dir" >/dev/null
+          done < <(find gitops-config -name kustomization.yaml -exec dirname {} \; | sort -u)
 
       - name: Validate YAML syntax
+        shell: bash
         run: |
-          find . -name "*.yaml" -o -name "*.yml" | while read file; do
-            echo "Checking: $file"
-            python3 -c "import yaml; yaml.safe_load(open('$file'))" || exit 1
-          done
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet pyyaml
+          while IFS= read -r file; do
+            echo "Checking YAML: $file"
+            python3 - "$file" <<'PY'
+          import sys
+          import yaml
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              list(yaml.safe_load_all(handle))
+          PY
+          done < <(find gitops-config -type f \( -name '*.yaml' -o -name '*.yml' \) | sort)
 
-      - name: Kubeval validation
+      - name: Validate rendered Kubernetes manifests
+        shell: bash
         run: |
-          wget -q https://github.com/instrumenta/kubeval/releases/download/v0.16.1/kubeval-linux-amd64.tar.gz
-          tar xf kubeval-linux-amd64.tar.gz
-          sudo mv kubeval /usr/local/bin/
+          set -euo pipefail
+          curl -fsSLo kubeval.tar.gz https://github.com/instrumenta/kubeval/releases/download/v0.16.1/kubeval-linux-amd64.tar.gz
+          tar -xzf kubeval.tar.gz
+          sudo install -m 0755 kubeval /usr/local/bin/kubeval
 
-          find apps platform -name "*.yaml" | while read file; do
-            kubeval --strict --ignore-missing-schemas "$file" || true
-          done
+          while IFS= read -r dir; do
+            echo "Schema-validating rendered manifests: $dir"
+            kustomize build "$dir" | kubeval --strict --ignore-missing-schemas
+          done < <(find gitops-config/apps gitops-config/platform -name kustomization.yaml -exec dirname {} \; | sort -u)
 
-      - name: Policy check (Conftest)
+      - name: Setup Conftest
+        shell: bash
         run: |
-          wget -q https://github.com/open-policy-agent/conftest/releases/download/v0.45.0/conftest_0.45.0_Linux_x86_64.tar.gz
-          tar xzf conftest_0.45.0_Linux_x86_64.tar.gz
-          sudo mv conftest /usr/local/bin/
+          set -euo pipefail
+          curl -fsSLo conftest.tar.gz https://github.com/open-policy-agent/conftest/releases/download/v0.45.0/conftest_0.45.0_Linux_x86_64.tar.gz
+          tar -xzf conftest.tar.gz
+          sudo install -m 0755 conftest /usr/local/bin/conftest
 
-          if [ -d "policies" ]; then
-            find apps -name "deployment.yaml" | xargs conftest test --policy policies/ || true
+      - name: Run application policy checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -d platform-policies/kubernetes ]]; then
+            POLICY_DIR="platform-policies/kubernetes"
+          elif [[ -d ../platform-policies/kubernetes ]]; then
+            POLICY_DIR="../platform-policies/kubernetes"
+          else
+            echo "ERROR: Kubernetes Conftest policy bundle was not found."
+            echo "Check out the platform-policies repository next to this repository or run from the consolidated Golden Path repository."
+            exit 1
           fi
+
+          mapfile -t deployments < <(find gitops-config/apps -name deployment.yaml | sort)
+          if (( ${#deployments[@]} == 0 )); then
+            echo "ERROR: no application Deployment manifests were found for policy validation."
+            exit 1
+          fi
+
+          conftest test "${deployments[@]}" --policy "$POLICY_DIR"

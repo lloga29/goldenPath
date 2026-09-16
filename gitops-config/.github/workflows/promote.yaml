@@ -1,32 +1,36 @@
-# Workflow de Promoción de Versiones
-
+# Manual promotion blueprint. The promotion script is the single implementation
+# of the promotion rules and enforces the required Git commit identity.
 name: Promote Version
 
 on:
   workflow_dispatch:
     inputs:
       service:
-        description: 'Nombre del servicio'
+        description: 'Service name'
         required: true
         type: string
       team:
-        description: 'Equipo del servicio'
+        description: 'Owning team without the team- prefix'
         required: true
         type: string
       from_env:
-        description: 'Entorno origen'
+        description: 'Source environment'
         required: true
         type: choice
         options:
           - dev
           - staging
       to_env:
-        description: 'Entorno destino'
+        description: 'Target environment'
         required: true
         type: choice
         options:
           - staging
           - prod
+      image_tag:
+        description: 'Immutable image tag already running in the source environment'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -37,86 +41,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Validate promotion path
-        run: |
-          FROM="${{ inputs.from_env }}"
-          TO="${{ inputs.to_env }}"
-
-          # Validar camino de promoción
-          if [ "$FROM" == "dev" ] && [ "$TO" != "staging" ]; then
-            echo "Error: dev solo puede promover a staging"
-            exit 1
-          fi
-
-          if [ "$FROM" == "staging" ] && [ "$TO" != "prod" ]; then
-            echo "Error: staging solo puede promover a prod"
-            exit 1
-          fi
-
-      - name: Get current version from source
-        id: source
-        run: |
-          SOURCE_PATH="apps/${{ inputs.team }}/${{ inputs.service }}/overlays/${{ inputs.from_env }}"
-
-          if [ ! -d "$SOURCE_PATH" ]; then
-            echo "Error: Ruta no encontrada: $SOURCE_PATH"
-            exit 1
-          fi
-
-          # Extraer imagen/digest actual
-          IMAGE=$(grep -r "newTag\|digest" "$SOURCE_PATH" | head -1 | awk '{print $NF}')
-          echo "image=$IMAGE" >> $GITHUB_OUTPUT
-          echo "Versión encontrada: $IMAGE"
-
-      - name: Update target environment
-        run: |
-          TARGET_PATH="apps/${{ inputs.team }}/${{ inputs.service }}/overlays/${{ inputs.to_env }}"
-          IMAGE="${{ steps.source.outputs.image }}"
-
-          if [ ! -d "$TARGET_PATH" ]; then
-            echo "Error: Ruta destino no encontrada: $TARGET_PATH"
-            exit 1
-          fi
-
-          # Actualizar kustomization.yaml
-          cd "$TARGET_PATH"
-
-          # Si usa newTag
-          if grep -q "newTag:" kustomization.yaml; then
-            sed -i "s/newTag:.*/newTag: $IMAGE/" kustomization.yaml
-          fi
-
-          # Si usa digest
-          if grep -q "digest:" kustomization.yaml; then
-            sed -i "s/digest:.*/digest: $IMAGE/" kustomization.yaml
-          fi
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "promote(${{ inputs.service }}): ${{ inputs.from_env }} → ${{ inputs.to_env }}"
-          title: "🚀 Promote ${{ inputs.service }} from ${{ inputs.from_env }} to ${{ inputs.to_env }}"
-          body: |
-            ## Promoción de Versión
+          fetch-depth: 0
 
-            | Campo | Valor |
-            |-------|-------|
-            | Servicio | `${{ inputs.service }}` |
-            | Equipo | `${{ inputs.team }}` |
-            | Origen | `${{ inputs.from_env }}` |
-            | Destino | `${{ inputs.to_env }}` |
-            | Versión | `${{ steps.source.outputs.image }}` |
+      - name: Configure required Git identity
+        shell: bash
+        run: |
+          git config user.name "Juan Gallo"
+          git config user.email "lloga29@gmail.com"
 
-            ### Checklist
-            - [ ] Verificar que los tests pasaron en ${{ inputs.from_env }}
-            - [ ] Revisar cambios de configuración
-            - [ ] Aprobar promoción
-
-            ---
-            *Generado automáticamente por el workflow de promoción*
-          branch: promote/${{ inputs.service }}-${{ inputs.to_env }}-${{ github.run_id }}
-          labels: |
-            promotion
-            ${{ inputs.to_env }}
+      - name: Promote immutable image and open pull request
+        shell: bash
+        env:
+          AUTO_PR: 'true'
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ./gitops-config/scripts/promote.sh \
+            "${{ inputs.team }}" \
+            "${{ inputs.service }}" \
+            "${{ inputs.from_env }}" \
+            "${{ inputs.to_env }}" \
+            "${{ inputs.image_tag }}"

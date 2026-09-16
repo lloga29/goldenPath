@@ -1,25 +1,26 @@
-# CODEOWNERS para GitOps Config
+# Reference CODEOWNERS for a standalone GitOps repository.
+# Replace `@org/*` placeholders with real organization teams during adoption.
 
-# Default
+# Default ownership
 *                               @org/platform-team
 
-# Argo CD config requiere platform team
+# Argo CD control-plane configuration
 argocd/                         @org/platform-team
 
-# Clusters
+# Cluster-specific state
 clusters/prod/                  @org/platform-team @org/sre-team
 clusters/staging/               @org/platform-team
 clusters/dev/                   @org/platform-team
 
-# Platform components
+# Shared platform components
 platform/                       @org/platform-team
 
-# Políticas requieren security review
+# Policy changes require security review
 policies/                       @org/platform-team @org/security-team
 
-# Apps por equipo
+# Team applications
 apps/team-payments/             @org/team-payments @org/platform-team
 apps/team-orders/               @org/team-orders @org/platform-team
 
-# Producción requiere múltiples aprobaciones
+# Production desired state requires platform and SRE ownership
 apps/*/overlays/prod/           @org/platform-team @org/sre-team

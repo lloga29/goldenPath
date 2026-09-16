@@ -1,4 +1,5 @@
-# ApplicationSet para aplicaciones de equipos
+# ApplicationSet for team-owned applications.
+# Development and staging are automatically reconciled. Production is manual.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -11,7 +12,6 @@ spec:
   generators:
     - matrix:
         generators:
-          # Equipos
           - list:
               elements:
                 - team: payments
@@ -19,7 +19,6 @@ spec:
                 - team: orders
                   repo: git@github.com:org/team-orders-gitops.git
 
-          # Entornos
           - list:
               elements:
                 - env: dev
@@ -55,10 +54,6 @@ spec:
         namespace: '{{.team}}-{{.env}}'
 
       syncPolicy:
-        automated:
-          prune: '{{.prune}}'
-          selfHeal: true
-
         syncOptions:
           - CreateNamespace=true
           - PrunePropagationPolicy=foreground
@@ -69,3 +64,15 @@ spec:
             duration: 5s
             factor: 2
             maxDuration: 3m
+
+  # `automated` is deliberately omitted for production. Keeping this in a
+  # template patch prevents a false "autoSync: false" flag from leaving the
+  # automated sync block enabled.
+  templatePatch: |
+    {{- if .autoSync }}
+    spec:
+      syncPolicy:
+        automated:
+          prune: {{ .prune }}
+          selfHeal: true
+    {{- end }}

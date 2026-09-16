@@ -1,11 +1,11 @@
-# Proyecto Argo CD para equipo de pagos
+# Argo CD project for the payments team.
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
   name: payments
   namespace: argocd
 spec:
-  description: Aplicaciones del equipo de pagos
+  description: Applications owned by the payments team
 
   sourceRepos:
     - git@github.com:org/team-payments-gitops.git
@@ -19,7 +19,7 @@ spec:
     - namespace: payments-*
       server: https://prod-cluster.example.com
 
-  # Solo recursos de namespace (sin cluster-wide)
+  # Team applications are limited to namespace-scoped workload resources.
   namespaceResourceWhitelist:
     - group: ''
       kind: ConfigMap
@@ -46,14 +46,14 @@ spec:
 
   roles:
     - name: admin
-      description: Administradores del equipo payments
+      description: Payments team administrators
       policies:
         - p, proj:payments:admin, applications, *, payments/*, allow
       groups:
         - team-payments
 
     - name: deployer
-      description: Puede hacer sync de aplicaciones
+      description: Can read and synchronize payments applications
       policies:
         - p, proj:payments:deployer, applications, sync, payments/*, allow
         - p, proj:payments:deployer, applications, get, payments/*, allow

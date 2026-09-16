@@ -1,35 +1,41 @@
-#!/bin/bash
-# Script para promocionar una versión de un servicio entre entornos
-# Uso: ./promote.sh <team> <service> <source-env> <target-env> <image-tag>
-# Requisitos: yq, git, gh (opcional para crear PR)
+#!/usr/bin/env bash
+# Promote one immutable service image reference between environments.
+# Usage: ./promote.sh <team> <service> <source-env> <target-env> <image-tag>
+# Requirements: git, yq, and optionally gh when AUTO_PR=true.
 
 set -euo pipefail
 
-# Colores
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# Verificar dependencias
-check_deps() {
-    local missing=0
+EXPECTED_GIT_NAME="Juan Gallo"
+EXPECTED_GIT_EMAIL="lloga29@gmail.com"
 
-    if ! command -v yq &> /dev/null; then
-        echo -e "${YELLOW}WARNING: yq no instalado. Usando sed como fallback.${NC}"
-        echo "Instalar yq: https://github.com/mikefarah/yq#install"
-        USE_YQ=false
-    else
-        USE_YQ=true
-    fi
-
-    if ! command -v git &> /dev/null; then
-        echo -e "${RED}ERROR: git no instalado${NC}"
-        exit 1
-    fi
+fail() {
+    echo -e "${RED}ERROR: $*${NC}" >&2
+    exit 1
 }
 
-check_deps
+ensure_git_identity() {
+    local actual_name actual_email
+    actual_name=$(git config user.name || true)
+    actual_email=$(git config user.email || true)
+
+    [[ "$actual_name" == "$EXPECTED_GIT_NAME" ]] || fail "git user.name must be '$EXPECTED_GIT_NAME' (found '${actual_name:-unset}')."
+    [[ "$actual_email" == "$EXPECTED_GIT_EMAIL" ]] || fail "git user.email must be '$EXPECTED_GIT_EMAIL' (found '${actual_email:-unset}')."
+}
+
+ensure_clean_worktree() {
+    git diff --quiet || fail "working tree contains unstaged changes. Commit or stash them before promotion."
+    git diff --cached --quiet || fail "index contains staged changes. Commit or unstage them before promotion."
+}
+
+check_dependencies() {
+    command -v git >/dev/null 2>&1 || fail "git is not installed."
+    command -v yq >/dev/null 2>&1 || fail "yq v4 is required for deterministic promotion updates."
+}
 
 TEAM=${1:-}
 SERVICE=${2:-}
@@ -39,100 +45,63 @@ IMAGE_TAG=${5:-}
 AUTO_PR=${AUTO_PR:-false}
 
 if [[ -z "$TEAM" || -z "$SERVICE" || -z "$SOURCE_ENV" || -z "$TARGET_ENV" || -z "$IMAGE_TAG" ]]; then
-    echo "Uso: $0 <team> <service> <source-env> <target-env> <image-tag>"
-    echo "Ejemplo: $0 payments payment-api dev staging v1.2.3"
-    echo ""
-    echo "Variables de entorno:"
-    echo "  AUTO_PR=true  - Crear PR automáticamente (requiere gh CLI)"
+    echo "Usage: $0 <team> <service> <source-env> <target-env> <image-tag>"
+    echo "Example: $0 payments payment-api dev staging v1.2.3"
     exit 1
 fi
 
-# Validar que no se use :latest
-if [[ "$IMAGE_TAG" == "latest" ]]; then
-    echo -e "${RED}ERROR: No se permite usar 'latest' como tag.${NC}"
-    echo "Use un tag inmutable (semver o SHA): v1.2.3 o abc1234"
-    exit 1
-fi
+[[ "$IMAGE_TAG" != "latest" ]] || fail "the 'latest' image tag is not allowed. Use an immutable SemVer or commit-derived tag."
+
+case "${SOURCE_ENV}:${TARGET_ENV}" in
+    dev:staging|staging:prod) ;;
+    *) fail "unsupported promotion path '${SOURCE_ENV}' -> '${TARGET_ENV}'. Allowed paths are dev -> staging and staging -> prod." ;;
+esac
+
+check_dependencies
+ensure_git_identity
+ensure_clean_worktree
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APPS_DIR="${SCRIPT_DIR}/../apps"
-SERVICE_DIR="${APPS_DIR}/team-${TEAM}/${SERVICE}"
-
-if [[ ! -d "$SERVICE_DIR" ]]; then
-    echo -e "${RED}Error: El servicio ${SERVICE} no existe en ${SERVICE_DIR}${NC}"
-    exit 1
-fi
-
+REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
+SERVICE_DIR="gitops-config/apps/team-${TEAM}/${SERVICE}"
+SOURCE_KUSTOMIZATION="${SERVICE_DIR}/overlays/${SOURCE_ENV}/kustomization.yaml"
 TARGET_KUSTOMIZATION="${SERVICE_DIR}/overlays/${TARGET_ENV}/kustomization.yaml"
+cd "$REPO_ROOT"
 
-if [[ ! -f "$TARGET_KUSTOMIZATION" ]]; then
-    echo -e "${RED}Error: No existe kustomization para entorno ${TARGET_ENV}${NC}"
-    exit 1
-fi
+[[ -d "$SERVICE_DIR" ]] || fail "service '${SERVICE}' was not found at ${SERVICE_DIR}."
+[[ -f "$SOURCE_KUSTOMIZATION" ]] || fail "source kustomization does not exist for environment '${SOURCE_ENV}'."
+[[ -f "$TARGET_KUSTOMIZATION" ]] || fail "target kustomization does not exist for environment '${TARGET_ENV}'."
 
-echo -e "${GREEN}=== Promoción de ${SERVICE} ===${NC}"
-echo "  Team: ${TEAM}"
-echo "  Source: ${SOURCE_ENV}"
-echo "  Target: ${TARGET_ENV}"
-echo "  Tag: ${IMAGE_TAG}"
-echo ""
+SOURCE_TAG=$(yq -r '.images[0].newTag // ""' "$SOURCE_KUSTOMIZATION")
+[[ -n "$SOURCE_TAG" ]] || fail "no image newTag was found in ${SOURCE_KUSTOMIZATION}."
+[[ "$SOURCE_TAG" == "$IMAGE_TAG" ]] || fail "requested tag '${IMAGE_TAG}' does not match source environment tag '${SOURCE_TAG}'."
 
-# Crear branch para la promoción
 BRANCH_NAME="promote/${SERVICE}-${TARGET_ENV}-${IMAGE_TAG}"
-echo -e "${YELLOW}Creando branch: ${BRANCH_NAME}${NC}"
-git checkout -b "$BRANCH_NAME" 2>/dev/null || git checkout "$BRANCH_NAME"
 
-# Actualizar el tag de imagen en el overlay destino
-if [[ "$USE_YQ" == "true" ]]; then
-    yq -i ".images[0].newTag = \"${IMAGE_TAG}\"" "$TARGET_KUSTOMIZATION"
-else
-    sed -i "s/newTag: .*/newTag: \"${IMAGE_TAG}\"/" "$TARGET_KUSTOMIZATION"
-fi
+echo -e "${GREEN}=== Promote ${SERVICE} ===${NC}"
+echo "Team: ${TEAM}"
+echo "Source: ${SOURCE_ENV}"
+echo "Target: ${TARGET_ENV}"
+echo "Image tag: ${IMAGE_TAG}"
 
-echo -e "${GREEN}✓ Archivo actualizado: ${TARGET_KUSTOMIZATION}${NC}"
+git switch -c "$BRANCH_NAME"
+yq -i ".images[0].newTag = \"${IMAGE_TAG}\"" "$TARGET_KUSTOMIZATION"
 
-# Verificar el cambio
-echo ""
-echo "Cambios realizados:"
-git diff --color "$TARGET_KUSTOMIZATION"
+git diff --check
+git diff -- "$TARGET_KUSTOMIZATION"
+git add -- "$TARGET_KUSTOMIZATION"
+git commit -s -m "chore(${TEAM}): promote ${SERVICE} to ${TARGET_ENV} ${IMAGE_TAG}"
 
-# Commit
-git add "$TARGET_KUSTOMIZATION"
-git commit -m "chore(${TEAM}): promote ${SERVICE} to ${TARGET_ENV} ${IMAGE_TAG}
+echo -e "${GREEN}Promotion commit created with the required identity.${NC}"
 
-Promoción automática:
-- Service: ${SERVICE}
-- From: ${SOURCE_ENV}
-- To: ${TARGET_ENV}
-- Image tag: ${IMAGE_TAG}"
-
-echo ""
-echo -e "${GREEN}✓ Commit creado${NC}"
-
-# Crear PR si AUTO_PR está habilitado
-if [[ "$AUTO_PR" == "true" ]] && command -v gh &> /dev/null; then
-    echo -e "${YELLOW}Creando PR...${NC}"
+if [[ "$AUTO_PR" == "true" ]]; then
+    command -v gh >/dev/null 2>&1 || fail "AUTO_PR=true requires the GitHub CLI."
     git push -u origin "$BRANCH_NAME"
     gh pr create \
-        --title "Promote ${SERVICE} to ${TARGET_ENV}: ${IMAGE_TAG}" \
-        --body "## Promoción Automática
-
-**Servicio:** ${SERVICE}
-**Origen:** ${SOURCE_ENV}
-**Destino:** ${TARGET_ENV}
-**Tag:** ${IMAGE_TAG}
-
-### Checklist
-- [ ] Verificar que el tag existe en el registry
-- [ ] Revisar métricas en ${SOURCE_ENV}
-- [ ] Aprobar promoción" \
-        --label "promotion"
-    echo -e "${GREEN}✓ PR creado${NC}"
+        --title "chore(${TEAM}): promote ${SERVICE} to ${TARGET_ENV} ${IMAGE_TAG}" \
+        --body "## Promotion\n\n- Service: \`${SERVICE}\`\n- Team: \`${TEAM}\`\n- Source: \`${SOURCE_ENV}\`\n- Target: \`${TARGET_ENV}\`\n- Image tag: \`${IMAGE_TAG}\`\n\n### Verification\n- [ ] Source environment is healthy\n- [ ] Image reference exists and is immutable\n- [ ] Target environment checks pass\n- [ ] Production approval is recorded when applicable"
+    echo -e "${GREEN}Pull request created.${NC}"
 else
-    echo ""
-    echo -e "${YELLOW}Para completar la promoción:${NC}"
-    echo "1. Push: git push -u origin ${BRANCH_NAME}"
-    echo "2. Crear PR en GitHub"
-    echo "3. Esperar aprobación y merge"
-    echo "4. Verificar sync en Argo CD"
+    echo "Push the branch and open a pull request to complete the promotion:"
+    echo "  git push -u origin ${BRANCH_NAME}"
 fi

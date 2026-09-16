@@ -1,4 +1,4 @@
-# Configuración del cluster de staging
+# Staging cluster reference configuration.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -10,17 +10,17 @@ data:
   region: us-east-1
   log-level: info
 
-  # Configuración de recursos por defecto
+  # Default resource guidance.
   default-cpu-request: "100m"
   default-memory-request: "256Mi"
   default-cpu-limit: "1000m"
   default-memory-limit: "1Gi"
 
-  # Configuración de auto-scaling
+  # Autoscaling guidance.
   hpa-min-replicas: "2"
   hpa-max-replicas: "10"
 
-  # URLs de servicios
+  # Platform service endpoints.
   prometheus-url: http://prometheus.observability:9090
   loki-url: http://loki.observability:3100
   tempo-url: http://tempo.observability:4317
