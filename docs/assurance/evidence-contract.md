@@ -68,6 +68,23 @@ For `runtime-validated` and `production-validated` claims, runtime evidence must
 
 `production-validated` is valid only when `context.environment` is `prod`.
 
+## R0-R4 risk-adaptive assurance binding
+
+The optional `assurance` object binds a `goldenpath.assurance/v1` plan to the Evidence Manifest. The plan is produced by the R0-R4 engine documented in [R0-R4 Risk-Adaptive Assurance](risk-adaptive-assurance.md).
+
+When an assurance snapshot is present, the validator additionally requires:
+
+- `assurance.policyDigest` to equal `inputs.policyDigest`;
+- `assurance.architectureMetadataDigest` to equal `inputs.architectureDigest`;
+- every `requiredGateId` to exist in `gates` and be marked `required: true`;
+- every human-approval gate to be part of the required gate set;
+- `preview-environment` to be a required gate whenever preview is mandatory;
+- passing `runtimeEvidence` whenever the risk plan requires runtime validation, even if the claim level remains `reference`.
+
+This makes the risk plan enforceable evidence, not advisory metadata. A producer cannot attach an R3/R4 plan and then silently omit its stronger controls while still claiming `READY`.
+
+Risk-derived runtime proof does not automatically elevate the claim level. A `reference` claim with risk-mandated runtime evidence remains a `reference` claim unless the producer explicitly satisfies and declares the stronger evidence-status contract.
+
 ## Evidence invalidation
 
 Evidence is a statement about an exact set of inputs. It becomes stale when any authoritative input changes.
@@ -83,7 +100,7 @@ At minimum, regenerate evidence when any of these change:
 
 The v1 manifest records hashes for source, policy, architecture, and desired state. CI or a higher-level assurance controller can compare those values with current inputs before accepting the evidence.
 
-The `--expected-commit` validator option is the first executable invalidation check in this repository. Future risk and assurance layers may add direct computation and comparison of the other input digests.
+The `--expected-commit` validator option is the first executable invalidation check in this repository. The R0-R4 plan also carries policy, architecture, and plan digests. Automatic recomputation/comparison of every non-source digest at consumption time remains follow-up operational work.
 
 ## Runtime evidence
 
@@ -108,9 +125,10 @@ Evidence producers should:
 2. bind every observation to the exact commit and artifact under test;
 3. preserve the distinction between test failure and infrastructure failure;
 4. include a reason for any skip or failure;
-5. collect runtime proof only from the environment named in the manifest;
-6. derive `decision` after all required evidence is known;
-7. publish the manifest with the other delivery/release evidence.
+5. satisfy all gates added by an attached assurance plan;
+6. collect runtime proof only from the environment named in the manifest;
+7. derive `decision` after all required evidence is known;
+8. publish the manifest with the other delivery/release evidence.
 
 ## Consumer responsibilities
 
@@ -120,8 +138,9 @@ Evidence consumers should:
 2. compare source and relevant input identities with the current target;
 3. reject stale evidence;
 4. reject unsupported schema versions;
-5. never elevate a `reference` claim to runtime or production validation without new runtime evidence;
-6. fail closed when a required validation cannot establish a trustworthy result.
+5. enforce any attached R0-R4 assurance requirements;
+6. never elevate a `reference` claim to runtime or production validation without new runtime evidence;
+7. fail closed when a required validation cannot establish a trustworthy result.
 
 ## Local validation
 
@@ -145,10 +164,10 @@ Run the contract regression suite:
 python3 scripts/test-evidence-contract.py
 ```
 
-The negative fixtures are required. They prove that the validator rejects false `READY` decisions, missing runtime evidence, unauthorized skips, and source drift.
+The negative fixtures are required. They prove that the validator rejects false `READY` decisions, missing runtime evidence, unauthorized skips, source drift, and omitted risk-required gates.
 
-## Current scope and next step
+## Current scope
 
-This P0 contract establishes the evidence substrate. It does not yet implement change-risk classification.
+The Evidence Manifest plus R0-R4 engine now provide the repository/reference assurance substrate: deterministic risk classification, monotonic control selection, Architecture as Code inputs, and fail-closed evidence binding.
 
-The next assurance layer should introduce R0-R4 change risk so gate selection, independent review, previews, and human approvals can be derived from structured change context without weakening the global minimum controls defined here.
+This repository still does not claim operational enforcement of reviewer identities, preview environments, runtime gates, human approvals, or production controls. Those require a real governed delivery path and retained runtime evidence from the target environment.
