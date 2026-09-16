@@ -1,0 +1,65 @@
+# Gatekeeper template requiring CPU/memory requests and limits.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8scontainerresources
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sContainerResources
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8scontainerresources
+
+        import future.keywords.in
+
+        workload_kinds := {"Deployment", "StatefulSet", "DaemonSet", "Job"}
+
+        containers[container] {
+          input.review.kind.kind == "Pod"
+          container := input.review.object.spec.containers[_]
+        }
+
+        containers[container] {
+          input.review.kind.kind in workload_kinds
+          container := input.review.object.spec.template.spec.containers[_]
+        }
+
+        violation[{"msg": msg}] {
+          container := containers[_]
+          resources := object.get(container, "resources", {})
+          requests := object.get(resources, "requests", {})
+          object.get(requests, "cpu", "") == ""
+          msg := sprintf("Container '%s' must define resources.requests.cpu.", [container.name])
+        }
+
+        violation[{"msg": msg}] {
+          container := containers[_]
+          resources := object.get(container, "resources", {})
+          requests := object.get(resources, "requests", {})
+          object.get(requests, "memory", "") == ""
+          msg := sprintf("Container '%s' must define resources.requests.memory.", [container.name])
+        }
+
+        violation[{"msg": msg}] {
+          container := containers[_]
+          resources := object.get(container, "resources", {})
+          limits := object.get(resources, "limits", {})
+          object.get(limits, "cpu", "") == ""
+          msg := sprintf("Container '%s' must define resources.limits.cpu.", [container.name])
+        }
+
+        violation[{"msg": msg}] {
+          container := containers[_]
+          resources := object.get(container, "resources", {})
+          limits := object.get(resources, "limits", {})
+          object.get(limits, "memory", "") == ""
+          msg := sprintf("Container '%s' must define resources.limits.memory.", [container.name])
+        }

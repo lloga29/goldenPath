@@ -1,0 +1,52 @@
+# Gatekeeper template that rejects privileged containers.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8spspprivilegedcontainer
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPSPPrivilegedContainer
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8spspprivilegedcontainer
+
+        import future.keywords.in
+
+        workload_kinds := {"Deployment", "StatefulSet", "DaemonSet", "Job"}
+
+        containers[container] {
+          input.review.kind.kind == "Pod"
+          container := input.review.object.spec.containers[_]
+        }
+
+        containers[container] {
+          input.review.kind.kind == "Pod"
+          init_containers := object.get(input.review.object.spec, "initContainers", [])
+          container := init_containers[_]
+        }
+
+        containers[container] {
+          input.review.kind.kind in workload_kinds
+          container := input.review.object.spec.template.spec.containers[_]
+        }
+
+        containers[container] {
+          input.review.kind.kind in workload_kinds
+          init_containers := object.get(input.review.object.spec.template.spec, "initContainers", [])
+          container := init_containers[_]
+        }
+
+        violation[{"msg": msg}] {
+          container := containers[_]
+          security_context := object.get(container, "securityContext", {})
+          object.get(security_context, "privileged", false) == true
+          msg := sprintf("%s '%s': container '%s' must not run privileged.", [input.review.kind.kind, input.review.object.metadata.name, container.name])
+        }

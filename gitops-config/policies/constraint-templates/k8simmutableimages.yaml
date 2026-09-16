@@ -1,0 +1,48 @@
+# Gatekeeper template requiring explicit immutable image references.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8simmutableimages
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sImmutableImages
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8simmutableimages
+
+        import future.keywords.in
+
+        workload_kinds := {"Deployment", "StatefulSet", "DaemonSet", "Job"}
+
+        containers[container] {
+          input.review.kind.kind == "Pod"
+          container := input.review.object.spec.containers[_]
+        }
+
+        containers[container] {
+          input.review.kind.kind in workload_kinds
+          container := input.review.object.spec.template.spec.containers[_]
+        }
+
+        immutable(image) {
+          re_match(`@sha256:[a-fA-F0-9]{64}$`, image)
+        }
+
+        immutable(image) {
+          re_match(`:[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$`, image)
+          not endswith(image, ":latest")
+        }
+
+        violation[{"msg": msg}] {
+          container := containers[_]
+          not immutable(container.image)
+          msg := sprintf("Container '%s' must use an explicit immutable tag or SHA-256 digest instead of '%s'.", [container.name, container.image])
+        }

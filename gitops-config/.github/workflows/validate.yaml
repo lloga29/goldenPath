@@ -61,7 +61,7 @@ jobs:
           while IFS= read -r dir; do
             echo "Schema-validating rendered manifests: $dir"
             kustomize build "$dir" | kubeval --strict --ignore-missing-schemas
-          done < <(find gitops-config/apps gitops-config/platform -name kustomization.yaml -exec dirname {} \; | sort -u)
+          done < <(find gitops-config/apps gitops-config/platform gitops-config/policies -name kustomization.yaml -exec dirname {} \; | sort -u)
 
       - name: Setup Conftest
         shell: bash
@@ -71,24 +71,50 @@ jobs:
           tar -xzf conftest.tar.gz
           sudo install -m 0755 conftest /usr/local/bin/conftest
 
-      - name: Run application policy checks
+      - name: Resolve policy bundle
+        id: policies
         shell: bash
         run: |
           set -euo pipefail
           if [[ -d platform-policies/kubernetes ]]; then
-            POLICY_DIR="platform-policies/kubernetes"
+            echo "root=platform-policies" >> "$GITHUB_OUTPUT"
           elif [[ -d ../platform-policies/kubernetes ]]; then
-            POLICY_DIR="../platform-policies/kubernetes"
+            echo "root=../platform-policies" >> "$GITHUB_OUTPUT"
           else
-            echo "ERROR: Kubernetes Conftest policy bundle was not found."
-            echo "Check out the platform-policies repository next to this repository or run from the consolidated Golden Path repository."
+            echo "ERROR: platform-policies policy bundle was not found." >&2
             exit 1
           fi
 
-          mapfile -t deployments < <(find gitops-config/apps -name deployment.yaml | sort)
-          if (( ${#deployments[@]} == 0 )); then
-            echo "ERROR: no application Deployment manifests were found for policy validation."
-            exit 1
-          fi
+      - name: Validate policy exception registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          POLICY_ROOT="${{ steps.policies.outputs.root }}"
+          python3 "$POLICY_ROOT/scripts/validate-exceptions.py" "$POLICY_ROOT/policy-exceptions.yaml"
 
-          conftest test "${deployments[@]}" --policy "$POLICY_DIR"
+      - name: Run policy fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          POLICY_ROOT="${{ steps.policies.outputs.root }}"
+          "$POLICY_ROOT/scripts/test-policies.sh"
+
+      - name: Run policies against rendered application overlays
+        shell: bash
+        run: |
+          set -euo pipefail
+          POLICY_ROOT="${{ steps.policies.outputs.root }}"
+          found=false
+          while IFS= read -r dir; do
+            found=true
+            echo "Policy-validating rendered overlay: $dir"
+            rendered=$(mktemp)
+            kustomize build "$dir" > "$rendered"
+            conftest test "$rendered" --policy "$POLICY_ROOT/kubernetes"
+            rm -f "$rendered"
+          done < <(find gitops-config/apps -path '*/overlays/*/kustomization.yaml' -exec dirname {} \; | sort -u)
+
+          [[ "$found" == "true" ]] || {
+            echo "ERROR: no application overlays were found for policy validation." >&2
+            exit 1
+          }

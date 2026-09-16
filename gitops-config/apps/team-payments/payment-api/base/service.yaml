@@ -6,6 +6,8 @@ metadata:
     app.kubernetes.io/name: payment-api
     app.kubernetes.io/component: api
     app.kubernetes.io/part-of: payments
+    app.kubernetes.io/managed-by: argocd
+    team: payments
 spec:
   type: ClusterIP
   ports:

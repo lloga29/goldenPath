@@ -1,0 +1,58 @@
+# Gatekeeper template enforcing non-root execution and disabled privilege escalation.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8ssecurecontext
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sSecureContext
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8ssecurecontext
+
+        import future.keywords.in
+
+        workload_kinds := {"Deployment", "StatefulSet", "DaemonSet", "Job"}
+
+        pod_specs[spec] {
+          input.review.kind.kind == "Pod"
+          spec := input.review.object.spec
+        }
+
+        pod_specs[spec] {
+          input.review.kind.kind in workload_kinds
+          spec := input.review.object.spec.template.spec
+        }
+
+        runs_as_non_root(pod_context, container_context) {
+          object.get(container_context, "runAsNonRoot", false) == true
+        }
+
+        runs_as_non_root(pod_context, container_context) {
+          object.get(pod_context, "runAsNonRoot", false) == true
+        }
+
+        violation[{"msg": msg}] {
+          spec := pod_specs[_]
+          pod_context := object.get(spec, "securityContext", {})
+          container := spec.containers[_]
+          container_context := object.get(container, "securityContext", {})
+          not runs_as_non_root(pod_context, container_context)
+          msg := sprintf("Container '%s' must run as non-root at the pod or container level.", [container.name])
+        }
+
+        violation[{"msg": msg}] {
+          spec := pod_specs[_]
+          container := spec.containers[_]
+          container_context := object.get(container, "securityContext", {})
+          object.get(container_context, "allowPrivilegeEscalation", true) != false
+          msg := sprintf("Container '%s' must set allowPrivilegeEscalation=false.", [container.name])
+        }

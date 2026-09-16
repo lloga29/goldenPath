@@ -1,8 +1,8 @@
-# Require CPU and memory requests/limits at admission time.
+# Reject mutable or implicit image references at admission time.
 apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: K8sContainerResources
+kind: K8sImmutableImages
 metadata:
-  name: require-container-resources
+  name: require-immutable-images
   annotations:
     argocd.argoproj.io/sync-wave: "20"
 spec:

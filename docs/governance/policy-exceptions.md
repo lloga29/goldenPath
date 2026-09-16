@@ -2,40 +2,53 @@
 
 Policy exceptions provide a controlled path for legitimate cases that cannot immediately satisfy a guardrail.
 
+## Current repository state
+
+`platform-policies/policy-exceptions.yaml` is the authoritative reference registry and is machine-validated for structure and expiry. **It does not currently bypass Conftest or Gatekeeper decisions.** Safe integration of approved exceptions with enforcement is tracked in issue #14.
+
+This distinction is intentional: a registry must not become an undocumented global bypass simply because an entry exists.
+
 ## Required fields
 
-Every exception should contain:
+Every active exception must contain:
 
-- unique identifier;
-- requesting owner/team;
-- affected resource/service/environment;
-- exact policy being bypassed;
+- stable exception identifier (`EXC-YYYY-NNN` or greater sequence width);
+- exact policy identifier;
+- affected resource and namespace when applicable;
 - technical/business justification;
-- risk assessment;
-- compensating controls;
+- owner email;
 - approver;
+- tracking issue;
 - creation date;
-- expiration date;
-- remediation plan and owner.
+- expiration date.
+
+Production integrations should additionally retain risk assessment, compensating controls, and remediation evidence in the tracking issue or governance system.
 
 ## Rules
 
-Exceptions must be narrow, time-bounded, reviewable, and discoverable. Avoid global policy disablement for a single workload.
+Exceptions must be narrow, time-bounded, reviewable, and discoverable. Global policy disabling is prohibited by the repository validator.
+
+Expired exceptions fail registry validation. Renewal requires a new review before the previous expiry; silently extending expiry without reassessment is not the paved road.
+
+## Validation
+
+```bash
+python3 platform-policies/scripts/validate-exceptions.py \
+  platform-policies/policy-exceptions.yaml
+```
 
 ## Lifecycle
 
-1. Request.
-2. Review risk and alternatives.
-3. Approve or reject.
-4. Implement the smallest bypass.
-5. Monitor usage.
-6. Remediate before expiration.
-7. Remove and verify the exception.
+1. Open a tracking issue and document why compliant remediation cannot meet the deadline.
+2. Identify the exact policy and resource scope.
+3. Document risk and compensating controls.
+4. Obtain the required approval.
+5. Add the time-bounded registry entry.
+6. Validate the registry in CI.
+7. When #14 is implemented, enforcement may apply only that exact approved exception and must emit an audit-visible reference to its ID.
+8. Remediate before expiry.
+9. Remove the exception and verify normal enforcement.
 
 ## Metrics
 
-Track active exceptions, expired exceptions, average age, repeated exception reasons, and exceptions by policy. A growing exception backlog often indicates either an unrealistic policy or platform capability missing from the paved road.
-
-## Repository baseline
-
-`platform-policies/policy-exceptions.yaml` is the current reference mechanism. Production organizations may integrate exceptions with ticketing or governance systems, but executable policy should still be able to determine whether the exception is valid and unexpired.
+Track active exceptions, expired/blocked exceptions, average age, repeated reasons, renewals, and exceptions by policy/team. A growing backlog often indicates either an unrealistic guardrail or a missing paved-road capability.

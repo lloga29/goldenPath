@@ -1,8 +1,10 @@
-# ConstraintTemplate para labels requeridos
+# Gatekeeper template for standard resource and pod-template labels.
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:
   name: k8srequiredlabels
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
 spec:
   crd:
     spec:
@@ -16,6 +18,7 @@ spec:
               type: array
               items:
                 type: object
+                required: [key]
                 properties:
                   key:
                     type: string
@@ -26,19 +29,36 @@ spec:
       rego: |
         package k8srequiredlabels
 
+        import future.keywords.in
+
+        workload_kinds := {"Deployment", "StatefulSet", "DaemonSet", "Job"}
+
         violation[{"msg": msg, "details": {"missing_labels": missing}}] {
-          provided := {label | input.review.object.metadata.labels[label]}
+          labels := object.get(input.review.object.metadata, "labels", {})
+          provided := {label | labels[label]}
           required := {label | label := input.parameters.labels[_].key}
           missing := required - provided
           count(missing) > 0
-          msg := sprintf("Los siguientes labels son requeridos pero no están presentes: %v", [missing])
+          msg := sprintf("%s '%s' is missing required labels: %v", [input.review.kind.kind, input.review.object.metadata.name, missing])
+        }
+
+        violation[{"msg": msg, "details": {"missing_labels": missing}}] {
+          input.review.kind.kind in workload_kinds
+          labels := object.get(input.review.object.spec.template.metadata, "labels", {})
+          provided := {label | labels[label]}
+          required := {label | label := input.parameters.labels[_].key}
+          missing := required - provided
+          count(missing) > 0
+          msg := sprintf("%s '%s' pod template is missing required labels: %v", [input.review.kind.kind, input.review.object.metadata.name, missing])
         }
 
         violation[{"msg": msg}] {
-          value := input.review.object.metadata.labels[key]
+          labels := object.get(input.review.object.metadata, "labels", {})
+          value := labels[key]
           expected := input.parameters.labels[_]
           expected.key == key
-          expected.allowedRegex != ""
-          not re_match(expected.allowedRegex, value)
-          msg := sprintf("El label '%v' tiene valor '%v' que no cumple con el regex '%v'", [key, value, expected.allowedRegex])
+          regex := object.get(expected, "allowedRegex", "")
+          regex != ""
+          not re_match(regex, value)
+          msg := sprintf("Label '%s' on %s '%s' has value '%s', which does not match '%s'.", [key, input.review.kind.kind, input.review.object.metadata.name, value, regex])
         }
