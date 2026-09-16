@@ -1,7 +1,6 @@
-# Tests unitarios para el módulo VPC
-# Ejecutar con: terraform test
+# Terraform-native tests for the AWS branch of the VPC reference module.
+# Run with: terraform test
 
-# Variables de prueba
 variables {
   name           = "test-vpc"
   cidr_block     = "10.0.0.0/16"
@@ -16,100 +15,82 @@ variables {
   public_subnet_cidrs  = ["10.0.101.0/24", "10.0.102.0/24"]
 }
 
-# ============================================
-# TEST: VPC se crea correctamente
-# ============================================
 run "vpc_creates_successfully" {
   command = plan
 
   assert {
     condition     = aws_vpc.this[0].cidr_block == "10.0.0.0/16"
-    error_message = "El bloque CIDR de la VPC no coincide con el valor esperado"
+    error_message = "The AWS VPC CIDR block does not match the expected value."
   }
 
   assert {
     condition     = aws_vpc.this[0].enable_dns_hostnames == true
-    error_message = "DNS hostnames debería estar habilitado"
+    error_message = "DNS hostnames must be enabled for this test fixture."
   }
 
   assert {
     condition     = aws_vpc.this[0].enable_dns_support == true
-    error_message = "DNS support debería estar habilitado"
+    error_message = "DNS support must be enabled for this test fixture."
   }
 }
 
-# ============================================
-# TEST: VPC tiene tags requeridos
-# ============================================
 run "vpc_has_required_tags" {
   command = plan
 
   assert {
     condition     = contains(keys(aws_vpc.this[0].tags), "Environment")
-    error_message = "La VPC debe tener el tag Environment"
+    error_message = "The VPC must contain the Environment tag."
   }
 
   assert {
     condition     = contains(keys(aws_vpc.this[0].tags), "ManagedBy")
-    error_message = "La VPC debe tener el tag ManagedBy"
+    error_message = "The VPC must contain the ManagedBy tag."
   }
 
   assert {
     condition     = contains(keys(aws_vpc.this[0].tags), "Team")
-    error_message = "La VPC debe tener el tag Team"
+    error_message = "The VPC must contain the Team tag."
   }
 
   assert {
     condition     = contains(keys(aws_vpc.this[0].tags), "CostCenter")
-    error_message = "La VPC debe tener el tag CostCenter"
+    error_message = "The VPC must contain the CostCenter tag."
   }
 }
 
-# ============================================
-# TEST: Subnets se crean correctamente
-# ============================================
 run "subnets_created_correctly" {
   command = plan
 
   assert {
     condition     = length(aws_subnet.private) == 2
-    error_message = "Deberían crearse 2 subnets privadas"
+    error_message = "The fixture must create two private subnets."
   }
 
   assert {
     condition     = length(aws_subnet.public) == 2
-    error_message = "Deberían crearse 2 subnets públicas"
+    error_message = "The fixture must create two public subnets."
   }
 }
 
-# ============================================
-# TEST: Flow logs habilitados por defecto
-# ============================================
 run "flow_logs_enabled_by_default" {
   command = plan
 
   assert {
     condition     = length(aws_flow_log.this) == 1
-    error_message = "Flow logs deberían estar habilitados por defecto"
+    error_message = "VPC Flow Logs must be enabled by default for this fixture."
   }
 }
 
-# ============================================
-# TEST: Nombre inválido falla validación
-# ============================================
 run "invalid_name_fails_validation" {
   command = plan
 
   variables {
-    name = "INVALID_NAME"  # Mayúsculas no permitidas
+    name = "INVALID_NAME" # Uppercase and underscore are intentionally invalid.
   }
 
   expect_failures = [var.name]
 }
 
-# ============================================
-# TEST: Entorno inválido falla validación
-# ============================================
 run "invalid_environment_fails_validation" {
   command = plan
 
@@ -120,9 +101,6 @@ run "invalid_environment_fails_validation" {
   expect_failures = [var.environment]
 }
 
-# ============================================
-# TEST: CIDR inválido falla validación
-# ============================================
 run "invalid_cidr_fails_validation" {
   command = plan
 
@@ -133,25 +111,19 @@ run "invalid_cidr_fails_validation" {
   expect_failures = [var.cidr_block]
 }
 
-# ============================================
-# TEST: Tags sin Team falla validación
-# ============================================
 run "missing_team_tag_fails_validation" {
   command = plan
 
   variables {
     tags = {
       CostCenter = "cc-001"
-      # Falta Team
+      # Team is intentionally missing.
     }
   }
 
   expect_failures = [var.tags]
 }
 
-# ============================================
-# TEST: Cloud provider inválido falla
-# ============================================
 run "invalid_cloud_provider_fails" {
   command = plan
 

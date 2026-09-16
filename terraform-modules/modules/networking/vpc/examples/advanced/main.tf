@@ -1,7 +1,6 @@
-# Ejemplo avanzado de uso del módulo VPC
-# Este ejemplo crea una VPC con configuración completa para producción
+# Advanced AWS example showing separate application and data VPC address spaces.
 
-# VPC Principal
+# Primary application VPC.
 module "vpc_prod" {
   source = "../../"
 
@@ -10,40 +9,39 @@ module "vpc_prod" {
   environment    = "prod"
   cloud_provider = "aws"
 
-  # Multi-AZ para alta disponibilidad
+  # Multi-AZ placement for the example subnet layout.
   availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
 
-  # Subnets privadas - una por AZ
+  # One private subnet per availability zone.
   private_subnet_cidrs = [
-    "10.100.1.0/24",   # AZ-a: Aplicaciones
-    "10.100.2.0/24",   # AZ-b: Aplicaciones
-    "10.100.3.0/24",   # AZ-c: Aplicaciones
+    "10.100.1.0/24", # AZ-a: applications
+    "10.100.2.0/24", # AZ-b: applications
+    "10.100.3.0/24", # AZ-c: applications
   ]
 
-  # Subnets públicas - una por AZ
+  # One public subnet per availability zone.
   public_subnet_cidrs = [
-    "10.100.101.0/24", # AZ-a: Load Balancers
-    "10.100.102.0/24", # AZ-b: Load Balancers
-    "10.100.103.0/24", # AZ-c: Load Balancers
+    "10.100.101.0/24", # AZ-a: load balancers
+    "10.100.102.0/24", # AZ-b: load balancers
+    "10.100.103.0/24", # AZ-c: load balancers
   ]
 
-  # Seguridad
   enable_flow_logs     = true
   enable_dns_hostnames = true
   enable_dns_support   = true
 
-  # Tags para governance y cost allocation
+  # Governance and cost-allocation metadata example.
   tags = {
-    Team        = "platform"
-    CostCenter  = "cc-prod-001"
-    Owner       = "platform@example.com"
-    Project     = "golden-path"
-    Compliance  = "pci-dss"
-    DataClass   = "confidential"
+    Team       = "platform"
+    CostCenter = "cc-prod-001"
+    Owner      = "platform@example.com"
+    Project    = "golden-path"
+    Compliance = "pci-dss"
+    DataClass  = "confidential"
   }
 }
 
-# VPC Secundaria para Datos
+# Secondary data VPC reference.
 module "vpc_data" {
   source = "../../"
 
@@ -54,14 +52,14 @@ module "vpc_data" {
 
   availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
 
-  # Solo subnets privadas para bases de datos
+  # Private subnets only in this example.
   private_subnet_cidrs = [
     "10.200.1.0/24",
     "10.200.2.0/24",
     "10.200.3.0/24",
   ]
 
-  public_subnet_cidrs = []  # Sin subnets públicas
+  public_subnet_cidrs = []
 
   enable_flow_logs = true
 
@@ -75,7 +73,6 @@ module "vpc_data" {
   }
 }
 
-# Outputs
 output "main_vpc_id" {
   value = module.vpc_prod.vpc_id
 }

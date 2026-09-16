@@ -1,5 +1,4 @@
-# Ejemplo básico de uso del módulo VPC
-# Este ejemplo crea una VPC simple en AWS
+# Basic AWS usage example for the network reference module.
 
 module "vpc" {
   source = "../../"
@@ -9,15 +8,15 @@ module "vpc" {
   environment    = "dev"
   cloud_provider = "aws"
 
-  # Subnets en 2 AZs
+  # Subnets across two availability zones.
   availability_zones   = ["us-east-1a", "us-east-1b"]
   private_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
   public_subnet_cidrs  = ["10.0.101.0/24", "10.0.102.0/24"]
 
-  # Flow logs habilitados (por defecto)
+  # Enabled by default; repeated here for clarity.
   enable_flow_logs = true
 
-  # Tags obligatorios
+  # Required ownership/cost metadata.
   tags = {
     Team       = "platform"
     CostCenter = "cc-001"
@@ -26,18 +25,17 @@ module "vpc" {
   }
 }
 
-# Outputs para verificar
 output "vpc_id" {
-  description = "ID de la VPC creada"
+  description = "Created AWS VPC ID."
   value       = module.vpc.vpc_id
 }
 
 output "private_subnet_ids" {
-  description = "IDs de las subnets privadas"
+  description = "Created private subnet IDs."
   value       = module.vpc.private_subnet_ids
 }
 
 output "public_subnet_ids" {
-  description = "IDs de las subnets públicas"
+  description = "Created public subnet IDs."
   value       = module.vpc.public_subnet_ids
 }
