@@ -1,80 +1,54 @@
-# Guía de Promoción - GitOps
+# GitOps Promotion Guide
 
-## Principio: Build Once, Promote
+## Principle: Build Once, Promote
 
-Los artefactos se construyen **una sola vez** y se promueven entre entornos.
-- NO se permite `:latest`
-- Usar SHA de commit o semver
-- La promoción es un cambio de configuración, NO un rebuild
+Release artifacts are built once and promoted between environments without rebuilding.
 
-## Flujo de Promoción
+- Never promote `:latest`.
+- Prefer an immutable digest; an immutable semantic-version or commit tag is acceptable when registry immutability is enforced.
+- Promotion changes desired state; it does not create a new executable artifact.
 
-```
-┌─────────┐    ┌─────────┐    ┌─────────┐
-│   DEV   │───▶│ STAGING │───▶│  PROD   │
-│ (auto)  │    │ (auto)  │    │ (manual)│
-└─────────┘    └─────────┘    └─────────┘
-     │              │              │
-     ▼              ▼              ▼
-  PR merge      PR merge      PR + Approval
+## Flow
+
+```text
+Development -> Staging -> Production
+      same immutable artifact identity
 ```
 
-## Proceso
-
-### 1. Promoción Dev → Staging
+## Development to staging
 
 ```bash
-# Usar script de promoción
 ./scripts/promote.sh <team> <service> dev staging <version>
-
-# Ejemplo
-./scripts/promote.sh payments payment-api dev staging v1.2.3
 ```
 
-El script:
-1. Actualiza `overlays/staging/kustomization.yaml`
-2. Crea branch `promote/<service>-staging-<version>`
-3. Abre PR automáticamente
-
-### 2. Promoción Staging → Prod
+Review the resulting Kustomize change and render the target overlay before merge:
 
 ```bash
-./scripts/promote.sh payments payment-api staging prod v1.2.3
+kustomize build apps/<team>/<service>/overlays/staging
 ```
 
-**Requisitos adicionales para Prod:**
-- PR aprobado por al menos 2 revisores
-- Todos los checks de CI pasando
-- Sin alerts activas en staging
-- Verificación manual de smoke tests
-
-### 3. Verificación Post-Promoción
+## Staging to production
 
 ```bash
-# Verificar sync en ArgoCD
-kubectl get application <app-name> -n argocd -o jsonpath='{.status.sync.status}'
+./scripts/promote.sh <team> <service> staging prod <version>
+```
 
-# Verificar health
-kubectl get application <app-name> -n argocd -o jsonpath='{.status.health.status}'
+Production promotion should require the organization's configured review and environment protection rules. Do not rely on documentation alone to enforce reviewer counts or approvals.
 
-# Verificar pods
+## Pre-production checks
+
+Confirm the artifact exists, staging is healthy, required checks passed, migrations are compatible, relevant SLOs/alerts show no active regression, and rollback is understood.
+
+## Post-promotion verification
+
+```bash
+argocd app get <application>
+argocd app wait <application> --health --sync
 kubectl get pods -n <namespace> -l app.kubernetes.io/name=<service>
 ```
 
-## Rollback
+Verify service-level metrics and a representative business transaction in addition to pod health.
 
-Ver [ROLLBACK_PROCEDURE.md](ROLLBACK_PROCEDURE.md)
+## Failure
 
-## Troubleshooting
-
-### PR de promoción falla checks
-
-1. Verificar que la imagen existe en el registry
-2. Verificar que el tag es correcto
-3. Revisar logs de CI
-
-### ArgoCD no sincroniza
-
-1. Verificar credenciales del repo
-2. Verificar sintaxis de manifiestos: `kustomize build overlays/<env>`
-3. Revisar logs de ArgoCD: `kubectl logs -n argocd -l app.kubernetes.io/name=argocd-application-controller`
+If promotion causes degradation, use [Rollback Procedure](ROLLBACK_PROCEDURE.md) and the platform application rollback runbook.

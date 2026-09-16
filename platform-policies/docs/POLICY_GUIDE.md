@@ -1,108 +1,47 @@
-# Guía de Políticas - Golden Path
+# Policy Guide - Golden Path
 
-Este documento describe las políticas de seguridad y compliance implementadas.
+This guide describes the current policy-as-code baseline and how to operate it safely.
 
-## Políticas Terraform
+## Terraform policies
 
-### 1. deny_public_access.rego
+### Public access
 
-**Objetivo:** Prevenir la exposición accidental de recursos a Internet.
+Prevent unintended Internet exposure for supported resource types. Review any intentionally public endpoint through an explicit architecture/security decision rather than a permanent broad bypass.
 
-**Reglas:**
-- Prohibe S3 buckets con ACL público
-- Bloquea security groups con 0.0.0.0/0 en puertos sensibles
-- Prohibe RDS y Redshift públicamente accesibles
+### Encryption
 
-**Excepciones:**
-```hcl
-# checkov:skip=CKV_AWS_XX:ALB debe ser público por diseño
-```
+Require encryption for supported storage/database resource types where the provider exposes the setting. Prefer organization-managed key policy when compliance requires it.
 
-### 2. require_encryption.rego
+### Required metadata
 
-**Objetivo:** Garantizar que todos los datos en reposo estén encriptados.
+Require ownership/environment/cost metadata so findings and spend can be routed to responsible teams.
 
-**Reglas:**
-- EBS volumes deben estar encriptados
-- RDS debe tener storage_encrypted = true
-- S3 debe tener server-side encryption
-- ElastiCache debe tener encryption at rest y in transit
+### IAM wildcard restrictions
 
-### 3. require_tags.rego
+Reject broad wildcard permissions when more specific actions/resources can be used. Treat identity policies as code that requires review and tests.
 
-**Objetivo:** Governance y tracking de costos.
+## Kubernetes policies
 
-**Tags requeridos:**
-| Tag | Descripción | Ejemplo |
-|-----|-------------|---------|
-| Environment | Entorno de despliegue | dev, staging, prod |
-| Team | Equipo responsable | team-payments |
-| CostCenter | Centro de costos | cc-001 |
-| Owner | Email del responsable | team@company.com |
+The current baseline checks workload security properties, required labels, resource requests/limits, security context, and immutable image-tag behavior.
 
-### 4. deny_wildcard_iam.rego
-
-**Objetivo:** Principio de least privilege en IAM.
-
-**Reglas:**
-- Prohibe Action: "*"
-- Prohibe Resource: "*" con acciones sensibles
-- Advierte sobre NotAction y NotResource
-
-## Políticas Kubernetes
-
-### 1. workload_security.rego
-
-**Objetivo:** Seguridad de pods y containers.
-
-**Reglas:**
-- Prohibe containers privilegiados
-- Prohibe hostNetwork, hostPID, hostIPC
-- Requiere resource limits
-- Prohibe tag :latest
-- Requiere runAsNonRoot
-
-### 2. required_labels.rego
-
-**Objetivo:** Estandarización de labels.
-
-**Labels requeridos:**
-- app.kubernetes.io/name
-- app.kubernetes.io/component
-- app.kubernetes.io/part-of
-- team
-- environment
-
-## Ejecución
-
-### Local
+## Local execution
 
 ```bash
-# Terraform
-terraform plan -out=tfplan
-terraform show -json tfplan > tfplan.json
-conftest test tfplan.json --policy policies/terraform/
-
-# Kubernetes
-conftest test deployment.yaml --policy policies/kubernetes/
+conftest test tfplan.json --policy platform-policies/terraform/
+conftest test deployment.yaml --policy platform-policies/kubernetes/
 ```
 
-### CI/CD
+## Severity and enforcement
 
-Las políticas se ejecutan automáticamente en los pipelines de CI/CD.
+- `deny`: intended to block when the active integration propagates the failure.
+- `warn`: advisory feedback that does not block.
 
-## Severidad
+Do not describe a policy as enforced when its workflow uses `continue-on-error` or suppresses the command's exit code.
 
-| Tipo | Descripción | Acción |
-|------|-------------|--------|
-| deny | Violación crítica | Bloquea el pipeline |
-| warn | Advertencia | Muestra warning, no bloquea |
+## Exceptions
 
-## Excepciones
+Use the governed exception model instead of undocumented skip comments. If an external scanner requires an inline suppression, include a tracked exception identifier and expiry/owner in the authoritative exception process.
 
-Para solicitar una excepción:
+## Rollout
 
-1. Crear issue en el repositorio de políticas
-2. Documentar la justificación técnica
-3. Obtener aprobación de Security Team
-4. Agregar skip comment con referencia al issue
+For new blocking rules on existing estates, inventory violations first, run in audit/advisory mode, remediate, then enable enforcement with rollback and owner communication.

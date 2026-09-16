@@ -1,14 +1,13 @@
-# {{ .Name }}
+<!-- This content is inserted before terraform-docs generated sections. -->
 
-{{ .Description }}
+## Security and operational expectations
 
-## Requisitos
+- Prefer encryption and private access by default where the provider supports them.
+- Enable logging/telemetry when the module exposes the capability.
+- Require ownership and cost metadata according to organization policy.
+- Treat provider-specific differences explicitly; this reference does not guarantee identical behavior across AWS, Azure, and GCP.
+- Review lifecycle and deletion behavior before production adoption.
 
-Este módulo es cloud-agnostic y soporta AWS, Azure y GCP. Selecciona el proveedor mediante la variable `cloud_provider`.
+## Version pinning
 
-## Seguridad
-
-- Encryption habilitado por defecto
-- Flow logs/logging habilitado por defecto
-- No public access por defecto
-- Tags obligatorios para governance
+Production consumers should pin an immutable module release rather than follow a moving branch.

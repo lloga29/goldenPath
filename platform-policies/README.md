@@ -1,80 +1,44 @@
 # Platform Policies - Golden Path
 
-Políticas de seguridad y compliance para infraestructura y aplicaciones.
+Security, reliability, and governance policy-as-code references for Terraform and Kubernetes.
 
-## Estructura
+## Structure
 
+```text
+terraform/           # Terraform-plan policies evaluated with OPA/Conftest
+kubernetes/          # Kubernetes manifest policies
+policy-exceptions.yaml
+docs/
 ```
-terraform/           # Políticas para Terraform (Conftest/OPA)
-kubernetes/          # Políticas para Kubernetes (Gatekeeper)
-docs/               # Documentación de políticas
-```
 
-## Políticas Terraform
+## Terraform policy themes
 
-### Seguridad
+The current repository includes examples covering public access, encryption, required metadata/tags, and wildcard IAM permissions.
 
-- **deny_public_access**: Prohibe buckets S3 públicos
-- **deny_open_security_groups**: Bloquea 0.0.0.0/0 en puertos sensibles
-- **deny_wildcard_iam**: Prohibe políticas IAM con wildcards
-- **require_encryption**: Requiere encryption en EBS, RDS, etc.
+## Kubernetes policy themes
 
-### Compliance
+The current repository includes examples covering workload security, security context, required labels, immutable image tags, and resource requests/limits.
 
-- **require_tags**: Tags obligatorios (Environment, Team, CostCenter, Owner)
-- **naming_convention**: Validación de nombres de recursos
-
-## Políticas Kubernetes
-
-### Workload Security
-
-- **no_privileged_containers**: Prohibe containers privilegiados
-- **no_host_network**: Prohibe uso de hostNetwork
-- **require_resource_limits**: Requiere limits de CPU y memoria
-- **no_latest_tag**: Prohibe uso de tag :latest
-- **require_probes**: Requiere liveness y readiness probes
-
-## Uso
-
-### Validar Terraform localmente
+## Local evaluation
 
 ```bash
-# Generar plan JSON
 terraform plan -out=tfplan
 terraform show -json tfplan > tfplan.json
-
-# Ejecutar políticas
-conftest test tfplan.json --policy policies/terraform/
+conftest test tfplan.json --policy platform-policies/terraform/
 ```
-
-### Validar manifiestos Kubernetes
 
 ```bash
-conftest test deployment.yaml --policy policies/kubernetes/
+conftest test deployment.yaml --policy platform-policies/kubernetes/
 ```
 
-## Ejecución en CI/CD
+## Enforcement model
 
-Las políticas se ejecutan automáticamente en:
-- Pre-commit (local)
-- PR (CI)
-- Merge (CD)
-- Runtime (Gatekeeper)
+Policy checks may run locally, in pull-request CI, or at Kubernetes admission time. A control is only enforced when the active pipeline/admission configuration actually blocks a violation. The nested workflow blueprints in this consolidated repository are not proof of active enforcement.
 
-## Matriz de Políticas
+## Exceptions
 
-| Stage | Tool | Políticas | Acción |
-|-------|------|-----------|--------|
-| Pre-commit | conftest | básicas | Warn |
-| PR | conftest, checkov | todas | Block |
-| Merge | terraform plan | re-validate | Block |
-| Runtime | Gatekeeper | admission | Block |
+Exceptions must be narrowly scoped, owned, justified, approved, and time-bounded. See [Policy Exceptions](../docs/governance/policy-exceptions.md) and the reference `policy-exceptions.yaml`.
 
-## Excepciones
+## Policy quality
 
-Las excepciones deben ser documentadas y aprobadas:
-
-```hcl
-# En el código Terraform
-#checkov:skip=CKV_AWS_XX:Justificación de la excepción
-```
+Blocking policies require positive and negative fixtures, actionable error messages, staged rollout for existing workloads, and explicit ownership.

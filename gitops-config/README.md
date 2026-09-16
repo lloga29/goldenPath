@@ -1,77 +1,56 @@
-# GitOps Config - Golden Path
+# GitOps Configuration - Golden Path
 
-Repositorio de configuración GitOps para despliegue de aplicaciones con Argo CD.
+Reference Kubernetes desired-state repository for Argo CD and Kustomize.
 
-## Estructura
+## Structure
 
-```
+```text
 gitops-config/
-├── argocd/                    # Configuración de Argo CD
-│   ├── projects/              # Proyectos (RBAC por equipo)
-│   └── applicationsets/       # ApplicationSets para auto-discovery
-├── clusters/                  # Configuración por cluster
-│   ├── dev/
-│   ├── staging/
-│   └── prod/
-├── platform/                  # Componentes de plataforma
-│   ├── base/                  # Configuración base (cert-manager, etc.)
-│   └── overlays/              # Overlays por entorno
-├── apps/                      # Aplicaciones por equipo
-│   └── team-{name}/
-│       └── {service}/
-│           ├── base/
-│           └── overlays/
-├── policies/                  # Políticas Gatekeeper
-│   ├── constraints/
-│   └── constraint-templates/
-├── scripts/                   # Scripts de operaciones
-└── docs/                      # Documentación
+├── argocd/
+│   ├── projects/             # AppProject authorization boundaries
+│   └── applicationsets/      # Application generation
+├── clusters/                 # Environment/cluster metadata
+├── platform/
+│   ├── base/                 # Shared platform add-ons
+│   └── overlays/             # Environment-specific platform configuration
+├── apps/                     # Team/service application desired state
+├── policies/                 # Gatekeeper examples
+├── scripts/                  # Promotion and rollback helpers
+└── docs/                     # GitOps operating procedures
 ```
 
-## Flujo de Trabajo
+## Current platform add-ons
 
-### 1. Crear nueva aplicación
+The baseline contains reference definitions for ingress-nginx, cert-manager, External Secrets, Prometheus stack, Loki, Tempo, and Gatekeeper.
+
+## Application model
+
+Applications use a Kustomize base with environment overlays. The `team-payments/payment-api` path is the current reference application.
+
+Render an overlay before review:
 
 ```bash
-# Copiar estructura base
-cp -r apps/team-payments/payment-api apps/team-{mi-equipo}/{mi-servicio}
-
-# Editar kustomization y manifiestos
-# Crear PR y esperar merge
+kustomize build apps/team-payments/payment-api/overlays/dev
 ```
 
-### 2. Promocionar versión
+## Promotion
+
+Promote an immutable image reference by changing desired state:
 
 ```bash
 ./scripts/promote.sh payments payment-api dev staging v1.2.3
-git commit -am "chore: promote payment-api to staging"
-git push
 ```
 
-### 3. Rollback
+Production implementations should prefer digests or registry-enforced immutable tags.
 
-```bash
-./scripts/rollback.sh payments payment-api prod
-# Seguir instrucciones interactivas
-```
+## Rollback
 
-## Entornos
+See [Rollback Procedure](docs/ROLLBACK_PROCEDURE.md). Git is the preferred recovery source; emergency runtime mutation must be reconciled back into Git.
 
-| Entorno | Auto-Sync | Prune | Aprobación |
-|---------|-----------|-------|------------|
-| dev     | ✅        | ✅    | No         |
-| staging | ✅        | ❌    | No         |
-| prod    | ❌        | ❌    | Sí         |
+## Environment behavior
 
-## Políticas
+Reference configuration demonstrates development, staging, and production differences. Actual auto-sync, pruning, approvals, and deployment authority must be validated in the real Argo CD and Git hosting configuration.
 
-Las siguientes políticas se aplican automáticamente:
+## Workflow note
 
-- **required-labels**: Labels obligatorios en Deployments
-- **container-limits**: Límites de CPU/memoria requeridos
-- **no-privileged**: Containers privilegiados prohibidos
-
-## Documentación
-
-- [Guía de Promoción](docs/PROMOTION_GUIDE.md)
-- [Procedimiento de Rollback](docs/ROLLBACK_PROCEDURE.md)
+The workflows under `gitops-config/.github/workflows/` are blueprints in this consolidated repository. They are not active repository-root GitHub Actions workflows here.

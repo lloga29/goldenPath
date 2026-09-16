@@ -1,53 +1,62 @@
 # Changelog - Golden Path Platform
 
-Todos los cambios notables en este proyecto serán documentados aquí.
+All notable changes to this project are documented here.
+
+## [Unreleased] - Documentation and Language Standardization
+
+### Changed
+- Standardized repository documentation on English.
+- Reframed the repository as a production-oriented Golden Path reference implementation.
+- Added architecture, security, operations, governance, standards, maturity, and roadmap documentation.
+- Added operational runbooks and Architecture Decision Records.
+- Corrected documentation that presented roadmap templates as already implemented.
+- Documented the consolidated-repository limitation for nested GitHub Actions workflows.
 
 ## [0.2.0] - 2024-01-20 - Hardening Release
 
 ### terraform-modules/
-- **fix:** Crear `docs/header.md` y `docs/footer.md` para terraform-docs
-- **fix:** Crear `.secrets.baseline` para detect-secrets
-- **feat:** Agregar `Makefile` con comandos estándar (fmt, validate, lint, test, docs)
-- **fix:** Mejorar `scripts/validate-all.sh` con verificación de dependencias
+- **fix:** Added `docs/header.md` and `docs/footer.md` for terraform-docs.
+- **fix:** Added `.secrets.baseline` for detect-secrets.
+- **feat:** Added a `Makefile` with standard commands (`fmt`, `validate`, `lint`, `test`, `docs`).
+- **fix:** Improved `scripts/validate-all.sh` with dependency checks.
 
 ### platform-stacks/
-- **fix:** Completar estructura de cliente ACME con todos los entornos
-- **feat:** Workflows de CI/CD con instalación de herramientas
-- **docs:** Agregar templates para nuevos clientes/entornos
+- **fix:** Completed the ACME reference client structure with environment examples.
+- **feat:** Added CI/CD workflow blueprints with tool installation.
+- **docs:** Added templates for new clients and environments.
 
 ### gitops-config/
-- **fix:** Crear `clusters/staging/cluster-config.yaml`
-- **fix:** Completar `apps/team-payments/payment-api/overlays/staging/`
-- **feat:** Crear `platform/base/*` (ingress-nginx, cert-manager, external-secrets, prometheus-stack, loki, tempo, gatekeeper)
-- **feat:** Crear `platform/overlays/{dev,staging,prod}/`
-- **docs:** Crear `PROMOTION_GUIDE.md` y `ROLLBACK_PROCEDURE.md`
-- **fix:** Mejorar `scripts/promote.sh` con validación de :latest y soporte para yq
-- **fix:** Mejorar `scripts/rollback.sh` con modo emergencia
+- **fix:** Added `clusters/staging/cluster-config.yaml`.
+- **fix:** Completed the `payment-api` staging overlay.
+- **feat:** Added platform base definitions for ingress-nginx, cert-manager, External Secrets, Prometheus stack, Loki, Tempo, and Gatekeeper.
+- **feat:** Added platform overlays for development, staging, and production.
+- **docs:** Added promotion and rollback guidance.
+- **fix:** Improved `scripts/promote.sh` with `:latest` validation and `yq` support.
+- **fix:** Improved `scripts/rollback.sh` with an emergency mode.
 
 ### service-templates/
-- **fix:** Completar template Go con handlers, middleware, config
-- **fix:** Corregir Dockerfile (usar distroless, eliminar HEALTHCHECK roto)
-- **feat:** Agregar version injection via ldflags
-- **feat:** Agregar `.pre-commit-config.yaml` al template
+- **fix:** Completed the Go template with handlers, middleware, and configuration.
+- **fix:** Updated the Dockerfile to use a distroless runtime image and removed the invalid runtime health check.
+- **feat:** Added version injection through Go linker flags.
+- **feat:** Added pre-commit configuration to the template.
 
 ### platform-policies/
-- **feat:** Agregar `no_latest_tag.rego` - prohibir :latest
-- **feat:** Agregar `security_context.rego` - runAsNonRoot, no privilegeEscalation
-- **feat:** Agregar `required_resources.rego` - requests/limits obligatorios
-- **feat:** Crear `policy-exceptions.yaml` para gestión de excepciones
+- **feat:** Added immutable-image, security-context, and resource-requirement policies.
+- **feat:** Added `policy-exceptions.yaml` as a reference exception inventory.
 
-### Documentación
-- **docs:** Crear `docs/QUICKSTART.md` - guía de 15 minutos
-- **docs:** Crear runbooks: drift-detected, policy-deny-pr, application-rollback
-- **docs:** Crear `AUDIT_CHECKLIST.md` con gaps identificados
+### Documentation
+- **docs:** Added a 15-minute quickstart and operational runbooks.
+- **docs:** Added an audit checklist to track remaining gaps.
 
 ## [0.1.0] - 2024-01-15 - Initial Release
 
 ### Added
-- Estructura inicial de todos los repositorios
-- Módulos Terraform básicos (VPC, IAM, Storage)
-- Configuración GitOps con ArgoCD
-- Templates de servicio (Go skeleton)
-- Políticas OPA/Conftest básicas
-- CI/CD pipelines
-- Documentación inicial
+- Initial consolidated repository structure.
+- Initial Terraform VPC, IAM, OIDC, and storage references.
+- Initial Argo CD/GitOps structure.
+- Go service template skeleton.
+- Initial OPA/Conftest policies.
+- CI/CD workflow blueprints.
+- Initial documentation.
+
+> Historical entries describe the intent and state of the project at the time. The current repository tree and current documentation are authoritative for capabilities that exist today.
