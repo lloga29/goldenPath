@@ -28,7 +28,7 @@ A higher evidence status must never be inferred from a lower one.
 - [x] Configure reviewable Dependabot pull requests for GitHub Actions and implemented Go-template Docker base images.
 - [x] Add repository ownership, pull-request guidance, and structured issue intake for public contribution workflows.
 - [x] Scan the complete reachable Git history for committed secrets in root CI with a pinned, checksum-verified detector that must first pass a runtime canary.
-- [ ] Validate Mermaid diagram rendering rather than only Markdown link structure.
+- [x] Validate Mermaid diagram rendering rather than only Markdown link structure.
 
 ### Assurance and evidence
 - [x] Define a versioned `goldenpath.evidence/v1` Evidence Manifest schema.

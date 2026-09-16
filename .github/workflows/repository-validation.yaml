@@ -126,6 +126,9 @@ jobs:
       - name: Validate local Markdown links
         run: python3 scripts/check-markdown-links.py
 
+      - name: Render Mermaid diagrams
+        run: python3 scripts/validate-mermaid-rendering.py
+
   terraform:
     needs: changes
     if: needs.changes.outputs.terraform == 'true'
