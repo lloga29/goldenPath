@@ -1,0 +1,16 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_iam_policy.wildcard",
+      "mode": "managed",
+      "type": "aws_iam_policy",
+      "name": "wildcard",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"*\",\"Resource\":\"arn:aws:s3:::example/*\"}]}"
+        }
+      }
+    }
+  ]
+}
