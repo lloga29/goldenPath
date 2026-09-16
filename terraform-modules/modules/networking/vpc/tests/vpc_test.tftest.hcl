@@ -1,6 +1,10 @@
 # Terraform-native tests for the AWS branch of the VPC reference module.
 # Run with: terraform test
 
+mock_provider "aws" {}
+mock_provider "azurerm" {}
+mock_provider "google" {}
+
 variables {
   name           = "test-vpc"
   cidr_block     = "10.0.0.0/16"
@@ -85,7 +89,7 @@ run "invalid_name_fails_validation" {
   command = plan
 
   variables {
-    name = "INVALID_NAME" # Uppercase and underscore are intentionally invalid.
+    name = "INVALID_NAME"
   }
 
   expect_failures = [var.name]
@@ -117,7 +121,6 @@ run "missing_team_tag_fails_validation" {
   variables {
     tags = {
       CostCenter = "cc-001"
-      # Team is intentionally missing.
     }
   }
 

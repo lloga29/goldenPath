@@ -10,15 +10,17 @@ command -v conftest >/dev/null 2>&1 || {
     exit 1
 }
 
-conftest test "$ROOT_DIR/tests/kubernetes/valid-deployment.yaml" --policy "$ROOT_DIR/kubernetes"
-conftest test "$ROOT_DIR/tests/terraform/valid-plan.json" --policy "$ROOT_DIR/terraform"
+CONFTST_ARGS=(--all-namespaces)
 
-if conftest test "$ROOT_DIR/tests/kubernetes/invalid-deployment.yaml" --policy "$ROOT_DIR/kubernetes"; then
+conftest test "$ROOT_DIR/tests/kubernetes/valid-deployment.yaml" --policy "$ROOT_DIR/kubernetes" "${CONFTST_ARGS[@]}"
+conftest test "$ROOT_DIR/tests/terraform/valid-plan.json" --policy "$ROOT_DIR/terraform" "${CONFTST_ARGS[@]}"
+
+if conftest test "$ROOT_DIR/tests/kubernetes/invalid-deployment.yaml" --policy "$ROOT_DIR/kubernetes" "${CONFTST_ARGS[@]}"; then
     echo "ERROR: invalid Kubernetes fixture unexpectedly passed policy evaluation." >&2
     exit 1
 fi
 
-if conftest test "$ROOT_DIR/tests/terraform/invalid-plan.json" --policy "$ROOT_DIR/terraform"; then
+if conftest test "$ROOT_DIR/tests/terraform/invalid-plan.json" --policy "$ROOT_DIR/terraform" "${CONFTST_ARGS[@]}"; then
     echo "ERROR: invalid Terraform fixture unexpectedly passed policy evaluation." >&2
     exit 1
 fi

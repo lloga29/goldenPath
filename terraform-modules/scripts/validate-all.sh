@@ -55,7 +55,7 @@ validate_module() {
     echo -e "\n${YELLOW}Validating: $dir${NC}"
 
     echo "  → Checking formatting..."
-    if ! terraform -chdir="$dir" fmt -check -recursive > /dev/null 2>&1; then
+    if ! terraform -chdir="$dir" fmt -check -recursive; then
         echo -e "  ${RED}✗ Formatting check failed${NC}"
         ((ERRORS+=1))
     else
@@ -63,14 +63,14 @@ validate_module() {
     fi
 
     echo "  → Initializing without a backend..."
-    if ! terraform -chdir="$dir" init -backend=false -input=false > /dev/null 2>&1; then
+    if ! terraform -chdir="$dir" init -backend=false -input=false -no-color; then
         echo -e "  ${RED}✗ Initialization failed${NC}"
         ((ERRORS+=1))
         return
     fi
 
     echo "  → Validating configuration..."
-    if ! terraform -chdir="$dir" validate > /dev/null 2>&1; then
+    if ! terraform -chdir="$dir" validate -no-color; then
         echo -e "  ${RED}✗ Validation failed${NC}"
         ((ERRORS+=1))
     else
@@ -79,7 +79,7 @@ validate_module() {
 
     if [ -d "$dir/tests" ]; then
         echo "  → Running Terraform tests..."
-        if ! terraform -chdir="$dir" test > /dev/null 2>&1; then
+        if ! terraform -chdir="$dir" test -no-color; then
             echo -e "  ${RED}✗ Terraform tests failed${NC}"
             ((ERRORS+=1))
         else

@@ -179,27 +179,8 @@ resource "azurerm_subnet" "public" {
   address_prefixes     = [var.public_subnet_cidrs[count.index]]
 }
 
-# Azure Network Watcher flow logs.
-resource "azurerm_network_watcher_flow_log" "this" {
-  count = var.cloud_provider == "azure" && var.enable_flow_logs ? 1 : 0
-
-  name                 = "${var.name}-flow-logs"
-  network_watcher_name = "NetworkWatcher_${var.location}"
-  resource_group_name  = "NetworkWatcherRG"
-
-  network_security_group_id = azurerm_network_security_group.default[0].id
-  storage_account_id        = "" # Must be provided by a production-ready Azure implementation.
-
-  enabled = true
-
-  retention_policy {
-    enabled = true
-    days    = 30
-  }
-
-  tags = local.common_tags
-}
-
+# A default NSG is created as a reference object. Association and provider-native
+# flow logging remain explicit responsibilities of the consuming Azure stack.
 resource "azurerm_network_security_group" "default" {
   count = var.cloud_provider == "azure" ? 1 : 0
 

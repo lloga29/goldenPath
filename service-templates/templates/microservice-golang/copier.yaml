@@ -42,6 +42,3 @@ go_version:
     - "1.25"
     - "1.26"
   help: "Go language version"
-
-_tasks:
-  - "go mod tidy"
