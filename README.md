@@ -1,13 +1,13 @@
-<p align="center"><img src="docs/assets/branding/goldenpath-logo.png" alt="GoldenPath Logo"></p>
+<p align="center"><img src="docs/assets/branding/goldenpath-logo.png" alt="GoldenPath Logo" width="760"></p>
 
-<h3 align="center">The paved road from source code to production.</h3>
+<h3 align="center">The paved road from source code to evidence-backed production.</h3>
 
 <p align="center">
-  <strong>A production-oriented Platform Engineering reference architecture for secure, self-service, GitOps-driven software delivery.</strong>
+  <strong>An evidence-driven, risk-adaptive Golden Path for secure self-service delivery on Kubernetes.</strong>
 </p>
 
 <p align="center">
-  Platform Engineering · Kubernetes · GitOps · Infrastructure as Code · Policy as Code · Observability
+  Platform Engineering · Kubernetes · GitOps · Terraform · Policy as Code · Software Supply Chain
 </p>
 
 <p align="center">
@@ -18,9 +18,36 @@
 <p align="center">
   <a href="docs/QUICKSTART.md">Quickstart</a> ·
   <a href="docs/architecture/overview.md">Architecture</a> ·
+  <a href="docs/assurance/">Assurance</a> ·
   <a href="SECURITY.md">Security</a> ·
+  <a href="docs/roadmap.md">Roadmap</a> ·
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
+
+<p align="center">
+  <img src="docs/assets/branding/goldenpath-architecture.svg" alt="GoldenPath delivery architecture from developer experience through evidence-backed GitOps production" width="100%">
+</p>
+
+## Why GoldenPath is different
+
+| Risk-adaptive assurance | Evidence-bound controls | Supply-chain trust | Governed GitOps |
+|---|---|---|---|
+| R0-R4 assurance changes required controls according to deterministic risk inputs. | Architecture, policy, and desired-state evidence is bound to authoritative inputs instead of self-declared status. | The implemented Go path validates SBOM attestations, SLSA provenance, immutable digests, and keyless signatures. | Promotion is explicit, reviewable, and separated from runtime or production claims. |
+
+GoldenPath deliberately distinguishes **repository/reference evidence**, **runtime evidence**, and **production validation**. A green manifest, workflow, or rendered chart is never presented as proof that a real cloud account, cluster, registry, DNS zone, or secret backend is operational.
+
+## GoldenPath in 60 seconds
+
+Generate the implemented Go paved-road template and exercise its local validation path:
+
+```bash
+git clone https://github.com/lloga29/goldenPath.git
+cd goldenPath
+copier copy ./service-templates/templates/microservice-golang ./my-service
+cd my-service && go test ./... && go vet ./...
+```
+
+Then explore the [15-minute quickstart](docs/QUICKSTART.md) to continue through infrastructure validation, policy checks, GitOps registration, immutable promotion, and runtime verification boundaries.
 
 GoldenPath is an evidence-driven **Golden Path reference implementation** for internal developer platforms. It connects developer experience, reusable service templates, CI and policy gates, immutable artifacts, GitOps promotion, Kubernetes runtime, infrastructure as code, observability, governance, and operational practices into one explicit delivery path.
 
