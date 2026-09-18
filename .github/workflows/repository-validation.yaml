@@ -116,7 +116,7 @@ jobs:
           fi
 
       - name: Scan complete reachable Git history for secrets
-        run: gitleaks git --no-banner --redact --log-opts="--all" .
+        run: gitleaks git --verbose --no-banner --redact --log-opts="--all" .
 
   documentation:
     needs: changes
@@ -195,6 +195,9 @@ jobs:
             echo "Building $dir"
             kustomize build "$dir" >/dev/null
           done < <(find gitops-config/apps gitops-config/platform gitops-config/policies -name kustomization.yaml -exec dirname {} \; | sort -u)
+
+      - name: Validate digest-bound promotion contract
+        run: ./gitops-config/scripts/test-promotion-contract.sh
 
       - name: Install pinned Helm
         shell: bash

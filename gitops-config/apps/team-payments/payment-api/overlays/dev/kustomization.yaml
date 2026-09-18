@@ -13,7 +13,7 @@ labels:
 
 images:
   - name: ghcr.io/org/payment-api
-    newTag: "v1.0.0"
+    digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
 patches:
   - path: replica-patch.yaml

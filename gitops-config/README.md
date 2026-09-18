@@ -30,7 +30,7 @@ gitops-config/
 
 `argocd/applicationsets/platform-apps.yaml` combines an explicit upstream chart source with this repository as a `$values` source. Component/chart versions are pinned in the ApplicationSet; values are loaded from `platform/values/<component>/common.yaml` plus an optional environment override.
 
-The current support and upgrade status is recorded in the [platform dependency baseline](../docs/platform/dependency-baseline.md). Broad dependency refresh work remains tracked in issue #25 so unrelated breaking chart migrations are reviewed and validated independently.
+The current support and upgrade status is recorded in the [platform dependency baseline](../docs/platform/dependency-baseline.md). Broad dependency refresh work remains tracked independently so breaking chart migrations are reviewed and validated explicitly.
 
 Envoy Gateway replaces retired ingress-nginx as the reference Gateway API controller. The controller is installed from the upstream OCI Helm chart and `platform/resources/gateway-class.yaml` declares the platform-owned `GatewayClass`.
 
@@ -50,23 +50,31 @@ Render an overlay before review:
 kustomize build gitops-config/apps/team-payments/payment-api/overlays/dev
 ```
 
+Reference application overlays use the Kustomize `digest` field rather than `newTag`, so rendered workloads are pinned to an exact OCI `sha256` identity.
+
 ## Secrets integration
 
 The platform installs External Secrets Operator but does not declare a fake production secret backend. `examples/external-secrets/cluster-secret-store-vault.example.yaml` is deliberately outside reconciled paths and uses an `.invalid` endpoint. Adopters must provide an approved backend, authentication model, and real endpoint in environment-owned desired state.
 
 ## Promotion
 
-Promotion follows build-once/promote-many semantics. `promote.sh` accepts only `dev -> staging` or `staging -> prod`, verifies that the requested immutable tag is already present in the source environment, requires a clean worktree, and refuses to commit unless Git is configured as:
+Promotion follows build-once/promote-many semantics. `promote.sh` accepts only `dev -> staging` or `staging -> prod` and only an exact `sha256:<64-hex>` image digest. It requires that digest to match the source overlay, verifies the keyless Cosign image signature and signed SLSA provenance attestation for the exact digest, and only then creates a branch that copies the digest into the target overlay.
+
+The standard signer identity is inferred from `ghcr.io/<owner>/<repository>` and is bound to that repository's `.github/workflows/ci.yaml@refs/heads/main` GitHub Actions identity. Non-standard layouts must provide `TRUSTED_WORKFLOW_IDENTITY` explicitly.
+
+Git commits are refused unless Git is configured as:
 
 ```text
 Juan Gallo <lloga29@gmail.com>
 ```
 
 ```bash
-./gitops-config/scripts/promote.sh payments payment-api dev staging v1.2.3
+./gitops-config/scripts/promote.sh \
+  payments payment-api dev staging \
+  sha256:<64-hex-digest>
 ```
 
-Production implementations should prefer registry-enforced immutable tags or digests.
+Tags are not accepted as promotion authority. See [Promotion Guide](docs/PROMOTION_GUIDE.md) for trust and evidence boundaries.
 
 ## Rollback
 
@@ -76,11 +84,13 @@ For the ingress-nginx retirement path, see [ingress-nginx to Gateway API Migrati
 
 ## Validation
 
-Root CI validates Kustomize rendering, structured files, policy fixtures, the Argo CD platform contract, and pinned Helm renders. Nested workflows remain reusable blueprints rather than the authoritative CI for this consolidated repository.
+Root CI validates Kustomize rendering, the executable digest-bound promotion regression harness, structured files, policy fixtures, the Argo CD platform contract, and pinned Helm renders. The promotion harness uses isolated fake registry-verification executables, so it proves repository behavior without claiming a live GHCR/Sigstore/GitOps runtime.
+
+Nested workflows remain reusable blueprints rather than the authoritative CI for this consolidated repository.
 
 ## Placeholder configuration
 
-Cluster URLs and example team repositories under `org/*` are reference placeholders. Adopters must replace them with real repository identities, cluster destinations, and GitHub teams before installation. They are kept explicit so placeholder state cannot be mistaken for a production deployment.
+Cluster URLs, example team repositories under `org/*`, and reference image digests are placeholders. Adopters must replace them with real repository identities, signed release digests, cluster destinations, and GitHub teams before installation. They are kept explicit so placeholder state cannot be mistaken for a production deployment.
 
 ## Workflow note
 

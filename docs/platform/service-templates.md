@@ -28,11 +28,12 @@ The Go template currently provides:
 - Trivy high/critical vulnerability blocking;
 - non-root distroless container runtime;
 - PR container builds without registry publication;
-- full-Git-SHA GHCR publication from `main` only;
+- full-Git-SHA GHCR publication from `main` only, with the build output digest treated as the promotion identity;
 - BuildKit SBOM and max-level provenance attestations on published images;
 - post-push retrieval and structural validation of the registry-attached SPDX SBOM by the exact immutable image digest;
 - post-push retrieval and structural validation of BuildKit SLSA provenance by the same immutable image digest;
-- keyless Cosign image signing through GitHub OIDC followed by identity-bound verification of the exact signed digest;
+- keyless Cosign image signing plus a signed `slsaprovenance` attestation built from the validated provenance predicate;
+- identity-bound verification of both the image signature and signed provenance attestation for the exact digest;
 - ownership metadata and a runbook placeholder;
 - explicit separation between application source and GitOps desired state.
 
@@ -46,17 +47,19 @@ The repository includes:
 ./service-templates/scripts/render-go-template-smoke-test.sh
 ```
 
-The script renders representative output, then runs Go formatting validation, vet, tests, build, container construction, immutable-base checks, and static validation of the generated release-evidence contract for SBOM, provenance, signing, and signature verification. Root CI executes this smoke test for template-affecting changes.
+The script renders representative output, then runs Go formatting validation, vet, tests, build, container construction, immutable-base checks, and static validation of the generated release-evidence contract for SBOM, provenance, image signing, signed provenance, and identity-bound verification. Root CI executes this smoke test for template-affecting changes.
 
 The root smoke test proves repository/reference behavior only. It does not push a generated service image to GHCR, request a live GitHub OIDC certificate, or retrieve registry attestations/signatures. Those post-push checks become runtime evidence only when an actual generated service delivery repository executes the publish path successfully.
 
 ## Artifact lifecycle
 
-The application pipeline builds once and identifies an image by the full Git SHA. The GitOps repository promotes that same immutable image through environments. `:latest` publication is not part of the paved road.
+The application pipeline builds once and identifies the release artifact by the build output OCI digest. A full Git SHA tag remains useful for discovery, but GitOps promotion carries the digest and never resolves a tag again.
 
-On a `main` publication, BuildKit attaches an SBOM and max-level provenance to the pushed image. The workflow addresses the artifact as `IMAGE_NAME@<build-output-digest>`, extracts `.SBOM.SPDX` and `.Provenance.SLSA` with `docker buildx imagetools inspect`, and fails closed unless both payloads have the expected structure. It then signs that exact digest with keyless Cosign and immediately verifies the signature against the generated workflow identity and GitHub Actions OIDC issuer. SBOM, provenance, signing, and post-sign verification therefore follow the immutable registry artifact rather than a mutable tag.
+On a `main` publication, BuildKit attaches an SBOM and max-level provenance to the pushed image. The workflow addresses the artifact as `IMAGE_NAME@<build-output-digest>`, extracts `.SBOM.SPDX` and `.Provenance.SLSA` with `docker buildx imagetools inspect`, and fails closed unless both payloads have the expected structure. It then signs that exact digest, signs the validated SLSA provenance predicate as a Cosign attestation, and verifies both trust objects against the generated workflow identity and GitHub Actions OIDC issuer.
 
-This release-time verification is not deployment-time policy enforcement. A production delivery path must independently verify the trusted signature/provenance before admitting or promoting an artifact when that higher assurance level is required.
+The matching GoldenPath GitOps promotion helper requires the same source-environment digest and verifies the image signature plus signed SLSA provenance before copying that digest to staging or production desired state. Tags are not accepted as promotion authority.
+
+This is still a repository/reference contract until a generated service, real registry, real GitOps repository, and target runtime exercise the complete path successfully. Production health, approval, reconciliation, and rollback evidence remain separate runtime concerns.
 
 External CI Actions remain version-tag pinned in the generated template; stronger immutable dependency pinning is a separate supply-chain concern from the release-evidence contract.
 

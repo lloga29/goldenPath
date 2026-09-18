@@ -69,15 +69,28 @@ CI never publishes `:latest`. A push to `main` publishes:
 ghcr.io/{{ github_owner }}/{{ project_name }}:<full-git-sha>
 ```
 
-The publish job requests BuildKit SBOM and max-level provenance attestations. It uses the exact build output digest to retrieve and structurally validate both the registry-attached SPDX SBOM and SLSA provenance. It then signs that immutable digest with keyless Cosign and immediately verifies the signature against this repository's `ci.yaml` workflow identity and the GitHub Actions OIDC issuer.
+The tag is a discovery convenience; the build output `sha256` digest is the release identity that must be promoted.
+
+The publish job requests BuildKit SBOM and max-level provenance attestations. It uses the exact build output digest to retrieve and structurally validate both the registry-attached SPDX SBOM and SLSA provenance. It then signs the immutable image digest and creates a keyless Cosign `slsaprovenance` attestation from the validated provenance predicate. Both the image signature and signed provenance attestation are immediately verified against this repository's `ci.yaml` workflow identity and the GitHub Actions OIDC issuer.
 
 ## CI behavior
 
 Pull requests run formatting, vet, lint, race-enabled tests, filesystem/dependency vulnerability scanning, and a container build without publishing.
 
-`main` runs the same quality/security gates, then authenticates to GHCR with `GITHUB_TOKEN`, publishes a full-SHA image, verifies the SBOM and provenance attached to the exact published digest, signs that digest, and verifies the resulting keyless signature. A missing or malformed attestation, unexpected signer identity, or failed signature verification fails the publish job.
+`main` runs the same quality/security gates, then authenticates to GHCR with `GITHUB_TOKEN`, publishes a full-SHA image, validates the SBOM and BuildKit provenance attached to the exact published digest, signs the digest, signs the validated provenance predicate, and verifies both keyless trust objects. Missing or malformed evidence, an unexpected signer identity, or failed verification fails the publish job.
 
-These are release-time controls. Production deployment should independently verify the trusted artifact identity/signature/provenance when the target environment requires deployment-time admission evidence.
+## GitOps promotion contract
+
+GoldenPath GitOps promotion must carry the exact image digest from dev to staging to production. A tag must not be resolved again during promotion.
+
+For the standard generated-service path, the GitOps helper verifies:
+
+- the image signature for `ghcr.io/{{ github_owner }}/{{ project_name }}@sha256:<digest>`;
+- the signed SLSA provenance attestation for that same digest;
+- signer identity `https://github.com/{{ github_owner }}/{{ project_name }}/.github/workflows/ci.yaml@refs/heads/main`;
+- OIDC issuer `https://token.actions.githubusercontent.com`.
+
+These are release/promotion trust controls. A real production environment must still exercise the generated publishing path and GitOps promotion against the actual registry and target runtime before claiming runtime or production validation.
 
 ## Observability
 
@@ -91,7 +104,7 @@ Application deployment state belongs in the Golden Path GitOps repository, not i
 gitops-config/apps/team-{{ team }}/{{ project_name }}/
 ```
 
-Reference the immutable image produced by this repository and promote the same artifact through dev -> staging -> prod. Do not rebuild per environment.
+Reference the immutable image digest produced by this repository and promote that exact digest through dev -> staging -> prod. Do not rebuild per environment and do not use a tag as promotion authority.
 
 ## Operations
 
