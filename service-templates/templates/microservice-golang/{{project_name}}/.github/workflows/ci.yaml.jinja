@@ -244,16 +244,24 @@ jobs:
       - name: Install Cosign
         uses: sigstore/cosign-installer@v4.1.2
 
-      - name: Sign and verify published image with GitHub OIDC
+      - name: Sign and verify published image and provenance with GitHub OIDC
         env:
           DIGEST: {% raw %}${{ steps.build.outputs.digest }}{% endraw %}
+          PROVENANCE_PATH: {% raw %}${{ runner.temp }}{% endraw %}/provenance.slsa.json
         run: |
           IMAGE_REF="${IMAGE_NAME}@${DIGEST}"
           CERTIFICATE_IDENTITY="https://github.com/{{ github_owner }}/{{ project_name }}/.github/workflows/ci.yaml@refs/heads/main"
+          OIDC_ISSUER="https://token.actions.githubusercontent.com"
 
           cosign sign --yes "$IMAGE_REF"
+          cosign attest --yes --predicate "$PROVENANCE_PATH" --type slsaprovenance "$IMAGE_REF"
+
           cosign verify "$IMAGE_REF" \
             --certificate-identity="$CERTIFICATE_IDENTITY" \
-            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" >/dev/null
+            --certificate-oidc-issuer="$OIDC_ISSUER" >/dev/null
+          cosign verify-attestation "$IMAGE_REF" \
+            --type slsaprovenance \
+            --certificate-identity="$CERTIFICATE_IDENTITY" \
+            --certificate-oidc-issuer="$OIDC_ISSUER" >/dev/null
 
-          echo "Verified keyless Cosign signature for ${IMAGE_REF} from ${CERTIFICATE_IDENTITY}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Verified keyless image signature and signed SLSA provenance for ${IMAGE_REF} from ${CERTIFICATE_IDENTITY}" >> "$GITHUB_STEP_SUMMARY"

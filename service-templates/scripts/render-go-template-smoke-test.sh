@@ -85,9 +85,12 @@ for required_ci_contract in \
     'https://mobyproject.org/buildkit@v1' \
     'published provenance contains no build materials' \
     'cosign sign --yes "$IMAGE_REF"' \
+    'cosign attest --yes --predicate "$PROVENANCE_PATH" --type slsaprovenance "$IMAGE_REF"' \
     'cosign verify "$IMAGE_REF"' \
+    'cosign verify-attestation "$IMAGE_REF"' \
+    '--type slsaprovenance' \
     'https://github.com/example/golden-smoke/.github/workflows/ci.yaml@refs/heads/main' \
-    '--certificate-oidc-issuer="https://token.actions.githubusercontent.com"'; do
+    '--certificate-oidc-issuer="$OIDC_ISSUER"'; do
     if ! grep -F -- "$required_ci_contract" "$CI_WORKFLOW" >/dev/null; then
         echo "ERROR: generated CI is missing required release-evidence contract: $required_ci_contract" >&2
         exit 1

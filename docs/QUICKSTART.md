@@ -13,6 +13,8 @@ kubectl
 kustomize
 conftest
 copier
+cosign
+yq v4
 Go (for the Go service template)
 ```
 
@@ -92,22 +94,28 @@ gitops-config/apps/team-payments/payment-api/
     └── prod/
 ```
 
-Create a team/service path, update the Kustomize resources and image reference, and validate the rendered output:
+Create a team/service path, set the Kustomize image `digest` to the exact signed OCI `sha256` release identity, and validate the rendered output:
 
 ```bash
 kustomize build gitops-config/apps/<team>/<service>/overlays/dev
 ```
 
-## 6. Promote an immutable version
+Do not use `newTag` as the authoritative promotion identity.
+
+## 6. Promote a verified immutable digest
 
 The repository contains a promotion helper:
 
 ```bash
 cd gitops-config
-./scripts/promote.sh <team> <service> dev staging <immutable-tag>
+./scripts/promote.sh \
+  <team> <service> dev staging \
+  sha256:<64-hex-digest>
 ```
 
-Do not promote `:latest`. Promotion should change desired state in Git; Argo CD then reconciles that state to the target cluster.
+The digest must already match the source environment. Before creating a promotion branch, the helper verifies the keyless Cosign image signature and signed SLSA provenance attestation for that exact digest against the trusted GitHub Actions workflow identity. The same digest is then written to the target desired state; no tag is resolved and no artifact is rebuilt.
+
+For non-standard image/workflow layouts, set `TRUSTED_WORKFLOW_IDENTITY` explicitly before promotion.
 
 ## 7. Observe deployment state
 
@@ -119,6 +127,8 @@ kubectl get deploy,pods,svc -n <namespace>
 kubectl rollout status deployment/<service> -n <namespace>
 ```
 
+Confirm the running container image ID matches the promoted digest rather than only checking a tag.
+
 ## 8. Production-readiness checklist
 
 Before using the paved road for production, confirm at minimum:
@@ -126,7 +136,9 @@ Before using the paved road for production, confirm at minimum:
 - cloud workload identity is configured with least privilege;
 - remote Terraform state is encrypted, locked, backed up, and access controlled;
 - real clusters and Argo CD destinations are registered securely;
-- registry immutability and retention are configured;
+- registry retention and access controls are configured;
+- generated releases successfully publish signatures and signed provenance in the real registry;
+- the real GitOps promotion path successfully verifies those artifacts by digest;
 - secret management is integrated;
 - TLS and DNS ownership are operationalized;
 - policy enforcement mode has been tested;
