@@ -2,9 +2,13 @@
 
 All notable repository changes are documented here. This changelog describes repository evolution and must not be interpreted as runtime or production validation.
 
-The public repository currently has no tagged GitHub release baseline. Earlier pre-publication iterations are therefore described as an untagged baseline instead of being presented as dated releases that cannot be verified from repository tags.
+Tagged releases below describe repository/reference baselines only. Earlier pre-publication iterations remain documented as an untagged baseline because no historical release tags exist for them.
 
-## [Unreleased] - Public Reference Baseline
+## [Unreleased]
+
+No changes yet.
+
+## [0.1.0] - 2026-09-18 - Public Reference Baseline
 
 ### Added
 
@@ -21,6 +25,9 @@ The public repository currently has no tagged GitHub release baseline. Earlier p
 - ADRs, runbooks, architecture documentation, security guidance, maturity model, public-release runbook, and an evidence-aware audit checklist.
 - A working Go paved-road service template with non-interactive rendering, format/vet/test/build validation, immutable base-image digests, and a Distroless non-root runtime.
 - Reviewable Dependabot configuration for active GitHub Actions and implemented Go-template container dependencies.
+- Public landing improvements with a dedicated GoldenPath delivery architecture visual and a clearer evidence-first README.
+- A zero-cloud public assurance demo (`./scripts/demo.sh`) that derives an R0-R4 plan, validates matching evidence, and proves fail-closed rejection of incomplete required-gate evidence.
+- Digest-bound GitOps promotion that verifies an exact immutable image identity, keyless signature, and signed SLSA provenance before mutating desired state.
 
 ### Changed
 
@@ -37,6 +44,8 @@ The public repository currently has no tagged GitHub release baseline. Earlier p
 - Kept provider encryption differences explicit instead of claiming false AWS/Azure/GCP configuration symmetry.
 - Pinned active external GitHub Actions to immutable commit SHAs and replaced mutable hosted-runner aliases with the explicit `ubuntu-24.04` family.
 - Added checksum verification for downloaded CI executables and hash-locked active Python CI dependencies.
+- Bound the implemented Go release path to immutable image digests and identity-constrained signature/provenance verification.
+- Reworked the public quick-entry path around evidence-backed delivery while preserving explicit repository, runtime, and production evidence boundaries.
 
 ### Security
 
