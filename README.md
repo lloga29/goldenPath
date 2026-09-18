@@ -16,6 +16,7 @@
 </p>
 
 <p align="center">
+  <a href="docs/DEMO.md">Demo</a> ·
   <a href="docs/QUICKSTART.md">Quickstart</a> ·
   <a href="docs/architecture/overview.md">Architecture</a> ·
   <a href="docs/assurance/">Assurance</a> ·
@@ -38,16 +39,19 @@ GoldenPath deliberately distinguishes **repository/reference evidence**, **runti
 
 ## GoldenPath in 60 seconds
 
-Generate the implemented Go paved-road template and exercise its local validation path:
+Run the zero-cloud assurance demo. It requires only Bash and Python 3:
 
 ```bash
 git clone https://github.com/lloga29/goldenPath.git
 cd goldenPath
-copier copy ./service-templates/templates/microservice-golang ./my-service
-cd my-service && go test ./... && go vet ./...
+./scripts/demo.sh
 ```
 
-Then explore the [15-minute quickstart](docs/QUICKSTART.md) to continue through infrastructure validation, policy checks, GitOps registration, immutable promotion, and runtime verification boundaries.
+The demo derives an R0-R4 assurance plan, validates evidence bound to that plan, and then proves fail-closed behavior by showing that incomplete required-gate evidence is rejected.
+
+This is **repository/reference evidence only**. It does not claim that a registry, cloud account, Kubernetes cluster, GitOps controller, or production workload was exercised.
+
+See the [demo walkthrough](docs/DEMO.md) for what each step proves, or continue with the [15-minute quickstart](docs/QUICKSTART.md) for the broader paved road.
 
 GoldenPath is an evidence-driven **Golden Path reference implementation** for internal developer platforms. It connects developer experience, reusable service templates, CI and policy gates, immutable artifacts, GitOps promotion, Kubernetes runtime, infrastructure as code, observability, governance, and operational practices into one explicit delivery path.
 
