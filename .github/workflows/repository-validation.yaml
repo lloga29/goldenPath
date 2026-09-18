@@ -64,6 +64,9 @@ jobs:
       - name: Run zero-cloud public demo
         run: ./scripts/demo.sh
 
+      - name: Build and validate static Pages site
+        run: ./scripts/build-pages-site.sh
+
       - name: Validate CI domain routing semantics
         run: python3 scripts/test-ci-domain-routing.py
 
