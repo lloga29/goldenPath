@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GoldenPath — Evidence-backed platform engineering</title>
+  <meta name="description" content="GoldenPath is an evidence-driven, risk-adaptive reference implementation for secure self-service software delivery on Kubernetes.">
+  <meta name="theme-color" content="#0a1020">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="#top" aria-label="GoldenPath home">
+        <img src="assets/goldenpath-logo.png" alt="GoldenPath">
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#architecture">Architecture</a>
+        <a href="#demo">Demo</a>
+        <a href="#evidence">Evidence</a>
+        <a href="#explore">Explore</a>
+      </nav>
+      <a class="button button-small" href="https://github.com/lloga29/goldenPath">View on GitHub</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="container hero-grid">
+        <div>
+          <div class="eyebrow-row">
+            <span class="eyebrow">GoldenPath</span>
+            <a class="release-chip" href="https://github.com/lloga29/goldenPath/releases/tag/v0.1.0">v0.1.0 public baseline</a>
+          </div>
+          <h1>From source code to <span>evidence-backed production.</span></h1>
+          <p class="lead">An evidence-driven, risk-adaptive Golden Path for secure self-service delivery on Kubernetes—without hiding the controls, decisions, or proof behind the paved road.</p>
+          <div class="actions">
+            <a class="button" href="#demo">Run the 60-second demo</a>
+            <a class="button button-secondary" href="https://github.com/lloga29/goldenPath/blob/main/docs/QUICKSTART.md">Open the quickstart</a>
+          </div>
+          <div class="signal-row" aria-label="Core technologies">
+            <span>Kubernetes</span>
+            <span>GitOps</span>
+            <span>Terraform</span>
+            <span>OPA</span>
+            <span>SLSA</span>
+            <span>Cosign</span>
+          </div>
+        </div>
+
+        <aside class="hero-card" aria-label="Assurance summary">
+          <p class="kicker">Assurance model</p>
+          <div class="metric">
+            <strong>R0 → R4</strong>
+            <span>Deterministic risk-adaptive controls</span>
+          </div>
+          <div class="metric">
+            <strong>Fail closed</strong>
+            <span>Missing required evidence blocks readiness</span>
+          </div>
+          <div class="metric">
+            <strong>Digest bound</strong>
+            <span>Immutable artifacts and desired state</span>
+          </div>
+          <div class="metric">
+            <strong>Proof scoped</strong>
+            <span>Repository, runtime, and production evidence stay distinct</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section section-tight">
+      <div class="container">
+        <div class="section-heading">
+          <p class="kicker">Why GoldenPath is different</p>
+          <h2>The paved road is only trusted when its evidence is trustworthy.</h2>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <span class="feature-index">01</span>
+            <h3>Risk-adaptive assurance</h3>
+            <p>R0-R4 controls change according to deterministic Architecture as Code and change inputs rather than a one-size-fits-all pipeline.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-index">02</span>
+            <h3>Evidence-bound controls</h3>
+            <p>Policy, architecture, source, desired state, and assurance evidence are bound to authoritative inputs instead of self-declared status.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-index">03</span>
+            <h3>Supply-chain trust</h3>
+            <p>The Go reference path uses immutable digests, SBOM attestations, SLSA provenance, and identity-bound keyless signatures.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-index">04</span>
+            <h3>Governed GitOps</h3>
+            <p>Promotion is reviewable, digest-only, and verifies trusted release evidence before mutating desired state.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section architecture" id="architecture">
+      <div class="container">
+        <div class="section-heading split-heading">
+          <div>
+            <p class="kicker">Reference architecture</p>
+            <h2>A visible delivery path from developer intent to operational proof.</h2>
+          </div>
+          <p>GoldenPath connects developer self-service, policy gates, trusted artifacts, GitOps desired state, and Kubernetes runtime while preserving explicit evidence boundaries.</p>
+        </div>
+        <div class="architecture-frame">
+          <img src="assets/goldenpath-architecture.svg" alt="GoldenPath delivery architecture from developer self-service through evidence-backed GitOps production">
+        </div>
+      </div>
+    </section>
+
+    <section class="section demo-section" id="demo">
+      <div class="container demo-grid">
+        <div>
+          <p class="kicker">GoldenPath in 60 seconds</p>
+          <h2>See the assurance model fail closed without a cloud account.</h2>
+          <p>The zero-cloud demo uses the real repository contracts with only Bash and Python 3. It derives a risk plan, accepts matching evidence, and rejects incomplete required-gate evidence.</p>
+          <ul class="check-list">
+            <li>No cloud credentials</li>
+            <li>No Docker daemon</li>
+            <li>No Kubernetes cluster</li>
+            <li>No third-party CLI</li>
+          </ul>
+        </div>
+        <div class="terminal" aria-label="Demo command">
+          <div class="terminal-bar"><span></span><span></span><span></span></div>
+          <pre><code>git clone https://github.com/lloga29/goldenPath.git
+cd goldenPath
+./scripts/demo.sh</code></pre>
+          <div class="terminal-result">
+            <span>PASS</span>
+            <p>Risk-adaptive controls derived. Matching evidence accepted. Incomplete evidence rejected.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section evidence-section" id="evidence">
+      <div class="container">
+        <div class="evidence-panel">
+          <div>
+            <p class="kicker">Evidence boundary</p>
+            <h2>Green is not the same as proven in production.</h2>
+          </div>
+          <div class="evidence-flow" aria-label="Evidence levels">
+            <div><strong>Repository / reference</strong><span>Code, contracts, fixtures, renders, validation</span></div>
+            <span class="arrow" aria-hidden="true">→</span>
+            <div><strong>Runtime</strong><span>Real registry, cluster, reconciliation, workload proof</span></div>
+            <span class="arrow" aria-hidden="true">→</span>
+            <div><strong>Production validation</strong><span>Operational approvals, SLOs, recovery, live controls</span></div>
+          </div>
+          <p class="boundary-note">GoldenPath deliberately refuses to present repository validation as proof that a real cloud account, registry, DNS zone, secret backend, Kubernetes cluster, or production workload is operational.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="explore">
+      <div class="container">
+        <div class="section-heading">
+          <p class="kicker">Explore the implementation</p>
+          <h2>Start with the path that matches what you want to verify.</h2>
+        </div>
+        <div class="link-grid">
+          <a class="link-card" href="https://github.com/lloga29/goldenPath/blob/main/docs/QUICKSTART.md">
+            <span>Quickstart</span>
+            <strong>Exercise the broader paved road</strong>
+            <em>15-minute walkthrough →</em>
+          </a>
+          <a class="link-card" href="https://github.com/lloga29/goldenPath/blob/main/docs/architecture/overview.md">
+            <span>Architecture</span>
+            <strong>Understand the platform model</strong>
+            <em>Architecture overview →</em>
+          </a>
+          <a class="link-card" href="https://github.com/lloga29/goldenPath/tree/main/docs/assurance">
+            <span>Assurance</span>
+            <strong>Inspect evidence and R0-R4 semantics</strong>
+            <em>Assurance documentation →</em>
+          </a>
+          <a class="link-card" href="https://github.com/lloga29/goldenPath/blob/main/SECURITY.md">
+            <span>Security</span>
+            <strong>Review trust and reporting boundaries</strong>
+            <em>Security guidance →</em>
+          </a>
+          <a class="link-card" href="https://github.com/lloga29/goldenPath/blob/main/docs/roadmap.md">
+            <span>Roadmap</span>
+            <strong>See implemented versus planned work</strong>
+            <em>Project roadmap →</em>
+          </a>
+          <a class="link-card" href="https://github.com/lloga29/goldenPath/blob/main/docs/releases/v0.1.0.md">
+            <span>Release</span>
+            <strong>Read the v0.1.0 public baseline</strong>
+            <em>Release notes →</em>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-grid">
+      <div>
+        <strong>GoldenPath</strong>
+        <p>Evidence-driven platform engineering reference implementation.</p>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/lloga29/goldenPath">GitHub</a>
+        <a href="https://github.com/lloga29/goldenPath/blob/main/LICENSE">Apache-2.0</a>
+        <a href="https://github.com/lloga29/goldenPath/blob/main/CONTRIBUTING.md">Contributing</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
