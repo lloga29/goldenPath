@@ -19,6 +19,7 @@
 <p align="center">
   <a href="https://lloga29.github.io/goldenPath/">Website</a> ·
   <a href="docs/DEMO.md">Demo</a> ·
+  <a href="docs/showcases/evidence-backed-delivery.md">Showcase</a> ·
   <a href="docs/QUICKSTART.md">Quickstart</a> ·
   <a href="docs/architecture/overview.md">Architecture</a> ·
   <a href="docs/assurance/">Assurance</a> ·
@@ -54,6 +55,20 @@ The demo derives an R0-R4 assurance plan, validates evidence bound to that plan,
 This is **repository/reference evidence only**. It does not claim that a registry, cloud account, Kubernetes cluster, GitOps controller, or production workload was exercised.
 
 See the [demo walkthrough](docs/DEMO.md) for what each step proves, or continue with the [15-minute quickstart](docs/QUICKSTART.md) for the broader paved road.
+
+## End-to-end repository showcase
+
+For a single narrative that connects risk-adaptive assurance to governed GitOps promotion, run:
+
+```bash
+./scripts/showcase-delivery.sh
+```
+
+The showcase derives an R0-R4 plan, validates evidence bound to that plan, proves incomplete evidence is rejected, and then exercises the digest-bound promotion contract through `dev -> staging -> prod`. The promotion harness also proves that tag-based input, digest mismatches, and failed trust verification are rejected before desired state is mutated.
+
+This remains **repository/reference evidence only**. The promotion stage uses isolated fake `yq` and `cosign` executables so the contract can be demonstrated without claiming a live registry, signature transparency service, Argo CD control plane, Kubernetes cluster, or production workload.
+
+See the [end-to-end showcase walkthrough](docs/showcases/evidence-backed-delivery.md) for the evidence map and runtime-validation boundary.
 
 GoldenPath is an evidence-driven **Golden Path reference implementation** for internal developer platforms. It connects developer experience, reusable service templates, CI and policy gates, immutable artifacts, GitOps promotion, Kubernetes runtime, infrastructure as code, observability, governance, and operational practices into one explicit delivery path.
 
