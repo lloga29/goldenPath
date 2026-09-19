@@ -5,7 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GoldenPath — Evidence-backed platform engineering</title>
   <meta name="description" content="GoldenPath is an evidence-driven, risk-adaptive reference implementation for secure self-service software delivery on Kubernetes.">
+  <meta name="author" content="Juan Gallo">
+  <meta name="robots" content="index,follow">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="GoldenPath">
+  <meta property="og:title" content="GoldenPath — Evidence-backed platform engineering">
+  <meta property="og:description" content="An evidence-driven, risk-adaptive Golden Path for secure self-service delivery on Kubernetes.">
+  <meta property="og:url" content="https://lloga29.github.io/goldenPath/">
+  <meta property="og:image" content="https://lloga29.github.io/goldenPath/assets/goldenpath-logo.png">
+  <meta property="og:image:alt" content="GoldenPath — evidence-backed platform engineering">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="GoldenPath — Evidence-backed platform engineering">
+  <meta name="twitter:description" content="An evidence-driven, risk-adaptive Golden Path for secure self-service delivery on Kubernetes.">
+  <meta name="twitter:image" content="https://lloga29.github.io/goldenPath/assets/goldenpath-logo.png">
   <meta name="theme-color" content="#0a1020">
+  <link rel="canonical" href="https://lloga29.github.io/goldenPath/">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -14,15 +29,27 @@
   <header class="site-header">
     <div class="container nav">
       <a class="brand" href="#top" aria-label="GoldenPath home">
-        <img src="assets/goldenpath-logo.png" alt="GoldenPath">
+        <img src="assets/goldenpath-logo.png" alt="GoldenPath" width="1448" height="1086" fetchpriority="high" decoding="async">
       </a>
-      <nav aria-label="Primary navigation">
+      <nav class="desktop-nav" aria-label="Primary navigation">
         <a href="#architecture">Architecture</a>
         <a href="#demo">Demo</a>
+        <a href="#verify">Verify</a>
         <a href="#evidence">Evidence</a>
         <a href="#explore">Explore</a>
       </nav>
-      <a class="button button-small" href="https://github.com/lloga29/goldenPath">View on GitHub</a>
+      <a class="button button-small header-github" href="https://github.com/lloga29/goldenPath">View on GitHub</a>
+      <details class="mobile-menu">
+        <summary aria-label="Open navigation">Menu</summary>
+        <nav aria-label="Mobile navigation">
+          <a href="#architecture">Architecture</a>
+          <a href="#demo">Demo</a>
+          <a href="#verify">Verify</a>
+          <a href="#evidence">Evidence</a>
+          <a href="#explore">Explore</a>
+          <a href="https://github.com/lloga29/goldenPath">GitHub</a>
+        </nav>
+      </details>
     </div>
   </header>
 
@@ -112,8 +139,8 @@
           </div>
           <p>GoldenPath connects developer self-service, policy gates, trusted artifacts, GitOps desired state, and Kubernetes runtime while preserving explicit evidence boundaries.</p>
         </div>
-        <div class="architecture-frame">
-          <img src="assets/goldenpath-architecture.svg" alt="GoldenPath delivery architecture from developer self-service through evidence-backed GitOps production">
+        <div class="architecture-frame" role="region" aria-label="Scrollable architecture diagram" tabindex="0">
+          <img src="assets/goldenpath-architecture.svg" alt="GoldenPath delivery architecture from developer self-service through evidence-backed GitOps production" width="1600" height="720" loading="lazy" decoding="async">
         </div>
       </div>
     </section>
@@ -140,6 +167,42 @@ cd goldenPath
             <span>PASS</span>
             <p>Risk-adaptive controls derived. Matching evidence accepted. Incomplete evidence rejected.</p>
           </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="section verify-section" id="verify">
+      <div class="container">
+        <div class="section-heading">
+          <p class="kicker">Verifiable implementation</p>
+          <h2>Inspect the contracts, not just the claims.</h2>
+        </div>
+        <div class="proof-grid">
+          <a class="proof-card" href="https://github.com/lloga29/goldenPath/blob/main/docs/assurance/risk-adaptive-assurance.md">
+            <span>01</span>
+            <strong>R0-R4 risk plan</strong>
+            <p>Inspect how deterministic risk inputs map to required assurance controls.</p>
+            <em>Open the assurance model →</em>
+          </a>
+          <a class="proof-card" href="https://github.com/lloga29/goldenPath/blob/main/docs/assurance/evidence-contract.md">
+            <span>02</span>
+            <strong>Fail-closed evidence</strong>
+            <p>Review the versioned evidence contract and the conditions that block readiness.</p>
+            <em>Open the evidence contract →</em>
+          </a>
+          <a class="proof-card" href="https://github.com/lloga29/goldenPath/blob/main/docs/platform/ci-cd.md">
+            <span>03</span>
+            <strong>Supply-chain controls</strong>
+            <p>Trace immutable digests, SBOM attestations, provenance, and signature validation in the reference delivery path.</p>
+            <em>Inspect CI/CD controls →</em>
+          </a>
+          <a class="proof-card" href="https://github.com/lloga29/goldenPath/blob/main/docs/platform/kubernetes-gitops.md">
+            <span>04</span>
+            <strong>Governed GitOps</strong>
+            <p>See how reviewable desired state and reconciliation fit into the paved road.</p>
+            <em>Inspect GitOps delivery →</em>
+          </a>
         </div>
       </div>
     </section>
@@ -210,6 +273,7 @@ cd goldenPath
       <div>
         <strong>GoldenPath</strong>
         <p>Evidence-driven platform engineering reference implementation.</p>
+        <p class="maintainer">Created and maintained by <a href="https://github.com/lloga29">Juan Gallo</a>.</p>
       </div>
       <div class="footer-links">
         <a href="https://github.com/lloga29/goldenPath">GitHub</a>

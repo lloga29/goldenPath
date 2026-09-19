@@ -74,9 +74,10 @@ img { max-width: 100%; display: block; }
 
 .brand img { width: 170px; height: auto; }
 
-nav { display: flex; gap: 24px; }
+.desktop-nav { display: flex; gap: 24px; }
 
-nav a,
+.desktop-nav a,
+.mobile-menu a,
 .footer-links a {
   color: var(--muted);
   text-decoration: none;
@@ -84,8 +85,53 @@ nav a,
   font-size: 0.92rem;
 }
 
-nav a:hover,
+.desktop-nav a:hover,
+.mobile-menu a:hover,
 .footer-links a:hover { color: var(--text); }
+
+.mobile-menu {
+  display: none;
+  position: relative;
+}
+
+.mobile-menu summary {
+  cursor: pointer;
+  list-style: none;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 800;
+}
+
+.mobile-menu summary::-webkit-details-marker { display: none; }
+
+.mobile-menu[open] summary {
+  border-color: #46628f;
+}
+
+.mobile-menu nav {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  min-width: 210px;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #0d1830;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.mobile-menu nav a {
+  padding: 9px 10px;
+  border-radius: 8px;
+}
+
+.mobile-menu nav a:hover {
+  background: rgba(139, 180, 255, 0.08);
+}
 
 .button {
   display: inline-flex;
@@ -102,7 +148,16 @@ nav a:hover,
   box-shadow: 0 14px 35px rgba(244, 154, 63, 0.12);
 }
 
+.button { transition: transform 140ms ease, box-shadow 140ms ease; }
+
 .button:hover { transform: translateY(-1px); }
+
+a:focus-visible,
+summary:focus-visible,
+.architecture-frame:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 4px;
+}
 
 .button-secondary {
   background: transparent;
@@ -298,6 +353,8 @@ footer p {
   border: 1px solid var(--line);
   background: #09111f;
   box-shadow: 0 24px 90px rgba(0, 0, 0, 0.22);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .architecture-frame img { border-radius: 15px; }
@@ -412,6 +469,58 @@ footer p {
 
 .boundary-note { margin: 0; }
 
+.verify-section {
+  border-top: 1px solid rgba(139, 163, 199, 0.12);
+}
+
+.proof-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+.proof-card {
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(20, 35, 63, 0.78), rgba(13, 24, 48, 0.78));
+  text-decoration: none;
+  transition: transform 140ms ease, border-color 140ms ease;
+}
+
+.proof-card:hover {
+  transform: translateY(-3px);
+  border-color: #46628f;
+}
+
+.proof-card > span {
+  color: var(--gold);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+}
+
+.proof-card strong {
+  margin-top: 28px;
+  font-size: 1.12rem;
+}
+
+.proof-card p {
+  color: var(--muted);
+  margin: 10px 0 18px;
+}
+
+.proof-card em {
+  margin-top: auto;
+  color: var(--blue);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
 .link-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -451,27 +560,51 @@ footer {
 
 footer p { margin: 5px 0 0; }
 
+.maintainer {
+  font-size: 0.9rem;
+}
+
+.maintainer a {
+  color: var(--blue);
+  text-decoration: none;
+  font-weight: 700;
+}
+
 .footer-links { display: flex; gap: 20px; align-items: center; }
 
 @media (max-width: 900px) {
-  nav { display: none; }
+  .desktop-nav { display: none; }
+  .mobile-menu { display: block; }
   .hero-grid,
   .demo-grid,
   .split-heading { grid-template-columns: 1fr; gap: 38px; }
   .feature-grid,
+  .proof-grid,
   .link-grid { grid-template-columns: repeat(2, 1fr); }
   .hero { padding-top: 72px; }
 }
 
 @media (max-width: 620px) {
   .container { width: min(calc(100% - 28px), var(--max)); }
-  .site-header .button-small { display: none; }
+  .site-header .header-github { display: none; }
   .brand img { width: 150px; }
   .feature-grid,
+  .proof-grid,
   .link-grid,
   .check-list { grid-template-columns: 1fr; }
+  .architecture-frame img {
+    width: 900px;
+    max-width: none;
+  }
   .evidence-flow { grid-template-columns: 1fr; }
   .evidence-flow .arrow { transform: rotate(90deg); justify-self: center; }
   .footer-grid { flex-direction: column; }
   .footer-links { flex-wrap: wrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .button,
+  .proof-card,
+  .link-card { transition: none; }
 }

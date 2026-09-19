@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">GoldenPath</title>
+  <defs>
+    <linearGradient id="gold" x1="0" x2="1" y1="1" y2="0">
+      <stop offset="0" stop-color="#f49a3f"/>
+      <stop offset="1" stop-color="#f6c453"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#08101f"/>
+  <path d="M11 49c10 0 8-30 21-30 8 0 9 15 17 15 4 0 6-4 6-9" fill="none" stroke="url(#gold)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="55" cy="19" r="5" fill="#f6c453"/>
+</svg>
