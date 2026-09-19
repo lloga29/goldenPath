@@ -81,11 +81,14 @@ def main() -> int:
 
     root = Path(sys.argv[1]).resolve()
     index = root / "index.html"
+    dashboard = root / "evidence.html"
     stylesheet = root / "styles.css"
 
     errors: list[str] = []
     if not index.is_file():
         errors.append("index.html is missing")
+    if not dashboard.is_file():
+        errors.append("evidence.html is missing")
     if not stylesheet.is_file():
         errors.append("styles.css is missing")
     if errors:
@@ -119,6 +122,30 @@ def main() -> int:
             errors.append(f"required metadata {key!r} must be {expected!r}")
 
     for kind, reference in parser.references:
+        errors.extend(validate_reference(root, kind, reference))
+
+    dashboard_parser = SiteParser()
+    dashboard_parser.feed(dashboard.read_text(encoding="utf-8"))
+    if dashboard_parser.scripts:
+        errors.append("evidence dashboard must remain JavaScript-free")
+
+    dashboard_text = " ".join(" ".join(dashboard_parser.text_parts).split())
+    dashboard_required_text = (
+        "Generated evidence dashboard",
+        "Scope: Repository / reference",
+        "Runtime: Not claimed",
+        "Production: Not claimed",
+        "Every listed capability resolves to repository-owned evidence.",
+        "fails closed",
+    )
+    for required in dashboard_required_text:
+        if required not in dashboard_text:
+            errors.append(f"required evidence dashboard message is missing: {required!r}")
+
+    if dashboard_parser.canonical != "https://lloga29.github.io/goldenPath/evidence.html":
+        errors.append("evidence dashboard canonical URL is invalid")
+
+    for kind, reference in dashboard_parser.references:
         errors.extend(validate_reference(root, kind, reference))
 
     required_assets = (

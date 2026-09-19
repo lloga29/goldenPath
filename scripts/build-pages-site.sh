@@ -24,6 +24,10 @@ cp docs/assets/branding/goldenpath-logo.png "$OUTPUT_DIR/assets/goldenpath-logo.
 cp docs/assets/branding/goldenpath-architecture.svg "$OUTPUT_DIR/assets/goldenpath-architecture.svg"
 cp docs/assets/branding/goldenpath-favicon.svg "$OUTPUT_DIR/assets/favicon.svg"
 
+python3 scripts/generate-evidence-dashboard.py \
+  platform-assurance/evidence/public-status.json \
+  "$OUTPUT_DIR/evidence.html"
+
 python3 scripts/validate-pages-site.py "$OUTPUT_DIR"
 
 echo "Pages site built and validated at $OUTPUT_DIR"

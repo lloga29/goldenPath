@@ -64,6 +64,9 @@ jobs:
       - name: Run zero-cloud public demo
         run: ./scripts/demo.sh
 
+      - name: Validate public evidence dashboard fail-closed semantics
+        run: python3 scripts/test-public-evidence-dashboard.py
+
       - name: Build and validate static Pages site
         run: ./scripts/build-pages-site.sh
 
