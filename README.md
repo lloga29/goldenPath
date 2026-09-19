@@ -20,6 +20,7 @@
   <a href="https://lloga29.github.io/goldenPath/">Website</a> ·
   <a href="docs/DEMO.md">Demo</a> ·
   <a href="docs/showcases/evidence-backed-delivery.md">Showcase</a> ·
+  <a href="docs/insights/README.md">Insights</a> ·
   <a href="docs/QUICKSTART.md">Quickstart</a> ·
   <a href="docs/architecture/overview.md">Architecture</a> ·
   <a href="docs/assurance/">Assurance</a> ·
@@ -69,6 +70,8 @@ The showcase derives an R0-R4 plan, validates evidence bound to that plan, prove
 This remains **repository/reference evidence only**. The promotion stage uses isolated fake `yq` and `cosign` executables so the contract can be demonstrated without claiming a live registry, signature transparency service, Argo CD control plane, Kubernetes cluster, or production workload.
 
 See the [end-to-end showcase walkthrough](docs/showcases/evidence-backed-delivery.md) for the evidence map and runtime-validation boundary.
+
+For reusable explanations of the core engineering ideas, read the [GoldenPath technical insight series](docs/insights/README.md).
 
 GoldenPath is an evidence-driven **Golden Path reference implementation** for internal developer platforms. It connects developer experience, reusable service templates, CI and policy gates, immutable artifacts, GitOps promotion, Kubernetes runtime, infrastructure as code, observability, governance, and operational practices into one explicit delivery path.
 
