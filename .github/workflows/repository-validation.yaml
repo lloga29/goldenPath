@@ -61,8 +61,8 @@ jobs:
       - name: Validate R0-R4 risk-adaptive assurance semantics
         run: python3 scripts/test-risk-adaptive-assurance.py
 
-      - name: Run zero-cloud public demo
-        run: ./scripts/demo.sh
+      - name: Run end-to-end public showcase
+        run: ./scripts/showcase-delivery.sh
 
       - name: Validate public evidence dashboard fail-closed semantics
         run: python3 scripts/test-public-evidence-dashboard.py
