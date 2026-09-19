@@ -12,6 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml"><img src="https://github.com/lloga29/goldenPath/actions/workflows/repository-validation.yaml/badge.svg?branch=main" alt="Repository validation"></a>
+  <a href="https://github.com/lloga29/goldenPath/releases/latest"><img src="https://img.shields.io/github/v/release/lloga29/goldenPath?display_name=tag&sort=semver" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache License 2.0"></a>
 </p>
 
