@@ -10,7 +10,7 @@ The site is intentionally small and dependency-free:
 - no static-site framework;
 - no separate documentation source of truth.
 
-The landing page links back to canonical repository documentation and uses existing branding assets.
+The landing page links back to canonical repository documentation, publishes canonical/Open Graph/Twitter metadata, includes an accessible mobile navigation path, and uses repository-owned branding assets.
 
 ## Local build
 
@@ -36,7 +36,8 @@ To choose another local output directory:
 - a local image or stylesheet target is missing;
 - a non-HTTPS external reference is introduced;
 - a `<script>` tag is added;
-- the release identifier or core evidence-boundary messages disappear;
+- the release identifier, verification section, or core evidence-boundary messages disappear;
+- canonical/social metadata drifts from the published project URL;
 - required GoldenPath branding assets are missing or empty.
 
 Root repository CI executes the same build/validation command so the public landing cannot silently drift.

@@ -22,6 +22,7 @@ cp site/index.html "$OUTPUT_DIR/index.html"
 cp site/styles.css "$OUTPUT_DIR/styles.css"
 cp docs/assets/branding/goldenpath-logo.png "$OUTPUT_DIR/assets/goldenpath-logo.png"
 cp docs/assets/branding/goldenpath-architecture.svg "$OUTPUT_DIR/assets/goldenpath-architecture.svg"
+cp docs/assets/branding/goldenpath-favicon.svg "$OUTPUT_DIR/assets/favicon.svg"
 
 python3 scripts/validate-pages-site.py "$OUTPUT_DIR"
 

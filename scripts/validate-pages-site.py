@@ -12,6 +12,7 @@ REQUIRED_TEXT = (
     "From source code to",
     "v0.1.0 public baseline",
     "GoldenPath in 60 seconds",
+    "Inspect the contracts, not just the claims.",
     "Repository / reference",
     "Runtime",
     "Production validation",
@@ -25,6 +26,8 @@ class SiteParser(HTMLParser):
         self.references: list[tuple[str, str]] = []
         self.scripts = 0
         self.text_parts: list[str] = []
+        self.metadata: dict[str, str] = {}
+        self.canonical: str | None = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attributes = {key: value for key, value in attrs if value is not None}
@@ -32,8 +35,17 @@ class SiteParser(HTMLParser):
             self.scripts += 1
         if tag == "img" and "src" in attributes:
             self.references.append(("asset", attributes["src"]))
-        if tag == "link" and attributes.get("rel") == "stylesheet" and "href" in attributes:
-            self.references.append(("asset", attributes["href"]))
+        if tag == "link" and "href" in attributes:
+            rel = set(attributes.get("rel", "").split())
+            if "stylesheet" in rel or "icon" in rel:
+                self.references.append(("asset", attributes["href"]))
+            elif "canonical" in rel:
+                self.canonical = attributes["href"]
+                self.references.append(("link", attributes["href"]))
+        if tag == "meta" and "content" in attributes:
+            key = attributes.get("property") or attributes.get("name")
+            if key:
+                self.metadata[key] = attributes["content"]
         if tag == "a" and "href" in attributes:
             self.references.append(("link", attributes["href"]))
 
@@ -92,12 +104,27 @@ def main() -> int:
         if required not in rendered_text:
             errors.append(f"required public message is missing: {required!r}")
 
+    expected_site_url = "https://lloga29.github.io/goldenPath/"
+    if parser.canonical != expected_site_url:
+        errors.append(f"canonical URL must be {expected_site_url}")
+
+    required_metadata = {
+        "og:title": "GoldenPath — Evidence-backed platform engineering",
+        "og:url": expected_site_url,
+        "og:image": "https://lloga29.github.io/goldenPath/assets/goldenpath-logo.png",
+        "twitter:card": "summary_large_image",
+    }
+    for key, expected in required_metadata.items():
+        if parser.metadata.get(key) != expected:
+            errors.append(f"required metadata {key!r} must be {expected!r}")
+
     for kind, reference in parser.references:
         errors.extend(validate_reference(root, kind, reference))
 
     required_assets = (
         root / "assets" / "goldenpath-logo.png",
         root / "assets" / "goldenpath-architecture.svg",
+        root / "assets" / "favicon.svg",
     )
     for asset in required_assets:
         if not asset.is_file() or asset.stat().st_size == 0:

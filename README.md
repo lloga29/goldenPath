@@ -16,6 +16,7 @@
 </p>
 
 <p align="center">
+  <a href="https://lloga29.github.io/goldenPath/">Website</a> ·
   <a href="docs/DEMO.md">Demo</a> ·
   <a href="docs/QUICKSTART.md">Quickstart</a> ·
   <a href="docs/architecture/overview.md">Architecture</a> ·
