@@ -1,0 +1,78 @@
+{
+  "schema_version": "goldenpath.public-status/v1",
+  "scope": "repository/reference",
+  "title": "GoldenPath Evidence Status",
+  "description": "Generated from versioned repository evidence. This status does not claim runtime or production validation.",
+  "capabilities": [
+    {
+      "id": "risk-adaptive-assurance",
+      "label": "R0-R4 risk-adaptive assurance",
+      "status": "implemented",
+      "evidence": [
+        "docs/assurance/risk-adaptive-assurance.md",
+        "scripts/evaluate-risk.py",
+        "scripts/test-risk-adaptive-assurance.py"
+      ]
+    },
+    {
+      "id": "fail-closed-evidence",
+      "label": "Fail-closed evidence contract",
+      "status": "implemented",
+      "evidence": [
+        "docs/assurance/evidence-contract.md",
+        "platform-assurance/evidence/schema/goldenpath-evidence-v1.schema.json",
+        "scripts/validate-evidence-manifest.py",
+        "scripts/test-evidence-contract.py"
+      ]
+    },
+    {
+      "id": "policy-as-code",
+      "label": "Policy-as-code enforcement",
+      "status": "implemented",
+      "evidence": [
+        "platform-policies/policy-exceptions.yaml",
+        "platform-policies/scripts/test-policies.sh"
+      ]
+    },
+    {
+      "id": "terraform-validation",
+      "label": "Terraform reference validation",
+      "status": "implemented",
+      "evidence": [
+        "terraform-modules/scripts/validate-all.sh",
+        "scripts/validate-platform-stacks.sh"
+      ]
+    },
+    {
+      "id": "governed-gitops",
+      "label": "Governed digest-bound GitOps promotion",
+      "status": "implemented",
+      "evidence": [
+        "gitops-config/scripts/promote.sh",
+        "gitops-config/scripts/test-promotion-contract.sh",
+        "scripts/validate-gitops-contract.py"
+      ]
+    },
+    {
+      "id": "supply-chain",
+      "label": "Software supply-chain controls",
+      "status": "implemented",
+      "evidence": [
+        "scripts/validate-ci-supply-chain.py"
+      ]
+    },
+    {
+      "id": "public-pages",
+      "label": "Validated public Pages experience",
+      "status": "implemented",
+      "evidence": [
+        "scripts/build-pages-site.sh",
+        "scripts/validate-pages-site.py"
+      ]
+    }
+  ],
+  "boundaries": {
+    "runtime": "not-claimed",
+    "production": "not-claimed"
+  }
+}

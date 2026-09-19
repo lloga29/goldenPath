@@ -608,3 +608,38 @@ footer p { margin: 5px 0 0; }
   .proof-card,
   .link-card { transition: none; }
 }
+
+
+.status-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.evidence-links {
+  margin: 18px 0 0;
+  padding-left: 18px;
+}
+
+.evidence-links li {
+  margin: 8px 0;
+  color: var(--muted);
+}
+
+.evidence-links a {
+  color: var(--blue);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.evidence-links a:hover {
+  text-decoration: underline;
+}
+
+.evidence-links code {
+  font-size: 0.82rem;
+}
+
+@media (max-width: 700px) {
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+}
