@@ -12,6 +12,8 @@ REQUIRED_TEXT = (
     "From source code to",
     "v0.1.0 public baseline",
     "GoldenPath in 60 seconds",
+    "End-to-end showcase",
+    "Technical insights",
     "Inspect the contracts, not just the claims.",
     "Repository / reference",
     "Runtime",
@@ -111,11 +113,15 @@ def main() -> int:
     if parser.canonical != expected_site_url:
         errors.append(f"canonical URL must be {expected_site_url}")
 
+    seo_description = "GoldenPath is an evidence-backed Kubernetes platform engineering reference for Internal Developer Platforms, R0-R4 assurance, fail-closed evidence, GitOps, Terraform, policy as code, SBOM, SLSA, and Cosign."
     required_metadata = {
+        "description": seo_description,
         "og:title": "GoldenPath — Evidence-backed platform engineering",
+        "og:description": seo_description,
         "og:url": expected_site_url,
         "og:image": "https://lloga29.github.io/goldenPath/assets/goldenpath-logo.png",
         "twitter:card": "summary_large_image",
+        "twitter:description": seo_description,
     }
     for key, expected in required_metadata.items():
         if parser.metadata.get(key) != expected:

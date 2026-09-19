@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  Platform Engineering · Kubernetes · GitOps · Terraform · Policy as Code · Software Supply Chain
+  Internal Developer Platform · Platform Engineering · Kubernetes · GitOps · Terraform · Policy as Code · Software Supply Chain
 </p>
 
 <p align="center">
