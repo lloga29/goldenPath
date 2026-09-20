@@ -10,15 +10,17 @@ from urllib.parse import urlparse
 
 REQUIRED_TEXT = (
     "From source code to",
-    "v0.1.0 public baseline",
+    "v0.2.0 runtime assurance baseline",
     "GoldenPath in 60 seconds",
     "End-to-end showcase",
     "Technical insights",
     "Inspect the contracts, not just the claims.",
+    "Signed runtime receipts",
     "Repository / reference",
     "Runtime",
     "Production validation",
     "Green is not the same as proven in production.",
+    "Supported ephemeral lab",
 )
 
 
@@ -138,11 +140,12 @@ def main() -> int:
     dashboard_text = " ".join(" ".join(dashboard_parser.text_parts).split())
     dashboard_required_text = (
         "Generated evidence dashboard",
-        "Scope: Repository / reference",
-        "Runtime: Not claimed",
+        "Scope: Repository / reference + supported runtime",
+        "Runtime: Verified for v0.2.0 candidate",
         "Production: Not claimed",
-        "Every listed capability resolves to repository-owned evidence.",
-        "fails closed",
+        "Every listed capability resolves to repository-owned contracts.",
+        "Exact runtime qualification",
+        "Production validation remains separate",
     )
     for required in dashboard_required_text:
         if required not in dashboard_text:
