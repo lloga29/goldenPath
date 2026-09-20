@@ -2,6 +2,16 @@
 
 The roadmap prioritizes converting the reference implementation into an operational platform capability.
 
+## Active execution cycle — v0.2.0
+
+GoldenPath is now planning **v0.2.0 — Runtime Evidence & Autonomous Assurance**.
+
+The authoritative release contract and phase gates are defined in the [v0.2.0 execution plan](releases/v0.2.0-execution-plan.md), tracked by GitHub epic #91 and phases #92 through #97.
+
+The v0.2.0 objective is to add reproducible ephemeral-runtime evidence, identity-bound assurance receipts, resilience/continuous-assurance exercises, and a coherent paved-road entry point while preserving the strict separation between repository/reference evidence, runtime evidence, and production validation.
+
+The phases below remain the broader adoption path for real organizational rollout. They do not convert v0.2.0 Runtime Lab evidence into production validation.
+
 ## Phase 1 — Repository truth and quality
 
 - Complete English documentation.
