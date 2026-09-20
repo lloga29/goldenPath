@@ -346,6 +346,17 @@ capture_runtime_facts() {
     NODE_NAME="$(kubectl get pod "$pod" -n "$WORKLOAD_NAMESPACE" -o jsonpath='{.spec.nodeName}')"
     ARGO_SYNC="$(kubectl -n argocd get application "$WORKLOAD_APP" -o jsonpath='{.status.sync.status}')"
     ARGO_HEALTH="$(kubectl -n argocd get application "$WORKLOAD_APP" -o jsonpath='{.status.health.status}')"
+    ARGO_REVISION="$(kubectl -n argocd get application "$WORKLOAD_APP" -o jsonpath='{.status.sync.revision}')"
+    POLICY_REVISION="$(kubectl -n argocd get application "$POLICY_APP" -o jsonpath='{.status.sync.revision}')"
+
+    [[ "$ARGO_REVISION" == "$SOURCE_REVISION" ]] || {
+        fail "Argo CD workload reconciled revision '$ARGO_REVISION' does not equal source revision '$SOURCE_REVISION'"
+        return 1
+    }
+    [[ "$POLICY_REVISION" == "$SOURCE_REVISION" ]] || {
+        fail "Argo CD policy reconciled revision '$POLICY_REVISION' does not equal source revision '$SOURCE_REVISION'"
+        return 1
+    }
 
     [[ "$OBSERVED_IMAGE" == "$IMAGE_REF" ]] || {
         fail "observed pod spec image '$OBSERVED_IMAGE' does not equal expected digest identity '$IMAGE_REF'"
@@ -372,7 +383,7 @@ write_report() {
     local observed_at
     observed_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 
-    SOURCE_REPOSITORY="$SOURCE_REPOSITORY"     SOURCE_REVISION="$SOURCE_REVISION"     LAB_ID="$LAB_ID"     CLUSTER_NAME="$CLUSTER_NAME"     CLUSTER_IDENTITY="$CLUSTER_IDENTITY"     WORKLOAD_NAMESPACE="$WORKLOAD_NAMESPACE"     WORKLOAD_UID="$WORKLOAD_UID"     POD_UID="$POD_UID"     POD_PHASE="$POD_PHASE"     IMAGE_REF="$IMAGE_REF"     IMAGE_DIGEST="$IMAGE_DIGEST"     OBSERVED_IMAGE="$OBSERVED_IMAGE"     OBSERVED_IMAGE_ID="$OBSERVED_IMAGE_ID"     ARGO_SYNC="$ARGO_SYNC"     ARGO_HEALTH="$ARGO_HEALTH"     POLICY_APP="$POLICY_APP"     WORKLOAD_APP="$WORKLOAD_APP"     ADMISSION_DENIAL="$ADMISSION_DENIAL"     RUNTIME_IDENTITY="$RUNTIME_IDENTITY"     OBSERVED_AT="$observed_at"     KIND_NODE_IMAGE="$KIND_NODE_IMAGE"     ARGOCD_VERSION="$ARGOCD_VERSION"     GATEKEEPER_CHART_VERSION="$GATEKEEPER_CHART_VERSION"     python3 - <<'PY' > "$REPORT_PATH"
+    SOURCE_REPOSITORY="$SOURCE_REPOSITORY"     SOURCE_REVISION="$SOURCE_REVISION"     LAB_ID="$LAB_ID"     CLUSTER_NAME="$CLUSTER_NAME"     CLUSTER_IDENTITY="$CLUSTER_IDENTITY"     WORKLOAD_NAMESPACE="$WORKLOAD_NAMESPACE"     WORKLOAD_UID="$WORKLOAD_UID"     POD_UID="$POD_UID"     POD_PHASE="$POD_PHASE"     IMAGE_REF="$IMAGE_REF"     IMAGE_DIGEST="$IMAGE_DIGEST"     OBSERVED_IMAGE="$OBSERVED_IMAGE"     OBSERVED_IMAGE_ID="$OBSERVED_IMAGE_ID"     ARGO_SYNC="$ARGO_SYNC"     ARGO_HEALTH="$ARGO_HEALTH"     ARGO_REVISION="$ARGO_REVISION"     POLICY_REVISION="$POLICY_REVISION"     POLICY_APP="$POLICY_APP"     WORKLOAD_APP="$WORKLOAD_APP"     ADMISSION_DENIAL="$ADMISSION_DENIAL"     RUNTIME_IDENTITY="$RUNTIME_IDENTITY"     OBSERVED_AT="$observed_at"     KIND_NODE_IMAGE="$KIND_NODE_IMAGE"     ARGOCD_VERSION="$ARGOCD_VERSION"     GATEKEEPER_CHART_VERSION="$GATEKEEPER_CHART_VERSION"     python3 - <<'PY' > "$REPORT_PATH"
 import json
 import os
 
@@ -404,6 +415,9 @@ report = {
     "gitops": {
         "policyApplication": os.environ["POLICY_APP"],
         "workloadApplication": os.environ["WORKLOAD_APP"],
+        "desiredStateRevision": os.environ["SOURCE_REVISION"],
+        "reconciledRevision": os.environ["ARGO_REVISION"],
+        "policyReconciledRevision": os.environ["POLICY_REVISION"],
         "syncStatus": os.environ["ARGO_SYNC"],
         "healthStatus": os.environ["ARGO_HEALTH"],
     },
