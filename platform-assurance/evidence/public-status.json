@@ -2,7 +2,7 @@
   "schema_version": "goldenpath.public-status/v2",
   "scope": "repository/reference + supported-runtime",
   "title": "GoldenPath Evidence Status",
-  "description": "Generated from versioned repository contracts plus the exact v0.2.0 Runtime Lab qualification. Production validation remains NOT CLAIMED.",
+  "description": "Generated from versioned repository contracts and the exact published v0.2.0 Runtime Lab qualification. Production validation remains NOT CLAIMED.",
   "runtime_release": {
     "release": "v0.2.0",
     "status": "VERIFIED",
