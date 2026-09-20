@@ -35,6 +35,7 @@ All repository documentation, code comments, workflow labels, examples, operatio
 - [Architecture Decision Records](adr/README.md)
 - [Platform maturity model](maturity-model.md)
 - [Adoption roadmap](roadmap.md)
+- [v0.2.0 execution plan](releases/v0.2.0-execution-plan.md)
 - [Glossary](glossary.md)
 
 ## Documentation principles
