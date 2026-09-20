@@ -148,3 +148,27 @@ Before using the paved road for production, confirm at minimum:
 - rollback and incident runbooks have been exercised.
 
 Continue with the [architecture overview](architecture/overview.md) and [implementation guide](../golden-path-implementation-guide.md).
+
+
+## 9. Run the v0.2.0 assurance path
+
+For the supported ephemeral-runtime path, first verify dependencies:
+
+```bash
+python3 goldenpath doctor --scope all
+```
+
+Then execute the exact checkout through the official CLI:
+
+```bash
+ARTIFACT_DIR=/tmp/goldenpath-runtime-lab
+SOURCE_REVISION="$(git rev-parse HEAD)"
+
+python3 goldenpath validate --artifact-dir "$ARTIFACT_DIR"
+python3 goldenpath lab up --artifact-dir "$ARTIFACT_DIR" --lab-id local-v020 --source-revision "$SOURCE_REVISION"
+python3 goldenpath assure --artifact-dir "$ARTIFACT_DIR"
+python3 goldenpath verify --artifact-dir "$ARTIFACT_DIR"
+python3 goldenpath evidence show --artifact-dir "$ARTIFACT_DIR"
+```
+
+This path creates **runtime evidence** from the supported disposable Kubernetes lab. It does not convert that evidence into production validation. Production validation remains **NOT CLAIMED** until a separately identified real production environment is exercised and evidenced.

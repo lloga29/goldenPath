@@ -70,6 +70,9 @@ jobs:
       - name: Validate P4 CLI, reports, and scorecards
         run: python3 scripts/test-goldenpath-cli-p4.py
 
+      - name: Validate P5 release-qualification fail-closed semantics
+        run: python3 scripts/test-release-qualification-p5.py
+
       - name: Validate R0-R4 risk-adaptive assurance semantics
         run: python3 scripts/test-risk-adaptive-assurance.py
 

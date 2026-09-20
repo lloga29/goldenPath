@@ -91,3 +91,22 @@ The platform should be evaluated against:
 - upgradeability;
 - policy consistency;
 - portability without pretending all cloud services are identical.
+
+
+## v0.2.0 assurance execution path
+
+The supported v0.2.0 assurance flow extends the repository/reference layer into a bounded ephemeral runtime:
+
+```text
+exact source revision
+  -> repository validation
+  -> Runtime Lab reconciliation
+  -> runtime identity observation
+  -> signed assurance receipt
+  -> independent verification
+  -> current-state continuous assurance
+  -> report / scorecard
+  -> exact release-candidate qualification
+```
+
+Every stage retains source, artifact, desired-state, policy, and runtime identity where applicable. A previous PASS cannot replace current evidence, and Runtime Lab evidence cannot be promoted into a production claim. **Production validation is not claimed by this architecture path.**
