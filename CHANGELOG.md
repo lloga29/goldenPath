@@ -8,6 +8,29 @@ Tagged releases below describe repository/reference baselines only. Earlier pre-
 
 No changes yet.
 
+## [0.2.0] - 2026-09-20 - Runtime Evidence & Autonomous Assurance
+
+### Added
+
+- Versioned runtime evidence and assurance-receipt contracts with explicit repository, runtime, and production claim tiers.
+- Reproducible ephemeral Kubernetes Runtime Lab with Argo CD reconciliation, policy denial, immutable workload-digest observation, cleanup, and residue verification.
+- Ed25519-signed runtime assurance receipts and independent identity/signature verification.
+- Continuous-assurance drift, degradation, recovery, and historical-vs-current evidence semantics.
+- Official GoldenPath CLI with machine-readable output, human reports, dependency diagnostics, and evidence-backed scorecards.
+- Exact P5 release-candidate qualification binding repository validation, Runtime Lab facts, receipt, independent verification, current-state assurance, scorecard, and documentation review.
+
+### Changed
+
+- The supported v0.2.0 path now self-qualifies the exact release candidate instead of treating prior green runs as release evidence.
+- Runtime and production claims are separated more explicitly across the public quickstart, demo, showcase, architecture, and release documentation.
+
+### Security
+
+- Missing, stale, tampered, identity-mismatched, or production-overclaim candidate evidence fails closed.
+- Release qualification verifies the exact receipt/evidence/public-key file digests recorded by independent verification before accepting the candidate.
+
+**Evidence boundary:** repository/reference and supported ephemeral-runtime evidence. **Production validation is not claimed.**
+
 ## [0.1.0] - 2026-09-18 - Public Reference Baseline
 
 ### Added
