@@ -36,6 +36,10 @@ All repository documentation, code comments, workflow labels, examples, operatio
 - [Platform maturity model](maturity-model.md)
 - [Adoption roadmap](roadmap.md)
 - [v0.2.0 execution plan](releases/v0.2.0-execution-plan.md)
+- [v0.2.0 release notes](releases/v0.2.0.md)
+- [v0.2.0 migration notes](releases/v0.2.0-migration.md)
+- [v0.2.0 release runbook](runbooks/v0.2.0-release.md)
+- [v0.2.0 post-release checklist](releases/v0.2.0-post-release-checklist.md)
 - [Glossary](glossary.md)
 
 ## Documentation principles
