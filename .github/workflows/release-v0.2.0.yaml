@@ -1,11 +1,10 @@
 name: Publish GoldenPath v0.2.0
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Runtime Lab"]
     branches: [main]
-    paths:
-      - 'docs/releases/v0.2.0-publish-request.json'
-  workflow_dispatch:
+    types: [completed]
 
 permissions:
   contents: write
@@ -13,7 +12,14 @@ permissions:
 
 jobs:
   publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
+    env:
+      RELEASE: v0.2.0
+      TARGET: ${{ github.event.workflow_run.head_sha }}
+      RUN_ID: ${{ github.event.workflow_run.id }}
+      RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
+      RUN_EVENT: ${{ github.event.workflow_run.event }}
     steps:
       - name: Check out repository history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -21,63 +27,69 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Read immutable publication request
-        id: request
+      - name: Validate publication request
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          python3 - <<'PY'
           import json
           from pathlib import Path
 
-          path = Path("docs/releases/v0.2.0-publish-request.json")
-          data = json.loads(path.read_text(encoding="utf-8"))
+          data = json.loads(
+              Path("docs/releases/v0.2.0-publish-request.json").read_text(encoding="utf-8")
+          )
           expected = {
-              "schemaVersion": "goldenpath.release-publish-request/v1",
+              "schemaVersion": "goldenpath.release-publish-request/v2",
               "release": "v0.2.0",
+              "publishWhen": "successful-runtime-lab-on-main",
               "productionValidation": "NOT_CLAIMED",
           }
           for key, value in expected.items():
               if data.get(key) != value:
                   raise SystemExit(f"invalid release request {key}: {data.get(key)!r}")
-          target = data.get("targetCommit")
-          if not isinstance(target, str) or len(target) != 40:
-              raise SystemExit("targetCommit must be an exact 40-character Git SHA")
-          run_id = data.get("qualificationRunId")
-          if not isinstance(run_id, int) or run_id < 1:
-              raise SystemExit("qualificationRunId must be a positive integer")
-          artifact = data.get("qualificationArtifact")
-          if not isinstance(artifact, str) or not artifact:
-              raise SystemExit("qualificationArtifact must be non-empty")
-          print(f"release={data['release']}")
-          print(f"target={target}")
-          print(f"run_id={run_id}")
-          print(f"artifact={artifact}")
           PY
 
-      - name: Verify exact qualified source commit
-        shell: bash
-        env:
-          TARGET: ${{ steps.request.outputs.target }}
-        run: |
-          set -euo pipefail
-          git cat-file -e "${TARGET}^{commit}"
-          git show --no-patch --format='%H %s' "$TARGET"
-
-      - name: Verify successful Runtime Lab qualification
+      - name: Check existing publication state
+        id: state
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TARGET: ${{ steps.request.outputs.target }}
-          RUN_ID: ${{ steps.request.outputs.run_id }}
-          ARTIFACT: ${{ steps.request.outputs.artifact }}
         run: |
           set -euo pipefail
+          if gh release view "$RELEASE" >/dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "$RELEASE already exists; publication workflow is a no-op."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify exact successful main Runtime Lab
+        id: qualification
+        if: steps.state.outputs.skip != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          [[ "$RUN_BRANCH" == "main" ]] || {
+            echo "ERROR: Runtime Lab branch is $RUN_BRANCH, expected main" >&2
+            exit 1
+          }
+          [[ "$RUN_EVENT" == "push" ]] || {
+            echo "ERROR: Runtime Lab event is $RUN_EVENT, expected push" >&2
+            exit 1
+          }
+
+          current_main="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          [[ "$current_main" == "$TARGET" ]] || {
+            echo "ERROR: Runtime Lab target $TARGET is not current main $current_main" >&2
+            exit 1
+          }
 
           run_head="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.head_sha')"
           run_conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.conclusion')"
           run_name="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.name')"
-
           [[ "$run_head" == "$TARGET" ]] || {
             echo "ERROR: qualification run head $run_head does not match $TARGET" >&2
             exit 1
@@ -91,54 +103,41 @@ jobs:
             exit 1
           }
 
-          artifact_match="$(
-            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts"               --jq ".artifacts[] | select(.name == \"${ARTIFACT}\") | [.name, .expired] | @tsv"
+          prefix="goldenpath-v0.2.0-candidate-evidence-${RUN_ID}-"
+          artifact="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts"               --jq ".artifacts[] | select(.expired == false) | select(.name | startswith(\"${prefix}\")) | .name"               | head -n 1
           )"
-          [[ "$artifact_match" == "$ARTIFACT"$'\tfalse' ]] || {
-            echo "ERROR: exact qualification artifact is missing or expired" >&2
+          [[ -n "$artifact" ]] || {
+            echo "ERROR: release-candidate qualification artifact is missing or expired" >&2
             exit 1
           }
+          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
 
       - name: Publish immutable v0.2.0 GitHub Release
+        if: steps.state.outputs.skip != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE: ${{ steps.request.outputs.release }}
-          TARGET: ${{ steps.request.outputs.target }}
-          RUN_ID: ${{ steps.request.outputs.run_id }}
-          ARTIFACT: ${{ steps.request.outputs.artifact }}
+          ARTIFACT: ${{ steps.qualification.outputs.artifact }}
         run: |
           set -euo pipefail
 
-          if gh release view "$RELEASE" >/dev/null 2>&1; then
-            tag_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE}" --jq '.object.sha')"
-            [[ "$tag_sha" == "$TARGET" ]] || {
-              echo "ERROR: existing $RELEASE tag points to $tag_sha, expected $TARGET" >&2
-              exit 1
-            }
-            echo "$RELEASE already exists at the qualified commit; no mutation required."
-            exit 0
-          fi
-
-          cp docs/releases/v0.2.0.md /tmp/release-notes.md
-          cat >> /tmp/release-notes.md <<EOF
-
-          ## Exact release qualification
-
-          - Release commit: `$TARGET`
-          - Runtime Lab qualification run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/$RUN_ID
-          - Qualification artifact: `$ARTIFACT`
-          - Production validation: **NOT CLAIMED**
-          EOF
+          {
+            cat docs/releases/v0.2.0.md
+            printf '\n## Exact release qualification\n\n'
+            printf -- '- Release commit: `%s`\n' "$TARGET"
+            printf -- '- Runtime Lab qualification run: https://github.com/%s/actions/runs/%s\n' "$GITHUB_REPOSITORY" "$RUN_ID"
+            printf -- '- Qualification artifact: `%s`\n' "$ARTIFACT"
+            printf -- '- Production validation: **NOT CLAIMED**\n'
+          } > /tmp/release-notes.md
 
           gh release create "$RELEASE"             --target "$TARGET"             --title "GoldenPath v0.2.0 — Runtime Evidence & Autonomous Assurance"             --notes-file /tmp/release-notes.md             --latest
 
       - name: Verify published tag identity
+        if: steps.state.outputs.skip != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE: ${{ steps.request.outputs.release }}
-          TARGET: ${{ steps.request.outputs.target }}
         run: |
           set -euo pipefail
           tag_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE}" --jq '.object.sha')"
