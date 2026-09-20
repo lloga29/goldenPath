@@ -61,3 +61,10 @@ The successful path deletes the kind cluster and local registry and then proves 
 ## Claims
 
 A successful Runtime Lab run supports runtime claims only for the identified ephemeral execution. It does not support production claims, managed-cloud equivalence, production SLOs, real organizational approvals, production identity, or compliance certification.
+
+
+## Release qualification trigger
+
+For v0.2.0 publication, the release workflow listens for a successful **Runtime Lab** run on the current `main` head. It publishes only when the triggering run is a `push` execution on `main`, its head SHA still equals the current default-branch SHA, and the exact non-expired P5 candidate evidence artifact exists.
+
+This keeps the release tag bound to the commit that actually completed Runtime Lab qualification. The built-in GitHub Actions token is not used to retarget an older commit, and production validation remains `NOT_CLAIMED`.
