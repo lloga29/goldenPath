@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "goldenpath.release-publish-request/v1",
+  "release": "v0.2.0",
+  "targetCommit": "ae1e043040f00b04109b5a6038ae440778418b3c",
+  "qualificationRunId": 35538499852,
+  "qualificationArtifact": "goldenpath-v0.2.0-candidate-evidence-35538499852-1",
+  "productionValidation": "NOT_CLAIMED"
+}
