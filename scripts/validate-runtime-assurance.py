@@ -4,10 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import hashlib
 import json
 import re
+import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -108,9 +112,12 @@ def require_repository(value: object, path: str) -> str:
     return text
 
 
+def canonical_bytes(value: object) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+
+
 def canonical_digest(value: object) -> str:
-    raw = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-    return "sha256:" + hashlib.sha256(raw).hexdigest()
+    return "sha256:" + hashlib.sha256(canonical_bytes(value)).hexdigest()
 
 
 def validate_execution(value: object, path: str) -> dict[str, object]:
@@ -281,6 +288,71 @@ def require_equal(actual: object, expected: object, path: str) -> None:
         fail(f"{path} identity mismatch")
 
 
+def run_openssl(args: list[str]) -> subprocess.CompletedProcess[bytes]:
+    try:
+        return subprocess.run(["openssl", *args], check=False, capture_output=True)
+    except FileNotFoundError:
+        fail("openssl is required to verify signed assurance receipts")
+
+
+def trusted_public_key_fingerprint(path: Path) -> str:
+    result = run_openssl(["pkey", "-pubin", "-in", str(path), "-outform", "DER"])
+    if result.returncode != 0:
+        fail(f"cannot load trusted public key: {result.stderr.decode(errors='replace').strip()}")
+    return "sha256:" + hashlib.sha256(result.stdout).hexdigest()
+
+
+def validate_receipt_signature(root: dict[str, object], args: argparse.Namespace) -> None:
+    signature_value = root.get("signature")
+    if signature_value is None:
+        if args.require_signature:
+            fail("assurance receipt signature is required")
+        return
+    if args.trusted_public_key is None:
+        fail("signed assurance receipt requires --trusted-public-key")
+
+    signature = require_dict(signature_value, "receipt.signature")
+    required = {"algorithm", "keyId", "payloadDigest", "value"}
+    require_keys(signature, required, "receipt.signature")
+    reject_unknown(signature, required, "receipt.signature")
+    if signature["algorithm"] != "ed25519":
+        fail("receipt.signature.algorithm must be ed25519")
+    key_id = require_digest(signature["keyId"], "receipt.signature.keyId")
+    payload_digest = require_digest(signature["payloadDigest"], "receipt.signature.payloadDigest")
+    encoded = require_string(signature["value"], "receipt.signature.value")
+
+    unsigned = dict(root)
+    unsigned.pop("signature", None)
+    payload = canonical_bytes(unsigned)
+    actual_payload_digest = "sha256:" + hashlib.sha256(payload).hexdigest()
+    if payload_digest != actual_payload_digest:
+        fail("signature payload digest mismatch: receipt content was changed")
+
+    actual_key_id = trusted_public_key_fingerprint(args.trusted_public_key)
+    if key_id != actual_key_id:
+        fail("receipt signing key does not match the independently trusted public key")
+
+    try:
+        signature_bytes = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError):
+        fail("receipt.signature.value must be valid base64")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root_path = Path(tmp)
+        payload_path = root_path / "payload.json"
+        signature_path = root_path / "signature.bin"
+        payload_path.write_bytes(payload)
+        signature_path.write_bytes(signature_bytes)
+        result = run_openssl([
+            "pkeyutl", "-verify", "-rawin", "-pubin",
+            "-inkey", str(args.trusted_public_key),
+            "-sigfile", str(signature_path),
+            "-in", str(payload_path),
+        ])
+    if result.returncode != 0:
+        fail("receipt signature verification failed")
+
+
 def validate_receipt(receipt_value: object, runtime_value: object | None, now: datetime, args: argparse.Namespace) -> None:
     root = require_dict(receipt_value, "receipt")
     required = {
@@ -288,9 +360,10 @@ def validate_receipt(receipt_value: object, runtime_value: object | None, now: d
         "decision", "execution", "subject", "controls",
     }
     require_keys(root, required, "receipt")
-    reject_unknown(root, required | {"runtimeEvidence"}, "receipt")
+    reject_unknown(root, required | {"runtimeEvidence", "signature"}, "receipt")
     if root["schemaVersion"] != RECEIPT_SCHEMA:
         fail(f"unsupported assurance receipt schema version: {root['schemaVersion']!r}")
+    validate_receipt_signature(root, args)
     require_id(root["receiptId"], "receipt.receiptId")
     generated = parse_time(root["generatedAt"], "receipt.generatedAt")
     valid_until = parse_time(root["validUntil"], "receipt.validUntil")
@@ -423,6 +496,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--expected-desired-state-revision")
     parser.add_argument("--expected-policy-bundle-digest")
     parser.add_argument("--expected-cluster-identity")
+    parser.add_argument("--trusted-public-key", type=Path)
+    parser.add_argument("--require-signature", action="store_true")
     return parser
 
 

@@ -68,6 +68,6 @@ The Runtime Lab does not prove or claim:
 - production networking, identity, storage, availability, backup, or disaster recovery;
 - organization-specific GitHub, Argo CD, or Kubernetes authorization controls;
 - external compliance certification;
-- P2 receipt signing or independent cryptographic verification.
+- production-grade signing roots or production trust anchors.
 
-Those require separately scoped evidence.
+P2 now signs the lab receipt with an execution-scoped Ed25519 key and independently verifies it against the separately supplied public key. That proves the P2 cryptographic path for this bounded runtime execution; it does not turn the ephemeral key into a production organizational trust root.

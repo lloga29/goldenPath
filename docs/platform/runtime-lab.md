@@ -38,7 +38,7 @@ For CI, `.github/workflows/runtime-lab.yaml` runs the same command on the PR hea
 
 The lab emits `goldenpath.runtime-lab-facts/v1` raw facts. They are runtime evidence from an `ephemeral-lab` execution and explicitly record `productionValidation: NOT_CLAIMED`.
 
-P1 does not sign these facts and does not convert them into `goldenpath.assurance-receipt/v1`. P2 owns identity-bound receipt generation, signing, and independent verification.
+The P1 lifecycle itself still emits raw facts rather than silently treating them as a receipt. P2 consumes those facts only after teardown, derives the identity-bound `goldenpath.runtime-evidence/v1` object, signs a `goldenpath.assurance-receipt/v1`, and verifies it independently with an external public trust key. See [Runtime Evidence and Signed Assurance Receipts](../assurance/runtime-signed-receipts.md).
 
 ## Determinism and isolation
 

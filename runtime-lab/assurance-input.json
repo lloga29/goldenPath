@@ -1,0 +1,26 @@
+{
+  "architecture": {
+    "schemaVersion": "goldenpath.architecture/v1",
+    "service": {
+      "name": "goldenpath-runtime",
+      "owner": "platform",
+      "serviceType": "api",
+      "dataSensitivity": "internal",
+      "dependencies": [],
+      "runtime": "kubernetes",
+      "sloTier": "tier3",
+      "deploymentUnit": "kustomize",
+      "riskClass": "R1"
+    }
+  },
+  "change": {
+    "changeType": "config",
+    "touchesProduction": false,
+    "changesPolicy": false,
+    "changesArchitecture": false,
+    "changesDesiredState": true,
+    "changesIdentity": false,
+    "changesNetwork": false,
+    "changesData": false
+  }
+}
