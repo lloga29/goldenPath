@@ -61,6 +61,9 @@ jobs:
       - name: Validate v0.2 runtime assurance contract
         run: python3 scripts/test-runtime-assurance-contract.py
 
+      - name: Validate P2 signed runtime assurance semantics
+        run: python3 scripts/test-runtime-assurance-p2.py
+
       - name: Validate R0-R4 risk-adaptive assurance semantics
         run: python3 scripts/test-risk-adaptive-assurance.py
 
