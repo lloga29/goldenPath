@@ -27,6 +27,6 @@ The intended sequence is doctor, validate, lab up, assure, verify, then evidence
 
 `evidence show` writes `assurance-report.txt` and `platform-scorecard.json`. Repository evidence is VERIFIED only when repository validation passed for the same source revision as the signed receipt. Runtime evidence is VERIFIED only after independent verification still binds the current receipt and runtime evidence. Production validation is always NOT_CLAIMED for the v0.2.0 Runtime Lab.
 
-The scorecard deliberately has no synthetic percentage, weighted health value, or maturity score. Each row comes from an explicit signed control or current continuous-assurance state, and `aggregation` is `none`.
+The scorecard is versioned as `goldenpath.platform-scorecard/v1` with schema `platform-assurance/cli/schema/goldenpath-platform-scorecard-v1.schema.json`. It deliberately has no synthetic percentage, weighted health value, or maturity score. Each row comes from an explicit signed control or current continuous-assurance state, and `aggregation` is `none`.
 
 A receipt whose stated decision contradicts required control outcomes fails closed. Missing dependencies, malformed artifacts, lower-level validation failures, identity or signature failures, and stale verification bindings return a non-zero status with diagnostics; blocking conditions are never downgraded to advisory PASS.
