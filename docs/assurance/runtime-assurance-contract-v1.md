@@ -46,7 +46,7 @@ Both runtime evidence and receipts have explicit validity windows. Verification 
 
 Validity windows are necessary but not sufficient replay protection. Exact source, artifact, GitOps, policy, runtime, and execution identities must also match the consumer's expected context.
 
-Cryptographic signing is a P2 deliverable. P0 therefore treats canonical digests and independent identity matching as the pre-signing contract, not as a substitute for signatures.
+P0 originally treated cryptographic signing as a P2 deliverable and canonical digests plus independent identity matching as the pre-signing contract. P2 now implements Ed25519 receipt signing and independent verification while preserving those identity checks. The P2 trust model, external public-key requirement, and adversarial verification path are documented in [Runtime Evidence and Signed Assurance Receipts](runtime-signed-receipts.md).
 
 ## Control and decision semantics
 
