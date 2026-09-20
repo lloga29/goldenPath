@@ -76,3 +76,19 @@ After the zero-cloud demo:
 2. read the [risk-adaptive assurance model](assurance/risk-adaptive-assurance.md);
 3. review the [evidence contract](assurance/evidence-contract.md);
 4. review [trusted evidence consumption](assurance/trusted-evidence-consumption.md).
+
+
+## v0.2.0 runtime complement
+
+The zero-cloud demo intentionally remains repository/reference evidence. v0.2.0 adds a separate supported Runtime Lab for users who want ephemeral Kubernetes runtime evidence:
+
+```bash
+python3 goldenpath doctor --scope all
+python3 goldenpath validate --artifact-dir /tmp/goldenpath-runtime-lab
+python3 goldenpath lab up --artifact-dir /tmp/goldenpath-runtime-lab --lab-id demo-v020 --source-revision "$(git rev-parse HEAD)"
+python3 goldenpath assure --artifact-dir /tmp/goldenpath-runtime-lab
+python3 goldenpath verify --artifact-dir /tmp/goldenpath-runtime-lab
+python3 goldenpath evidence show --artifact-dir /tmp/goldenpath-runtime-lab
+```
+
+This is a different evidence tier from the zero-cloud demo. The Runtime Lab can establish supported ephemeral-runtime evidence, but **production validation is not claimed**.
