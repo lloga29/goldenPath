@@ -1,8 +1,15 @@
 {
-  "schema_version": "goldenpath.public-status/v1",
-  "scope": "repository/reference",
+  "schema_version": "goldenpath.public-status/v2",
+  "scope": "repository/reference + supported-runtime",
   "title": "GoldenPath Evidence Status",
-  "description": "Generated from versioned repository evidence. This status does not claim runtime or production validation.",
+  "description": "Generated from versioned repository contracts plus the exact v0.2.0 Runtime Lab qualification. Production validation remains NOT CLAIMED.",
+  "runtime_release": {
+    "release": "v0.2.0",
+    "status": "VERIFIED",
+    "source_revision": "ae1e043040f00b04109b5a6038ae440778418b3c",
+    "qualification_run_id": 35538499852,
+    "qualification_artifact": "goldenpath-v0.2.0-candidate-evidence-35538499852-1"
+  },
   "capabilities": [
     {
       "id": "risk-adaptive-assurance",
@@ -23,6 +30,47 @@
         "platform-assurance/evidence/schema/goldenpath-evidence-v1.schema.json",
         "scripts/validate-evidence-manifest.py",
         "scripts/test-evidence-contract.py"
+      ]
+    },
+    {
+      "id": "runtime-lab",
+      "label": "Reproducible supported Runtime Lab",
+      "status": "implemented",
+      "evidence": [
+        "docs/platform/runtime-lab.md",
+        "runtime-lab/lab.sh",
+        ".github/workflows/runtime-lab.yaml"
+      ]
+    },
+    {
+      "id": "signed-runtime-assurance",
+      "label": "Signed runtime assurance receipts",
+      "status": "implemented",
+      "evidence": [
+        "docs/assurance/runtime-signed-receipts.md",
+        "scripts/generate-runtime-assurance.py",
+        "scripts/validate-runtime-assurance.py"
+      ]
+    },
+    {
+      "id": "continuous-assurance",
+      "label": "Continuous assurance, drift, and recovery",
+      "status": "implemented",
+      "evidence": [
+        "docs/assurance/continuous-assurance.md",
+        "scripts/evaluate-continuous-assurance.py",
+        "scripts/test-runtime-assurance-p3.py"
+      ]
+    },
+    {
+      "id": "release-self-qualification",
+      "label": "Exact release-candidate self-qualification",
+      "status": "implemented",
+      "evidence": [
+        "scripts/qualify-release-candidate.py",
+        "scripts/test-release-qualification-p5.py",
+        "docs/releases/v0.2.0.md",
+        "docs/runbooks/v0.2.0-release.md"
       ]
     },
     {
@@ -72,7 +120,7 @@
     }
   ],
   "boundaries": {
-    "runtime": "not-claimed",
+    "runtime": "verified-release-candidate",
     "production": "not-claimed"
   }
 }
