@@ -122,3 +122,10 @@ Production validation additionally requires the target organization's real ident
 ## Why this exists
 
 The zero-cloud demo intentionally focuses on assurance. The GitOps regression harness intentionally focuses on immutable promotion. This showcase composes those existing contracts so a new evaluator can understand the delivery story in one run without confusing repository proof with runtime or production validation.
+
+
+## v0.2.0 runtime continuation
+
+The repository showcase above remains intentionally zero-cloud. The supported v0.2.0 Runtime Lab continues the same evidence story against a real disposable Kubernetes API and Argo CD reconciliation path through the root `goldenpath` CLI.
+
+P5 then binds repository validation, Runtime Lab facts, the signed receipt, independent verification, continuous assurance, and the platform scorecard to the exact candidate SHA. This establishes supported ephemeral-runtime evidence for that candidate. **Production validation remains NOT CLAIMED.**
