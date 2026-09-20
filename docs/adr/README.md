@@ -19,5 +19,8 @@ ADRs capture durable platform decisions, their context, alternatives, and conseq
 - [ADR-0006: Maintain a Consolidated Reference Repository](0006-consolidated-reference-repository.md)
 - [ADR-0007: Use Argo CD Native Helm Reconciliation for Platform Add-ons](0007-argocd-native-platform-helm.md)
 - [ADR-0008: Standardize North-South Traffic on Gateway API with Envoy Gateway](0008-gateway-api-envoy-gateway.md)
+- [ADR-0009: Treat Runtime Evidence as Identity-Bound, Expiring Evidence](0009-runtime-evidence-trust-model.md)
+- [ADR-0010: Use Independently Verifiable Assurance Receipts](0010-assurance-receipts.md)
+- [ADR-0011: Use kind for the v0.2 Disposable Runtime Lab](0011-kind-runtime-lab.md)
 
 Create a new ADR when a change alters a durable architectural assumption or operating model.

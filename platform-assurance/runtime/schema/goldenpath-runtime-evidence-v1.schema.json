@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://goldenpath.dev/schemas/runtime/goldenpath-runtime-evidence-v1.schema.json",
+  "title": "GoldenPath Runtime Evidence v1",
+  "description": "Identity-bound runtime observation contract for GoldenPath v0.2.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "evidenceId",
+    "observedAt",
+    "validUntil",
+    "claim",
+    "execution",
+    "source",
+    "artifact",
+    "gitops",
+    "policy",
+    "runtime",
+    "controls"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "goldenpath.runtime-evidence/v1"
+    },
+    "evidenceId": {
+      "$ref": "#/$defs/id"
+    },
+    "observedAt": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "validUntil": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tier"
+      ],
+      "properties": {
+        "tier": {
+          "type": "string",
+          "enum": [
+            "runtime",
+            "production"
+          ]
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "executionId",
+        "attempt",
+        "collectorVersion"
+      ],
+      "properties": {
+        "executionId": {
+          "$ref": "#/$defs/id"
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "collectorVersion": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "revision"
+      ],
+      "properties": {
+        "repository": {
+          "$ref": "#/$defs/repository"
+        },
+        "revision": {
+          "$ref": "#/$defs/gitSha"
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity",
+        "digest"
+      ],
+      "properties": {
+        "identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest": {
+          "$ref": "#/$defs/sha256Digest"
+        }
+      }
+    },
+    "gitops": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "desiredStateRevision",
+        "desiredStateDigest"
+      ],
+      "properties": {
+        "repository": {
+          "$ref": "#/$defs/repository"
+        },
+        "desiredStateRevision": {
+          "$ref": "#/$defs/gitSha"
+        },
+        "desiredStateDigest": {
+          "$ref": "#/$defs/sha256Digest"
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assurancePlanDigest",
+        "policyBundleDigest"
+      ],
+      "properties": {
+        "assurancePlanDigest": {
+          "$ref": "#/$defs/sha256Digest"
+        },
+        "policyBundleDigest": {
+          "$ref": "#/$defs/sha256Digest"
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "environmentClass",
+        "clusterIdentity",
+        "namespace",
+        "workload"
+      ],
+      "properties": {
+        "environmentClass": {
+          "type": "string",
+          "enum": [
+            "ephemeral-lab",
+            "non-production",
+            "production"
+          ]
+        },
+        "clusterIdentity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "namespace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "name",
+            "uid",
+            "observedDigest"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uid": {
+              "type": "string",
+              "minLength": 1
+            },
+            "observedDigest": {
+              "$ref": "#/$defs/sha256Digest"
+            }
+          }
+        }
+      }
+    },
+    "controls": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/control"
+      }
+    }
+  },
+  "$defs": {
+    "gitSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256Digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[^/\\s]+/[^/\\s]+$"
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "required",
+        "result",
+        "observedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "INFRASTRUCTURE_FAILURE",
+            "NEEDS_HUMAN"
+          ]
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
