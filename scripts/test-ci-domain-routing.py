@@ -50,6 +50,13 @@ def main() -> int:
         templates=True,
         policies=False,
     )
+    assert_flags(
+        ["runtime-lab/gitops/deployment.yaml"],
+        gitops=True,
+        policies=True,
+        templates=True,
+        terraform=False,
+    )
 
     all_domains = module.classify(["scripts/validate-platform-stacks.sh"])
     if not all(all_domains.values()):
