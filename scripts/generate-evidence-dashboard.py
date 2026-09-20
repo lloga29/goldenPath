@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""Generate the public GoldenPath evidence status page from repository evidence."""
-
+"""Generate the public GoldenPath evidence status page with explicit claim boundaries."""
 from __future__ import annotations
 
 import argparse
 import html
 import json
+import re
 from pathlib import Path
 
-SCHEMA_VERSION = "goldenpath.public-status/v1"
-SCOPE = "repository/reference"
+SCHEMA_VERSION = "goldenpath.public-status/v2"
+SCOPE = "repository/reference + supported-runtime"
 ALLOWED_STATUS = {"implemented", "reference"}
-BOUNDARY_STATUS = "not-claimed"
+RUNTIME_BOUNDARY = "verified-release-candidate"
+PRODUCTION_BOUNDARY = "not-claimed"
+SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
 def fail(message: str) -> None:
@@ -34,7 +36,6 @@ def validate_evidence_path(root: Path, raw_path: str) -> Path:
 
 def load_status(root: Path, manifest_path: Path) -> dict:
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
-
     if data.get("schema_version") != SCHEMA_VERSION:
         fail(f"schema_version must be {SCHEMA_VERSION!r}")
     if data.get("scope") != SCOPE:
@@ -43,9 +44,27 @@ def load_status(root: Path, manifest_path: Path) -> dict:
     boundaries = data.get("boundaries")
     if not isinstance(boundaries, dict):
         fail("boundaries must be an object")
-    for boundary in ("runtime", "production"):
-        if boundaries.get(boundary) != BOUNDARY_STATUS:
-            fail(f"{boundary} boundary must remain {BOUNDARY_STATUS!r}")
+    if boundaries.get("runtime") != RUNTIME_BOUNDARY:
+        fail(f"runtime boundary must remain {RUNTIME_BOUNDARY!r}")
+    if boundaries.get("production") != PRODUCTION_BOUNDARY:
+        fail(f"production boundary must remain {PRODUCTION_BOUNDARY!r}")
+
+    runtime = data.get("runtime_release")
+    if not isinstance(runtime, dict):
+        fail("runtime_release must be an object")
+    if runtime.get("status") != "VERIFIED":
+        fail("runtime_release.status must be VERIFIED")
+    if runtime.get("release") != "v0.2.0":
+        fail("runtime_release.release must be v0.2.0")
+    revision = runtime.get("source_revision")
+    if not isinstance(revision, str) or not SHA_RE.fullmatch(revision):
+        fail("runtime_release.source_revision must be an exact Git SHA")
+    run_id = runtime.get("qualification_run_id")
+    if not isinstance(run_id, int) or run_id < 1:
+        fail("runtime_release.qualification_run_id must be a positive integer")
+    artifact = runtime.get("qualification_artifact")
+    if not isinstance(artifact, str) or not artifact:
+        fail("runtime_release.qualification_artifact must be non-empty")
 
     capabilities = data.get("capabilities")
     if not isinstance(capabilities, list) or not capabilities:
@@ -59,28 +78,21 @@ def load_status(root: Path, manifest_path: Path) -> dict:
         label = capability.get("label")
         status = capability.get("status")
         evidence = capability.get("evidence")
-
         if not isinstance(capability_id, str) or not capability_id:
             fail("each capability requires a non-empty id")
         if capability_id in seen_ids:
             fail(f"duplicate capability id: {capability_id}")
         seen_ids.add(capability_id)
-
         if not isinstance(label, str) or not label:
             fail(f"capability {capability_id!r} requires a non-empty label")
         if status not in ALLOWED_STATUS:
-            fail(
-                f"capability {capability_id!r} status must be one of "
-                f"{sorted(ALLOWED_STATUS)}"
-            )
+            fail(f"capability {capability_id!r} status must be one of {sorted(ALLOWED_STATUS)}")
         if not isinstance(evidence, list) or not evidence:
             fail(f"capability {capability_id!r} requires repository evidence")
-
         for evidence_path in evidence:
             if not isinstance(evidence_path, str) or not evidence_path:
                 fail(f"capability {capability_id!r} has an invalid evidence path")
             validate_evidence_path(root, evidence_path)
-
     return data
 
 
@@ -91,34 +103,29 @@ def repository_url(path: str) -> str:
 def render(data: dict) -> str:
     cards: list[str] = []
     for capability in data["capabilities"]:
-        evidence_links = "\n".join(
+        links = "\n".join(
             f'                <li><a href="{html.escape(repository_url(path), quote=True)}">'
             f"<code>{html.escape(path)}</code></a></li>"
             for path in capability["evidence"]
         )
-        status_label = (
-            "Implemented repository evidence"
-            if capability["status"] == "implemented"
-            else "Reference repository evidence"
-        )
-        cards.append(
-            f"""          <article class="feature-card">
-            <span class="feature-index">{html.escape(status_label)}</span>
+        label = "Implemented repository contract" if capability["status"] == "implemented" else "Reference repository contract"
+        cards.append(f"""          <article class="feature-card">
+            <span class="feature-index">{html.escape(label)}</span>
             <h3>{html.escape(capability["label"])}</h3>
             <ul class="evidence-links">
-{evidence_links}
+{links}
             </ul>
-          </article>"""
-        )
+          </article>""")
 
-    cards_html = "\n".join(cards)
+    runtime = data["runtime_release"]
+    run_url = f"https://github.com/lloga29/goldenPath/actions/runs/{runtime['qualification_run_id']}"
     return f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GoldenPath Evidence Status</title>
-  <meta name="description" content="Generated GoldenPath repository/reference evidence status with explicit runtime and production boundaries.">
+  <meta name="description" content="GoldenPath repository/reference contracts plus exact v0.2.0 supported-runtime qualification; production validation remains separate.">
   <meta name="robots" content="index,follow">
   <link rel="canonical" href="https://lloga29.github.io/goldenPath/evidence.html">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -126,75 +133,56 @@ def render(data: dict) -> str:
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="container nav">
-      <a class="brand" href="index.html" aria-label="GoldenPath home">
-        <img src="assets/goldenpath-logo.png" alt="GoldenPath" width="1448" height="1086">
-      </a>
-      <a class="button button-small" href="index.html">Back to GoldenPath</a>
-    </div>
-  </header>
+  <header class="site-header"><div class="container nav">
+    <a class="brand" href="index.html" aria-label="GoldenPath home"><img src="assets/goldenpath-logo.png" alt="GoldenPath" width="1448" height="1086"></a>
+    <a class="button button-small" href="index.html">Back to GoldenPath</a>
+  </div></header>
 
   <main id="main">
-    <section class="hero">
-      <div class="container">
-        <div class="eyebrow-row">
-          <span class="eyebrow">Generated evidence dashboard</span>
-        </div>
-        <h1>{html.escape(data["title"])}</h1>
-        <p class="lead">{html.escape(data["description"])}</p>
-        <div class="signal-row">
-          <span>Scope: Repository / reference</span>
-          <span>Runtime: Not claimed</span>
-          <span>Production: Not claimed</span>
-        </div>
+    <section class="hero"><div class="container">
+      <div class="eyebrow-row"><span class="eyebrow">Generated evidence dashboard</span></div>
+      <h1>{html.escape(data["title"])}</h1>
+      <p class="lead">{html.escape(data["description"])}</p>
+      <div class="signal-row">
+        <span>Scope: Repository / reference + supported runtime</span>
+        <span>Runtime: Verified for v0.2.0 candidate</span>
+        <span>Production: Not claimed</span>
       </div>
-    </section>
+    </div></section>
 
-    <section class="section section-tight">
-      <div class="container">
-        <div class="section-heading">
-          <p class="kicker">Verifiable repository evidence</p>
-          <h2>Every listed capability resolves to repository-owned evidence.</h2>
-        </div>
-        <div class="feature-grid status-grid">
-{cards_html}
-        </div>
+    <section class="section section-tight"><div class="container">
+      <div class="section-heading">
+        <p class="kicker">Verifiable contracts</p>
+        <h2>Every listed capability resolves to repository-owned contracts.</h2>
       </div>
-    </section>
+      <div class="feature-grid status-grid">
+{chr(10).join(cards)}
+      </div>
+    </div></section>
 
-    <section class="section evidence-section">
-      <div class="container">
-        <div class="evidence-panel">
-          <div>
-            <p class="kicker">Evidence boundary</p>
-            <h2>Repository evidence is intentionally not promoted into a runtime claim.</h2>
-          </div>
-          <div class="evidence-flow" aria-label="Evidence levels">
-            <div><strong>Repository / reference</strong><span>Generated from paths validated during the site build</span></div>
-            <span class="arrow" aria-hidden="true">→</span>
-            <div><strong>Runtime</strong><span>Not claimed by this dashboard</span></div>
-            <span class="arrow" aria-hidden="true">→</span>
-            <div><strong>Production validation</strong><span>Not claimed by this dashboard</span></div>
-          </div>
-          <p class="boundary-note">The generator fails closed when declared repository evidence is missing or when the manifest attempts to claim runtime or production validation.</p>
-        </div>
+    <section class="section evidence-section"><div class="container"><div class="evidence-panel">
+      <div>
+        <p class="kicker">Exact runtime qualification</p>
+        <h2>v0.2.0 binds runtime proof to one exact release candidate.</h2>
       </div>
-    </section>
+      <div class="evidence-flow" aria-label="Evidence levels">
+        <div><strong>Repository / reference</strong><span>Contracts, schemas, policy, CI, and release documentation</span></div>
+        <span class="arrow" aria-hidden="true">→</span>
+        <div><strong>Supported runtime</strong><span>Runtime Lab, signed receipt, independent verification, and current-state assurance</span></div>
+        <span class="arrow" aria-hidden="true">→</span>
+        <div><strong>Production validation</strong><span>Not claimed by v0.2.0</span></div>
+      </div>
+      <p class="boundary-note">Qualified source: <code>{html.escape(runtime["source_revision"])}</code>. Runtime Lab: <a href="{html.escape(run_url, quote=True)}">run #{runtime["qualification_run_id"]}</a>. Evidence bundle: <code>{html.escape(runtime["qualification_artifact"])}</code>. Production validation remains separate and is not claimed.</p>
+    </div></div></section>
   </main>
 
-  <footer>
-    <div class="container footer-grid">
-      <div>
-        <strong>GoldenPath</strong>
-        <p>Generated from <code>platform-assurance/evidence/public-status.json</code>.</p>
-      </div>
-      <div class="footer-links">
-        <a href="https://github.com/lloga29/goldenPath/blob/main/platform-assurance/evidence/public-status.json">Status manifest</a>
-        <a href="https://github.com/lloga29/goldenPath/blob/main/scripts/generate-evidence-dashboard.py">Generator</a>
-      </div>
+  <footer><div class="container footer-grid">
+    <div><strong>GoldenPath</strong><p>Generated from <code>platform-assurance/evidence/public-status.json</code>.</p></div>
+    <div class="footer-links">
+      <a href="https://github.com/lloga29/goldenPath/blob/main/platform-assurance/evidence/public-status.json">Status manifest</a>
+      <a href="{html.escape(run_url, quote=True)}">Qualification run</a>
     </div>
-  </footer>
+  </div></footer>
 </body>
 </html>
 """
@@ -205,18 +193,11 @@ def main() -> int:
     parser.add_argument("manifest", type=Path)
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
-
     root = Path(__file__).resolve().parent.parent
-    manifest = args.manifest.resolve()
-    output = args.output.resolve()
-
-    data = load_status(root, manifest)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(render(data), encoding="utf-8")
-    print(
-        f"PASS: generated repository/reference evidence dashboard with "
-        f"{len(data['capabilities'])} verified capability entries"
-    )
+    data = load_status(root, args.manifest.resolve())
+    args.output.resolve().parent.mkdir(parents=True, exist_ok=True)
+    args.output.resolve().write_text(render(data), encoding="utf-8")
+    print(f"PASS: generated repository/reference + runtime evidence dashboard with {len(data['capabilities'])} verified contract entries")
     return 0
 
 

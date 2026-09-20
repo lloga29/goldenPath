@@ -44,14 +44,9 @@ Root repository CI executes the same build/validation command so the public land
 
 ## Deployment
 
-`.github/workflows/pages.yaml` is intentionally manual through `workflow_dispatch`.
+`.github/workflows/pages.yaml` supports manual `workflow_dispatch` and automatically deploys validated site changes merged to `main`.
 
-Do not run it until:
-
-1. the `v0.1.0` GitHub Release exists;
-2. GitHub Pages is configured to use GitHub Actions as its source;
-3. issue #75 is complete;
-4. the Pages implementation PR is merged to `main`.
+For v0.2.0, Pages publishes the release-aware landing and evidence dashboard after the site update is merged. The dashboard may claim supported ephemeral-runtime verification only when it is bound to the exact successful v0.2.0 Runtime Lab qualification run; production validation remains NOT CLAIMED.
 
 The workflow separates permissions by job:
 
@@ -62,6 +57,6 @@ External actions are pinned to immutable commit SHAs.
 
 ## Evidence boundary
 
-A successful Pages deployment proves that the static project landing was built and published. It does not convert repository/reference evidence into runtime or production evidence for the platform architecture described by the site.
+A successful Pages deployment proves that the static project landing was built and published. Runtime claims shown by the v0.2.0 dashboard are separately bound to the exact qualified Runtime Lab run and release commit. Pages itself does not create runtime evidence, and it never converts that evidence into production validation.
 
 Refs #77.
