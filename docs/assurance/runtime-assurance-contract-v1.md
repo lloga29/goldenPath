@@ -152,5 +152,5 @@ Machine-readable and human-readable output must represent the same underlying st
 
 `scripts/test-runtime-assurance-contract.py` proves rejection of missing identities, source/artifact/desired-state mismatch, stale runtime evidence, tampering, unsupported versions, contradictory required controls, missing runtime evidence, and attempted lab-to-production tier escalation.
 
-These tests establish the contract boundary only. They do not claim that P1 runtime collection, P2 signing, P3 continuous assurance, P4 CLI, or P5 release qualification already exists.
+The P0 contract remains authoritative. P1 runtime collection, P2 signing, P3 continuous assurance, and the P4 CLI/reporting layer are now implemented against it. P5 release self-qualification remains a separate gate and is not implied by these phase results.
 

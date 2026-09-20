@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://goldenpath.dev/schemas/cli/goldenpath-cli-output-v1.schema.json",
+  "title": "GoldenPath CLI Output v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion","command","status","evidenceTier","productionValidation","summary","data","diagnostics"],
+  "properties": {
+    "schemaVersion": {"const": "goldenpath.cli-output/v1"},
+    "command": {"type": "string", "minLength": 1},
+    "status": {"enum": ["PASS","FAIL","VERIFIED","NOT_VERIFIED","NEEDS_HUMAN"]},
+    "evidenceTier": {"enum": ["none","repository","runtime"]},
+    "productionValidation": {"const": "NOT_CLAIMED"},
+    "summary": {"type": "string", "minLength": 1},
+    "data": {"type": "object"},
+    "diagnostics": {"type": "array", "items": {"type": "object"}}
+  }
+}

@@ -14,6 +14,10 @@ on:
       - 'scripts/test-runtime-assurance-p2.py'
       - 'scripts/evaluate-continuous-assurance.py'
       - 'scripts/test-runtime-assurance-p3.py'
+      - 'scripts/test-goldenpath-cli-p4.py'
+      - 'platform-assurance/cli/**'
+      - 'goldenpath'
+      - 'docs/cli/goldenpath-cli-v1.md'
       - 'docs/assurance/runtime-signed-receipts.md'
       - 'docs/assurance/continuous-assurance.md'
       - 'docs/runbooks/runtime-drift-recovery.md'
@@ -31,6 +35,10 @@ on:
       - 'scripts/test-runtime-assurance-p2.py'
       - 'scripts/evaluate-continuous-assurance.py'
       - 'scripts/test-runtime-assurance-p3.py'
+      - 'scripts/test-goldenpath-cli-p4.py'
+      - 'platform-assurance/cli/**'
+      - 'goldenpath'
+      - 'docs/cli/goldenpath-cli-v1.md'
       - 'docs/assurance/runtime-signed-receipts.md'
       - 'docs/assurance/continuous-assurance.md'
       - 'docs/runbooks/runtime-drift-recovery.md'
@@ -103,65 +111,24 @@ jobs:
           git --version
           python3 --version
 
-      - name: Run reproducible Runtime Lab smoke path
-        shell: bash
-        env:
-          GOLDENPATH_LAB_ID: "gh-${{ github.run_id }}-${{ github.run_attempt }}"
-          GOLDENPATH_SOURCE_REVISION: "${{ github.event.pull_request.head.sha || github.sha }}"
-          GOLDENPATH_LAB_ARTIFACT_DIR: "${{ runner.temp }}/goldenpath-runtime-lab"
-        run: ./runtime-lab/lab.sh smoke
+      - name: Validate repository evidence through official CLI
+        run: python3 goldenpath --output json validate --artifact-dir "${{ runner.temp }}/goldenpath-runtime-lab"
 
-      - name: Generate signed runtime assurance receipt
-        shell: bash
-        run: |
-          set -euo pipefail
-          artifact_dir="${{ runner.temp }}/goldenpath-runtime-lab"
-          private_key="${RUNNER_TEMP}/goldenpath-runtime-receipt.key"
-          trap 'rm -f "$private_key"' EXIT
+      - name: Run Runtime Lab through official CLI
+        run: >-
+          python3 goldenpath --output json lab up
+          --artifact-dir "${{ runner.temp }}/goldenpath-runtime-lab"
+          --lab-id "gh-${{ github.run_id }}-${{ github.run_attempt }}"
+          --source-revision "${{ github.event.pull_request.head.sha || github.sha }}"
 
-          python3 scripts/evaluate-risk.py \
-            runtime-lab/assurance-input.json \
-            --output "$artifact_dir/assurance-plan.json"
+      - name: Generate signed runtime assurance through official CLI
+        run: >-
+          python3 goldenpath --output json assure
+          --artifact-dir "${{ runner.temp }}/goldenpath-runtime-lab"
+          --attempt "${{ github.run_attempt }}"
 
-          openssl genpkey -algorithm ED25519 -out "$private_key"
-
-          python3 scripts/generate-runtime-assurance.py \
-            --runtime-facts "$artifact_dir/runtime-facts.json" \
-            --assurance-plan "$artifact_dir/assurance-plan.json" \
-            --private-key "$private_key" \
-            --repository-root . \
-            --runtime-evidence-output "$artifact_dir/runtime-evidence.json" \
-            --receipt-output "$artifact_dir/assurance-receipt.json" \
-            --public-key-output "$artifact_dir/runtime-receipt-public.pem" \
-            --summary-output "$artifact_dir/assurance-summary.txt" \
-            --attempt "${{ github.run_attempt }}"
-
-          cat "$artifact_dir/assurance-summary.txt"
-
-      - name: Independently verify signed runtime assurance receipt
-        shell: bash
-        env:
-          EXPECTED_SOURCE: "${{ github.event.pull_request.head.sha || github.sha }}"
-        run: |
-          set -euo pipefail
-          artifact_dir="${{ runner.temp }}/goldenpath-runtime-lab"
-          facts="$artifact_dir/runtime-facts.json"
-          receipt="$artifact_dir/assurance-receipt.json"
-
-          expected_artifact="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["artifact"]["expectedDigest"])' "$facts")"
-          expected_cluster="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["runtime"]["clusterIdentity"])' "$facts")"
-          expected_policy="$(git ls-tree -r --full-tree "$EXPECTED_SOURCE" -- gitops-config/policies | sha256sum | awk '{print "sha256:" $1}')"
-
-          python3 scripts/validate-runtime-assurance.py \
-            "$receipt" \
-            --runtime-evidence "$artifact_dir/runtime-evidence.json" \
-            --trusted-public-key "$artifact_dir/runtime-receipt-public.pem" \
-            --require-signature \
-            --expected-source "$EXPECTED_SOURCE" \
-            --expected-artifact-digest "$expected_artifact" \
-            --expected-desired-state-revision "$EXPECTED_SOURCE" \
-            --expected-policy-bundle-digest "$expected_policy" \
-            --expected-cluster-identity "$expected_cluster"
+      - name: Independently verify signed receipt through official CLI
+        run: python3 goldenpath --output json verify --artifact-dir "${{ runner.temp }}/goldenpath-runtime-lab"
 
       - name: Bind recovered current state to new signed receipt
         shell: bash
@@ -176,6 +143,9 @@ jobs:
             --output "$artifact_dir/continuous-assurance.json"
 
           cat "$artifact_dir/continuous-assurance.json"
+
+      - name: Render P4 assurance report and scorecard
+        run: python3 goldenpath evidence show --artifact-dir "${{ runner.temp }}/goldenpath-runtime-lab"
 
       - name: Upload Runtime Lab facts
         if: always()

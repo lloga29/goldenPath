@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+"""GoldenPath v0.2 official CLI for repository and ephemeral-runtime assurance."""
+from __future__ import annotations
+import argparse, hashlib, json, os, shutil, subprocess, sys, tempfile
+from pathlib import Path
+
+ROOT=Path(__file__).resolve().parent
+CLI_SCHEMA="goldenpath.cli-output/v1"
+DEFAULT_ARTIFACT_DIR="runtime-lab-artifacts/cli"
+RESULTS={"PASS","FAIL","INFRASTRUCTURE_FAILURE","NEEDS_HUMAN"}
+
+class CliError(RuntimeError):
+    def __init__(self,message,remediation=None):
+        super().__init__(message); self.remediation=remediation
+
+def read_json(path):
+    path=Path(path)
+    try: value=json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise CliError(f"required file does not exist: {path}","Run the preceding GoldenPath command or pass the correct --artifact-dir.") from exc
+    except json.JSONDecodeError as exc:
+        raise CliError(f"invalid JSON in {path}: {exc}","Replace it with output from the supported GoldenPath path.") from exc
+    if not isinstance(value,dict): raise CliError(f"{path} must contain a JSON object")
+    return value
+
+def write_json(path,value):
+    path=Path(path); path.parent.mkdir(parents=True,exist_ok=True)
+    path.write_text(json.dumps(value,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+
+def run(command,env=None):
+    try:
+        result=subprocess.run(command,cwd=ROOT,env=env,check=False,text=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    except FileNotFoundError as exc:
+        raise CliError(f"required executable is not available: {command[0]}",f"Install {command[0]!r} and rerun doctor.") from exc
+    if result.returncode:
+        detail=(result.stderr or result.stdout).strip() or f"exit status {result.returncode}"
+        raise CliError(f"command failed: {' '.join(command)}: {detail}","Fix the blocking condition; required controls are never downgraded to advisory.")
+    return result
+
+def canonical_digest(value):
+    raw=json.dumps(value,sort_keys=True,separators=(",",":"),ensure_ascii=False).encode()
+    return "sha256:"+hashlib.sha256(raw).hexdigest()
+
+def file_digest(path):
+    try: return "sha256:"+hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    except FileNotFoundError as exc: raise CliError(f"required file does not exist: {path}") from exc
+
+def tree_digest(revision,path):
+    out=run(["git","ls-tree","-r","--full-tree",revision,"--",path]).stdout
+    if not out: raise CliError(f"Git tree for {path} at {revision} is empty")
+    return "sha256:"+hashlib.sha256(out.encode()).hexdigest()
+
+def artifacts(value):
+    p=Path(value); return p if p.is_absolute() else (ROOT/p).resolve()
+
+def envelope(command,status,tier,summary,data=None,diagnostics=None):
+    return {"schemaVersion":CLI_SCHEMA,"command":command,"status":status,"evidenceTier":tier,"productionValidation":"NOT_CLAIMED","summary":summary,"data":data or {},"diagnostics":diagnostics or []}
+
+def emit(result,fmt):
+    if fmt=="json": print(json.dumps(result,indent=2,sort_keys=True)); return
+    print(f"GoldenPath {result['command']}")
+    print(f"Status: {result['status']}")
+    print(f"Evidence tier: {result['evidenceTier']}")
+    print("Production validation: NOT CLAIMED")
+    print(result["summary"])
+    report=result.get("data",{}).get("report")
+    if isinstance(report,str): print("\n"+report,end="" if report.endswith("\n") else "\n")
+    for item in result.get("diagnostics",[]):
+        name=item.get("dependency") or item.get("id") or "diagnostic"
+        detail=item.get("message") or item.get("remediation") or ""
+        print(f"- {name}: {item.get('status','INFO')}{' - '+detail if detail else ''}")
+
+def doctor(args):
+    groups={
+      "repository":{"git":"repository validation","python3":"repository validation"},
+      "assurance":{"git":"identity binding","python3":"assurance tooling","openssl":"Ed25519 signing and verification"},
+      "runtime":{"git":"source identity","python3":"runtime evidence tooling","docker":"kind runtime","kind":"ephemeral Kubernetes","kubectl":"Kubernetes API","helm":"bootstrap","copier":"reference service generation","go":"reference service build"},
+    }
+    selected={}
+    for scope in (groups if args.scope=="all" else [args.scope]):
+        for dep,purpose in groups[scope].items(): selected.setdefault(dep,set()).add(purpose)
+    diagnostics=[]; missing=[]
+    for dep in sorted(selected):
+        path=shutil.which(dep); status="PASS" if path else "FAIL"
+        if not path: missing.append(dep)
+        diagnostics.append({"dependency":dep,"status":status,"path":path,"requiredFor":sorted(selected[dep]),"remediation":None if path else f"Install {dep!r} and ensure it is on PATH."})
+    if missing: return envelope("doctor","FAIL","none","Missing blocking prerequisites: "+", ".join(missing),{"scope":args.scope,"missing":missing},diagnostics)
+    return envelope("doctor","PASS","none","All requested prerequisites are available.",{"scope":args.scope},diagnostics)
+
+def plan(args):
+    src=Path(args.input); src=src if src.is_absolute() else ROOT/src
+    out=Path(args.output_file); out=out if out.is_absolute() else ROOT/out; out.parent.mkdir(parents=True,exist_ok=True)
+    run([sys.executable,"scripts/evaluate-risk.py",str(src),"--output",str(out)])
+    value=read_json(out); evidence=value.get("evidenceRequirements",{})
+    return envelope("plan","PASS","repository",f"Derived assurance plan {value.get('riskLevel')}.",{"riskLevel":value.get("riskLevel"),"planDigest":evidence.get("planDigest"),"runtimeValidationRequired":evidence.get("runtimeValidationRequired"),"requiredGateIds":evidence.get("requiredGateIds",[]),"output":str(out)})
+
+def validate(args):
+    target=artifacts(args.artifact_dir); target.mkdir(parents=True,exist_ok=True)
+    checks=[
+      ("runtime-contract",[sys.executable,"scripts/test-runtime-assurance-contract.py"]),
+      ("signed-receipts",[sys.executable,"scripts/test-runtime-assurance-p2.py"]),
+      ("continuous-assurance",[sys.executable,"scripts/test-runtime-assurance-p3.py"]),
+      ("risk-adaptive-assurance",[sys.executable,"scripts/test-risk-adaptive-assurance.py"]),
+    ]
+    results=[]
+    for name,command in checks:
+        try: results.append({"id":name,"result":"PASS","detail":run(command).stdout.strip()})
+        except CliError as exc:
+            results.append({"id":name,"result":"FAIL","detail":str(exc)})
+            write_json(target/"repository-validation.json",{"schemaVersion":"goldenpath.repository-validation/v1","status":"FAIL","evidenceTier":"repository","productionValidation":"NOT_CLAIMED","checks":results})
+            raise CliError(f"repository/reference validation failed at {name}: {exc}","Correct the failing repository control before accepting runtime assurance.")
+    source=run(["git","rev-parse","HEAD"]).stdout.strip()
+    value={"schemaVersion":"goldenpath.repository-validation/v1","status":"PASS","sourceRevision":source,"evidenceTier":"repository","productionValidation":"NOT_CLAIMED","checks":results}
+    value["evidenceDigest"]=canonical_digest(value); write_json(target/"repository-validation.json",value)
+    return envelope("validate","PASS","repository","Repository/reference assurance passed for the exact source revision.",{"artifact":str(target/"repository-validation.json"),"checks":results})
+
+def lab_env(args):
+    env=os.environ.copy(); env["GOLDENPATH_LAB_ARTIFACT_DIR"]=str(artifacts(args.artifact_dir))
+    if args.lab_id: env["GOLDENPATH_LAB_ID"]=args.lab_id
+    if args.source_revision: env["GOLDENPATH_SOURCE_REVISION"]=args.source_revision
+    return env
+
+def lab(args):
+    target=artifacts(args.artifact_dir); env=lab_env(args)
+    if args.lab_command=="up":
+        run(["bash","runtime-lab/lab.sh","smoke"],env=env)
+        facts=target/"runtime-facts.json"
+        if not facts.exists(): raise CliError("Runtime Lab completed without runtime-facts.json","Treat the execution as infrastructure failure.")
+        return envelope("lab up","PASS","runtime","Completed bounded Runtime Lab lifecycle, captured facts, and verified teardown.",{"artifactDir":str(target),"runtimeFacts":str(facts),"lifecycle":"completed-and-destroyed"})
+    if not args.lab_id: raise CliError("lab down requires --lab-id","Pass the exact id used by the interrupted Runtime Lab.")
+    run(["bash","runtime-lab/lab.sh","down"],env=env)
+    return envelope("lab down","PASS","runtime",f"Cleanup completed for Runtime Lab id {args.lab_id}.",{"labId":args.lab_id})
+
+def assure(args):
+    target=artifacts(args.artifact_dir); target.mkdir(parents=True,exist_ok=True); facts=target/"runtime-facts.json"
+    if not facts.exists(): raise CliError("runtime-facts.json is required before assurance","Run lab up first or use a supported Runtime Lab artifact directory.")
+    plan_path=target/"assurance-plan.json"
+    run([sys.executable,"scripts/evaluate-risk.py","runtime-lab/assurance-input.json","--output",str(plan_path)])
+    with tempfile.TemporaryDirectory() as tmp:
+        key=Path(tmp)/"receipt.key"; run(["openssl","genpkey","-algorithm","ED25519","-out",str(key)])
+        run([sys.executable,"scripts/generate-runtime-assurance.py","--runtime-facts",str(facts),"--assurance-plan",str(plan_path),"--private-key",str(key),"--repository-root",str(ROOT),"--runtime-evidence-output",str(target/"runtime-evidence.json"),"--receipt-output",str(target/"assurance-receipt.json"),"--public-key-output",str(target/"runtime-receipt-public.pem"),"--summary-output",str(target/"assurance-summary.txt"),"--attempt",str(args.attempt)])
+    receipt=read_json(target/"assurance-receipt.json")
+    return envelope("assure","PASS","runtime",f"Generated signed runtime assurance receipt with decision {receipt.get('decision')}.",{"receipt":str(target/"assurance-receipt.json"),"runtimeEvidence":str(target/"runtime-evidence.json"),"publicKey":str(target/"runtime-receipt-public.pem"),"decision":receipt.get("decision"),"claimTier":receipt.get("claim",{}).get("tier")})
+
+def verify(args):
+    target=artifacts(args.artifact_dir)
+    facts=read_json(target/"runtime-facts.json"); receipt_path=target/"assurance-receipt.json"; evidence_path=target/"runtime-evidence.json"; public_key=target/"runtime-receipt-public.pem"; receipt=read_json(receipt_path)
+    source=facts.get("execution",{}).get("sourceRevision"); artifact=facts.get("artifact",{}).get("expectedDigest"); cluster=facts.get("runtime",{}).get("clusterIdentity")
+    if not all(isinstance(v,str) and v for v in (source,artifact,cluster)): raise CliError("runtime facts are missing source, artifact, or cluster identity","Regenerate facts through the supported Runtime Lab.")
+    policy=tree_digest(source,"gitops-config/policies")
+    run([sys.executable,"scripts/validate-runtime-assurance.py",str(receipt_path),"--runtime-evidence",str(evidence_path),"--trusted-public-key",str(public_key),"--require-signature","--expected-source",source,"--expected-artifact-digest",artifact,"--expected-desired-state-revision",source,"--expected-policy-bundle-digest",policy,"--expected-cluster-identity",cluster])
+    value={"schemaVersion":"goldenpath.verification-result/v1","status":"PASS","evidenceTier":"runtime","productionValidation":"NOT_CLAIMED","receiptId":receipt.get("receiptId"),"receiptFileDigest":file_digest(receipt_path),"runtimeEvidenceFileDigest":file_digest(evidence_path),"trustedPublicKeyFileDigest":file_digest(public_key),"expected":{"sourceRevision":source,"artifactDigest":artifact,"desiredStateRevision":source,"policyBundleDigest":policy,"clusterIdentity":cluster}}
+    value["evidenceDigest"]=canonical_digest(value); write_json(target/"verification-result.json",value)
+    return envelope("verify","PASS","runtime","Independently verified signature, evidence binding, and expected identities.",{"artifact":str(target/"verification-result.json"),"receiptId":receipt.get("receiptId")})
+
+def scorecard(target):
+    receipt=read_json(target/"assurance-receipt.json"); controls=receipt.get("controls")
+    if not isinstance(controls,list) or not controls: raise CliError("assurance receipt does not contain measurable controls")
+    rows=[]; nonpass=[]
+    for item in controls:
+        if not isinstance(item,dict) or not isinstance(item.get("id"),str) or item.get("result") not in RESULTS or not isinstance(item.get("required"),bool):
+            raise CliError("assurance receipt contains an invalid measurable control")
+        row={"id":item["id"],"result":item["result"],"required":item["required"],"observedAt":item.get("observedAt"),"source":"signed-runtime-receipt"}; rows.append(row)
+        if row["required"] and row["result"]!="PASS": nonpass.append(row)
+    derived="VERIFIED" if not nonpass else ("NEEDS_HUMAN" if any(r["result"]=="NEEDS_HUMAN" for r in nonpass) else "NOT_VERIFIED")
+    if receipt.get("decision")!=derived: raise CliError(f"receipt decision {receipt.get('decision')!r} contradicts measurable required controls; derived decision is {derived}","Reject and regenerate the receipt.")
+    repo="NOT_ASSESSED"; rp=target/"repository-validation.json"; receipt_source=receipt.get("subject",{}).get("source",{}).get("revision")
+    if rp.exists():
+        rv=read_json(rp); repo="VERIFIED" if rv.get("status")=="PASS" and rv.get("sourceRevision")==receipt_source else "NOT_VERIFIED"
+    runtime="PRESENT_UNVERIFIED"; vp=target/"verification-result.json"
+    if vp.exists():
+        vv=read_json(vp)
+        if vv.get("receiptFileDigest")!=file_digest(target/"assurance-receipt.json"): raise CliError("verification result does not bind the current assurance receipt","Rerun verify after any receipt change.")
+        if vv.get("runtimeEvidenceFileDigest")!=file_digest(target/"runtime-evidence.json"): raise CliError("verification result does not bind the current runtime evidence","Rerun verify after any evidence change.")
+        runtime="VERIFIED" if vv.get("status")=="PASS" and derived=="VERIFIED" else "NOT_VERIFIED"
+    current=None; cp=target/"continuous-assurance.json"
+    if cp.exists():
+        cv=read_json(cp); current=cv.get("currentState"); rows.append({"id":"continuous-assurance-current-state","result":current,"required":True,"observedAt":cv.get("observedAt"),"source":"continuous-assurance"})
+    risk=None; pp=target/"assurance-plan.json"
+    if pp.exists(): risk=read_json(pp).get("riskLevel")
+    value={"schemaVersion":"goldenpath.platform-scorecard/v1","evidenceTier":"runtime","productionValidation":"NOT_CLAIMED","riskLevel":risk,"decision":derived,"currentState":current,"controls":rows,"evidence":{"repository":repo,"runtime":runtime,"production":"NOT_CLAIMED"},"aggregation":"none","aggregationReason":"No synthetic percentage or weighted score is invented; every row is evidence-backed."}
+    value["evidenceDigest"]=canonical_digest(value); return value
+
+def report(value):
+    lines=["GoldenPath Assurance Report",""]
+    if value.get("riskLevel"): lines.append(f"Risk Level                 {value['riskLevel']}")
+    for row in value["controls"]:
+        label=str(row["id"]).replace("-"," ").title()
+        lines.append(f"{label[:28]:<28} {row['result']}")
+    lines+=["",f"Repository Evidence        {value['evidence']['repository']}",f"Runtime Evidence           {value['evidence']['runtime']}","Production Validation     NOT CLAIMED"]
+    if value.get("currentState"): lines.append(f"Current Runtime State      {value['currentState']}")
+    lines+=["","No aggregate numeric score is calculated; all rows are evidence-backed.",""]
+    return "\n".join(lines)
+
+def evidence_show(args):
+    target=artifacts(args.artifact_dir); value=scorecard(target); text=report(value)
+    write_json(target/"platform-scorecard.json",value); (target/"assurance-report.txt").write_text(text,encoding="utf-8")
+    return envelope("evidence show","PASS" if value["decision"]=="VERIFIED" else value["decision"],"runtime","Rendered evidence-backed report and scorecard without a production claim or invented aggregate metric.",{"report":text,"scorecard":value,"reportPath":str(target/"assurance-report.txt"),"scorecardPath":str(target/"platform-scorecard.json")})
+
+def parser():
+    p=argparse.ArgumentParser(description=__doc__); p.add_argument("--output",choices=("human","json"),default="human"); sub=p.add_subparsers(dest="command",required=True)
+    d=sub.add_parser("doctor"); d.add_argument("--scope",choices=("repository","assurance","runtime","all"),default="all")
+    pl=sub.add_parser("plan"); pl.add_argument("--input",default="runtime-lab/assurance-input.json"); pl.add_argument("--output-file",default=".goldenpath/assurance-plan.json")
+    v=sub.add_parser("validate"); v.add_argument("--artifact-dir",default=DEFAULT_ARTIFACT_DIR)
+    l=sub.add_parser("lab"); ls=l.add_subparsers(dest="lab_command",required=True)
+    for name in ("up","down"):
+        c=ls.add_parser(name); c.add_argument("--artifact-dir",default=DEFAULT_ARTIFACT_DIR); c.add_argument("--lab-id"); c.add_argument("--source-revision")
+    a=sub.add_parser("assure"); a.add_argument("--artifact-dir",default=DEFAULT_ARTIFACT_DIR); a.add_argument("--attempt",type=int,default=1)
+    ve=sub.add_parser("verify"); ve.add_argument("--artifact-dir",default=DEFAULT_ARTIFACT_DIR)
+    e=sub.add_parser("evidence"); es=e.add_subparsers(dest="evidence_command",required=True); sh=es.add_parser("show"); sh.add_argument("--artifact-dir",default=DEFAULT_ARTIFACT_DIR)
+    return p
+
+def main():
+    p=parser(); args=p.parse_args()
+    try:
+        result={"doctor":doctor,"plan":plan,"validate":validate,"lab":lab,"assure":assure,"verify":verify}.get(args.command)
+        result=result(args) if result else evidence_show(args)
+    except CliError as exc:
+        cmd=" ".join(str(x) for x in (args.command,getattr(args,"lab_command",None) or getattr(args,"evidence_command",None)) if x)
+        out=envelope(cmd,"FAIL","none",str(exc),diagnostics=[{"id":"blocking-error","status":"FAIL","message":str(exc),"remediation":exc.remediation}]); emit(out,args.output); return 1
+    emit(result,args.output); return 0 if result["status"]=="PASS" else 1
+if __name__=="__main__": raise SystemExit(main())

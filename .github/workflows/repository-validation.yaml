@@ -67,6 +67,9 @@ jobs:
       - name: Validate P3 continuous assurance semantics
         run: python3 scripts/test-runtime-assurance-p3.py
 
+      - name: Validate P4 CLI, reports, and scorecards
+        run: python3 scripts/test-goldenpath-cli-p4.py
+
       - name: Validate R0-R4 risk-adaptive assurance semantics
         run: python3 scripts/test-risk-adaptive-assurance.py
 

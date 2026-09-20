@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://goldenpath.dev/schemas/cli/goldenpath-platform-scorecard-v1.schema.json",
+  "title": "GoldenPath Platform Scorecard v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion","evidenceTier","productionValidation","riskLevel","decision","currentState","controls","evidence","aggregation","aggregationReason","evidenceDigest"],
+  "properties": {
+    "schemaVersion": {"const": "goldenpath.platform-scorecard/v1"},
+    "evidenceTier": {"const": "runtime"},
+    "productionValidation": {"const": "NOT_CLAIMED"},
+    "riskLevel": {"type": ["string","null"], "enum": ["R0","R1","R2","R3","R4",null]},
+    "decision": {"enum": ["VERIFIED","NOT_VERIFIED","NEEDS_HUMAN"]},
+    "currentState": {"type": ["string","null"], "enum": ["VERIFIED_HEALTHY","DETECTED_DEGRADED","RECOVERED_REVERIFIED","FAILED","NEEDS_HUMAN",null]},
+    "controls": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id","result","required","observedAt","source"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "result": {"type": ["string","null"]},
+          "required": {"type": "boolean"},
+          "observedAt": {"type": ["string","null"]},
+          "source": {"enum": ["signed-runtime-receipt","continuous-assurance"]}
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository","runtime","production"],
+      "properties": {
+        "repository": {"enum": ["NOT_ASSESSED","VERIFIED","NOT_VERIFIED"]},
+        "runtime": {"enum": ["PRESENT_UNVERIFIED","VERIFIED","NOT_VERIFIED"]},
+        "production": {"const": "NOT_CLAIMED"}
+      }
+    },
+    "aggregation": {"const": "none"},
+    "aggregationReason": {"type": "string", "minLength": 1},
+    "evidenceDigest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}
