@@ -12,7 +12,11 @@ on:
       - 'scripts/generate-runtime-assurance.py'
       - 'scripts/validate-runtime-assurance.py'
       - 'scripts/test-runtime-assurance-p2.py'
+      - 'scripts/evaluate-continuous-assurance.py'
+      - 'scripts/test-runtime-assurance-p3.py'
       - 'docs/assurance/runtime-signed-receipts.md'
+      - 'docs/assurance/continuous-assurance.md'
+      - 'docs/runbooks/runtime-drift-recovery.md'
       - 'docs/platform/runtime-lab.md'
   push:
     branches: [main]
@@ -25,7 +29,11 @@ on:
       - 'scripts/generate-runtime-assurance.py'
       - 'scripts/validate-runtime-assurance.py'
       - 'scripts/test-runtime-assurance-p2.py'
+      - 'scripts/evaluate-continuous-assurance.py'
+      - 'scripts/test-runtime-assurance-p3.py'
       - 'docs/assurance/runtime-signed-receipts.md'
+      - 'docs/assurance/continuous-assurance.md'
+      - 'docs/runbooks/runtime-drift-recovery.md'
       - 'docs/platform/runtime-lab.md'
   workflow_dispatch:
 
@@ -65,6 +73,9 @@ jobs:
 
       - name: Install hash-locked Copier toolchain
         run: python3 -m pip install --disable-pip-version-check --require-hashes -r .github/requirements/ci-template.lock
+
+      - name: Install structured validation dependencies
+        run: python3 -m pip install --disable-pip-version-check --require-hashes -r .github/requirements/ci-structured.lock
 
       - name: Install pinned kind
         shell: bash
@@ -151,6 +162,20 @@ jobs:
             --expected-desired-state-revision "$EXPECTED_SOURCE" \
             --expected-policy-bundle-digest "$expected_policy" \
             --expected-cluster-identity "$expected_cluster"
+
+      - name: Bind recovered current state to new signed receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact_dir="${{ runner.temp }}/goldenpath-runtime-lab"
+
+          python3 scripts/evaluate-continuous-assurance.py \
+            --observations "$artifact_dir/continuous-observations.json" \
+            --current-receipt "$artifact_dir/assurance-receipt.json" \
+            --require-current-receipt \
+            --output "$artifact_dir/continuous-assurance.json"
+
+          cat "$artifact_dir/continuous-assurance.json"
 
       - name: Upload Runtime Lab facts
         if: always()
