@@ -15,6 +15,8 @@ on:
       - 'scripts/evaluate-continuous-assurance.py'
       - 'scripts/test-runtime-assurance-p3.py'
       - 'scripts/test-goldenpath-cli-p4.py'
+      - 'scripts/qualify-release-candidate.py'
+      - 'scripts/test-release-qualification-p5.py'
       - 'platform-assurance/cli/**'
       - 'goldenpath'
       - 'docs/cli/goldenpath-cli-v1.md'
@@ -36,6 +38,8 @@ on:
       - 'scripts/evaluate-continuous-assurance.py'
       - 'scripts/test-runtime-assurance-p3.py'
       - 'scripts/test-goldenpath-cli-p4.py'
+      - 'scripts/qualify-release-candidate.py'
+      - 'scripts/test-release-qualification-p5.py'
       - 'platform-assurance/cli/**'
       - 'goldenpath'
       - 'docs/cli/goldenpath-cli-v1.md'
@@ -147,11 +151,24 @@ jobs:
       - name: Render P4 assurance report and scorecard
         run: python3 goldenpath evidence show --artifact-dir "${{ runner.temp }}/goldenpath-runtime-lab"
 
+      - name: Validate P5 release-qualification negative paths
+        run: python3 scripts/test-release-qualification-p5.py
+
+      - name: Qualify exact v0.2.0 release candidate
+        run: >-
+          python3 scripts/qualify-release-candidate.py
+          --artifact-dir "${{ runner.temp }}/goldenpath-runtime-lab"
+          --expected-source "${{ github.event.pull_request.head.sha || github.sha }}"
+          --output "${{ runner.temp }}/goldenpath-runtime-lab/release-candidate-evidence.json"
+
+      - name: Show exact candidate qualification
+        run: cat "${{ runner.temp }}/goldenpath-runtime-lab/release-candidate-evidence.json"
+
       - name: Upload Runtime Lab facts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: runtime-lab-facts-${{ github.run_id }}-${{ github.run_attempt }}
+          name: goldenpath-v0.2.0-candidate-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/goldenpath-runtime-lab
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 14
