@@ -304,7 +304,6 @@ spec:
           memory: 16Mi
       securityContext:
         privileged: true
-        allowPrivilegeEscalation: false
 EOF
 
     local output=""
