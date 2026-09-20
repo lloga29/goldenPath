@@ -58,6 +58,9 @@ jobs:
       - name: Validate evidence contract fail-closed semantics
         run: python3 scripts/test-evidence-contract.py
 
+      - name: Validate v0.2 runtime assurance contract
+        run: python3 scripts/test-runtime-assurance-contract.py
+
       - name: Validate R0-R4 risk-adaptive assurance semantics
         run: python3 scripts/test-risk-adaptive-assurance.py
 

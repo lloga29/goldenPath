@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "goldenpath.assurance-receipt/v1",
+  "receiptId": "assurance-runtime-001",
+  "generatedAt": "2026-09-20T17:01:00Z",
+  "validUntil": "2026-09-20T18:00:00Z",
+  "claim": {
+    "tier": "runtime"
+  },
+  "decision": "VERIFIED",
+  "execution": {
+    "executionId": "run-p0-001",
+    "attempt": 1,
+    "collectorVersion": "0.2.0-contract-draft"
+  },
+  "subject": {
+    "source": {
+      "repository": "lloga29/goldenPath",
+      "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "artifact": {
+      "identity": "ghcr.io/lloga29/goldenpath-reference",
+      "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "gitops": {
+      "repository": "lloga29/goldenPath",
+      "desiredStateRevision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "desiredStateDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "policy": {
+      "assurancePlanDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "policyBundleDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    "runtime": {
+      "environmentClass": "ephemeral-lab",
+      "clusterIdentity": "kind:goldenpath-v020-p0",
+      "namespace": "goldenpath-system",
+      "workloadUid": "11111111-2222-3333-4444-555555555555"
+    }
+  },
+  "runtimeEvidence": {
+    "schemaVersion": "goldenpath.runtime-evidence/v1",
+    "evidenceId": "runtime-lab-001",
+    "digest": "sha256:44ce6d4b7b5851806ca10ce3c86ef8f956f7eeacdd2fadd2f625b98021447788"
+  },
+  "controls": [
+    {
+      "id": "signature-verification",
+      "required": true,
+      "result": "PASS",
+      "observedAt": "2026-09-20T17:00:10Z"
+    },
+    {
+      "id": "provenance-verification",
+      "required": true,
+      "result": "PASS",
+      "observedAt": "2026-09-20T17:00:20Z"
+    },
+    {
+      "id": "admission-policy",
+      "required": true,
+      "result": "PASS",
+      "observedAt": "2026-09-20T17:00:30Z"
+    },
+    {
+      "id": "runtime-health",
+      "required": true,
+      "result": "PASS",
+      "observedAt": "2026-09-20T17:00:40Z"
+    }
+  ]
+}

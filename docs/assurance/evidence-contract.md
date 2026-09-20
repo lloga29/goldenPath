@@ -188,3 +188,15 @@ The negative coverage proves that the validator rejects false `READY` decisions,
 The Evidence Manifest plus R0-R4 engine now provide the repository/reference assurance substrate: deterministic risk classification, monotonic control selection, Architecture as Code inputs, and fail-closed evidence binding.
 
 This repository still does not claim operational enforcement of reviewer identities, preview environments, runtime gates, human approvals, or production controls. Those require a real governed delivery path and retained runtime evidence from the target environment.
+
+## v0.2 runtime assurance extension
+
+GoldenPath v0.2 adds identity-bound runtime evidence and assurance receipts without changing the existing `goldenpath.evidence/v1` semantics.
+
+The P0 contract baseline is documented in [GoldenPath v0.2 Runtime Assurance Contracts](runtime-assurance-contract-v1.md). It defines `goldenpath.runtime-evidence/v1`, `goldenpath.assurance-receipt/v1`, exact identity/freshness rules, the kind Runtime Lab boundary, compatibility expectations, and the P1-P5 adversarial test plan.
+
+Run its fail-closed regression suite with:
+
+```bash
+python3 scripts/test-runtime-assurance-contract.py
+```
