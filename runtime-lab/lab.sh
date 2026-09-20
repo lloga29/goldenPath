@@ -448,6 +448,19 @@ run_smoke() {
     prove_admission_denial
     capture_runtime_facts
 
+    log "Exercising bounded P3 drift and recovery scenarios"
+    python3 "$ROOT_DIR/runtime-lab/continuous-assurance.py" \
+        --namespace "$WORKLOAD_NAMESPACE" \
+        --workload-app "$WORKLOAD_APP" \
+        --image-ref "$IMAGE_REF" \
+        --image-digest "$IMAGE_DIGEST" \
+        --source-revision "$SOURCE_REVISION" \
+        --cluster-identity "$CLUSTER_IDENTITY" \
+        --artifact-dir "$ARTIFACT_DIR" \
+        --timeout-seconds "$WAIT_TIMEOUT_SECONDS"
+
+    capture_runtime_facts
+
     log "Destroying the Runtime Lab and verifying expected cleanup"
     cleanup_resources
     CLEANUP_DONE=1
