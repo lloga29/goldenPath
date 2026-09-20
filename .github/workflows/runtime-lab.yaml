@@ -49,6 +49,12 @@ jobs:
         with:
           python-version: '3.13.15'
 
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26.8'
+          cache: false
+
       - name: Install hash-locked Copier toolchain
         run: python3 -m pip install --disable-pip-version-check --require-hashes -r .github/requirements/ci-template.lock
 

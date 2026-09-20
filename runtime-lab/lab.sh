@@ -51,7 +51,7 @@ fail() {
 
 require_commands() {
     local command
-    for command in docker kind kubectl helm git python3 copier; do
+    for command in docker kind kubectl helm git python3 copier go; do
         command -v "$command" >/dev/null 2>&1 || {
             fail "required command '$command' is not available"
             return 1
@@ -177,6 +177,13 @@ render_build_and_push_service() {
 
     [[ -f "$GENERATED_SERVICE/Dockerfile" ]] || {
         fail "the paved-road template did not render the expected Dockerfile"
+        return 1
+    }
+
+    log "Resolving generated Go module dependencies"
+    (cd "$GENERATED_SERVICE" && go mod tidy)
+    [[ -f "$GENERATED_SERVICE/go.sum" ]] || {
+        fail "go mod tidy did not produce the go.sum required by the template Dockerfile"
         return 1
     }
 
