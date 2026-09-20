@@ -47,6 +47,10 @@ def classify(paths: list[str]) -> dict[str, bool]:
             flags["policies"] = True
         if normalized.startswith("service-templates/"):
             flags["templates"] = True
+        if normalized.startswith("runtime-lab/"):
+            flags["gitops"] = True
+            flags["policies"] = True
+            flags["templates"] = True
 
     return flags
 

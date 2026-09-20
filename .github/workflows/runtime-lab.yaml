@@ -1,0 +1,102 @@
+name: Runtime Lab
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/runtime-lab.yaml'
+      - 'runtime-lab/**'
+      - 'gitops-config/policies/**'
+      - 'service-templates/**'
+      - 'platform-assurance/runtime/**'
+      - 'docs/platform/runtime-lab.md'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/runtime-lab.yaml'
+      - 'runtime-lab/**'
+      - 'gitops-config/policies/**'
+      - 'service-templates/**'
+      - 'platform-assurance/runtime/**'
+      - 'docs/platform/runtime-lab.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-lab-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      KIND_VERSION: '0.33.0'
+      KIND_LINUX_AMD64_SHA256: 'aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d'
+      HELM_VERSION: '4.3.0'
+      HELM_LINUX_AMD64_SHA256: '86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb'
+    steps:
+      - name: Check out exact source revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13.15'
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26.8'
+          cache: false
+
+      - name: Install hash-locked Copier toolchain
+        run: python3 -m pip install --disable-pip-version-check --require-hashes -r .github/requirements/ci-template.lock
+
+      - name: Install pinned kind
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSLo kind "https://github.com/kubernetes-sigs/kind/releases/download/v${KIND_VERSION}/kind-linux-amd64"
+          echo "${KIND_LINUX_AMD64_SHA256}  kind" | sha256sum -c -
+          sudo install -m 0755 kind /usr/local/bin/kind
+          kind version
+
+      - name: Install pinned Helm
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSLo helm.tar.gz "https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz"
+          echo "${HELM_LINUX_AMD64_SHA256}  helm.tar.gz" | sha256sum -c -
+          tar -xzf helm.tar.gz
+          sudo install -m 0755 linux-amd64/helm /usr/local/bin/helm
+          helm version --short
+
+      - name: Show runtime client versions
+        run: |
+          docker version
+          kubectl version --client
+          git --version
+          python3 --version
+
+      - name: Run reproducible Runtime Lab smoke path
+        shell: bash
+        env:
+          GOLDENPATH_LAB_ID: "gh-${{ github.run_id }}-${{ github.run_attempt }}"
+          GOLDENPATH_SOURCE_REVISION: "${{ github.event.pull_request.head.sha || github.sha }}"
+          GOLDENPATH_LAB_ARTIFACT_DIR: "${{ runner.temp }}/goldenpath-runtime-lab"
+        run: ./runtime-lab/lab.sh smoke
+
+      - name: Upload Runtime Lab facts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: runtime-lab-facts-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/goldenpath-runtime-lab
+          if-no-files-found: warn
+          retention-days: 7
