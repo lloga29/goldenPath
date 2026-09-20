@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://goldenpath.dev/schemas/runtime/goldenpath-continuous-assurance-v1.schema.json",
+  "title": "GoldenPath Continuous Assurance v1",
+  "description": "Current-state runtime assurance derived from ordered observations while preserving historical receipts as non-current evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sequenceId",
+    "observedAt",
+    "claim",
+    "productionValidation",
+    "subject",
+    "currentState",
+    "controls",
+    "recovery",
+    "history",
+    "evidenceDigest"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "goldenpath.continuous-assurance/v1"},
+    "sequenceId": {"$ref": "#/$defs/id"},
+    "observedAt": {"$ref": "#/$defs/timestamp"},
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tier"],
+      "properties": {"tier": {"const": "runtime"}}
+    },
+    "productionValidation": {"const": "NOT_CLAIMED"},
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceRevision", "artifactDigest", "desiredStateRevision", "clusterIdentity"],
+      "properties": {
+        "sourceRevision": {"$ref": "#/$defs/gitSha"},
+        "artifactDigest": {"$ref": "#/$defs/sha256Digest"},
+        "desiredStateRevision": {"$ref": "#/$defs/gitSha"},
+        "clusterIdentity": {"type": "string", "minLength": 1}
+      }
+    },
+    "currentState": {"$ref": "#/$defs/state"},
+    "controls": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/control"}
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempted", "result"],
+      "properties": {
+        "attempted": {"type": "boolean"},
+        "result": {"type": "string", "enum": ["NOT_REQUIRED", "RECOVERED", "FAILED", "NEEDS_HUMAN"]}
+      }
+    },
+    "history": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "observedAt", "state"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"},
+          "observedAt": {"$ref": "#/$defs/timestamp"},
+          "state": {"$ref": "#/$defs/state"}
+        }
+      }
+    },
+    "historicalReceipt": {"$ref": "#/$defs/receiptRef"},
+    "currentReceipt": {"$ref": "#/$defs/receiptRef"},
+    "evidenceDigest": {"$ref": "#/$defs/sha256Digest"}
+  },
+  "$defs": {
+    "gitSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256Digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "state": {
+      "type": "string",
+      "enum": ["VERIFIED_HEALTHY", "DETECTED_DEGRADED", "RECOVERED_REVERIFIED", "FAILED", "NEEDS_HUMAN"]
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "required", "result", "observedAt"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$"},
+        "required": {"type": "boolean"},
+        "result": {"type": "string", "enum": ["PASS", "FAIL", "INFRASTRUCTURE_FAILURE", "NEEDS_HUMAN"]},
+        "observedAt": {"$ref": "#/$defs/timestamp"},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
+    "receiptRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["receiptId", "generatedAt", "decision", "digest"],
+      "properties": {
+        "receiptId": {"$ref": "#/$defs/id"},
+        "generatedAt": {"$ref": "#/$defs/timestamp"},
+        "decision": {"type": "string", "enum": ["VERIFIED", "NOT_VERIFIED", "NEEDS_HUMAN"]},
+        "digest": {"$ref": "#/$defs/sha256Digest"}
+      }
+    }
+  }
+}
