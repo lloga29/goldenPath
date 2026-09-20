@@ -2,6 +2,16 @@ name: GitHub Pages
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pages.yaml'
+      - 'site/**'
+      - 'scripts/build-pages-site.sh'
+      - 'scripts/validate-pages-site.py'
+      - 'scripts/generate-evidence-dashboard.py'
+      - 'platform-assurance/evidence/public-status.json'
+      - 'docs/assets/branding/**'
 
 concurrency:
   group: github-pages
