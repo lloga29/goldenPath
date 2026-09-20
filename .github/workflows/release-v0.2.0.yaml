@@ -133,16 +133,36 @@ jobs:
 
           gh release create "$RELEASE"             --target "$TARGET"             --title "GoldenPath v0.2.0 — Runtime Evidence & Autonomous Assurance"             --notes-file /tmp/release-notes.md             --latest
 
-      - name: Verify published tag identity
+      - name: Verify published release identity
         if: steps.state.outputs.skip != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+
           tag_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE}" --jq '.object.sha')"
+          release_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE}" --jq '.tag_name')"
+          release_target="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE}" --jq '.target_commitish')"
+          release_url="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE}" --jq '.html_url')"
+          latest_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq '.tag_name')"
+
           [[ "$tag_sha" == "$TARGET" ]] || {
             echo "ERROR: published tag points to $tag_sha, expected $TARGET" >&2
             exit 1
           }
-          gh release view "$RELEASE" --json url,isLatest,tagName,targetCommitish
+          [[ "$release_tag" == "$RELEASE" ]] || {
+            echo "ERROR: release tag is $release_tag, expected $RELEASE" >&2
+            exit 1
+          }
+          [[ "$release_target" == "$TARGET" ]] || {
+            echo "ERROR: release target is $release_target, expected $TARGET" >&2
+            exit 1
+          }
+          [[ "$latest_tag" == "$RELEASE" ]] || {
+            echo "ERROR: latest release is $latest_tag, expected $RELEASE" >&2
+            exit 1
+          }
+
+          printf 'Verified release %s\n' "$release_url"
+          printf 'Tag: %s\nTarget: %s\nLatest: %s\n' "$release_tag" "$release_target" "$latest_tag"
