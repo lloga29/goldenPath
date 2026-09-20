@@ -57,6 +57,21 @@ This is **repository/reference evidence only**. It does not claim that a registr
 
 See the [demo walkthrough](docs/DEMO.md) for what each step proves, or continue with the [15-minute quickstart](docs/QUICKSTART.md) for the broader paved road.
 
+## v0.2.0 runtime self-qualification
+
+GoldenPath v0.2.0 adds a supported ephemeral Runtime Lab and signed, identity-bound assurance receipts. The official checkout path is:
+
+```bash
+python3 goldenpath doctor --scope all
+python3 goldenpath validate --artifact-dir /tmp/goldenpath-runtime-lab
+python3 goldenpath lab up --artifact-dir /tmp/goldenpath-runtime-lab --lab-id local-v020
+python3 goldenpath assure --artifact-dir /tmp/goldenpath-runtime-lab
+python3 goldenpath verify --artifact-dir /tmp/goldenpath-runtime-lab
+python3 goldenpath evidence show --artifact-dir /tmp/goldenpath-runtime-lab
+```
+
+The CI P5 gate runs this path against the exact release-candidate SHA and emits an identity-bound candidate evidence bundle only when repository and runtime evidence are both verified. **Production validation is not claimed by the Runtime Lab.** See the [v0.2.0 release notes](docs/releases/v0.2.0.md).
+
 ## End-to-end repository showcase
 
 For a single narrative that connects risk-adaptive assurance to governed GitOps promotion, run:
