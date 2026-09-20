@@ -6,9 +6,9 @@
   "runtime_release": {
     "release": "v0.2.0",
     "status": "VERIFIED",
-    "source_revision": "ae1e043040f00b04109b5a6038ae440778418b3c",
-    "qualification_run_id": 35538499852,
-    "qualification_artifact": "goldenpath-v0.2.0-candidate-evidence-35538499852-1"
+    "source_revision": "34c9b90cb223491e8bec458d591ed6ab30286336",
+    "qualification_run_id": 35539472930,
+    "qualification_artifact": "goldenpath-v0.2.0-candidate-evidence-35539472930-1"
   },
   "capabilities": [
     {
