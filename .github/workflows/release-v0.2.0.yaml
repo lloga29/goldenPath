@@ -145,4 +145,4 @@ jobs:
             echo "ERROR: published tag points to $tag_sha, expected $TARGET" >&2
             exit 1
           }
-          gh release view "$RELEASE" --json url,isLatest,tagName,targetCommitish
+          gh release view "$RELEASE" --json url,tagName,targetCommitish
