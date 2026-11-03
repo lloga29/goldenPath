@@ -118,7 +118,7 @@ EOF
 
     git -C "$repo" init -q -b main
     git -C "$repo" config user.name "Juan Gallo"
-    git -C "$repo" config user.email "lloga29@gmail.com"
+    git -C "$repo" config user.email "216342561+lloga29@users.noreply.github.com"
     git -C "$repo" add .
     git -C "$repo" commit -q -m "test baseline"
 }

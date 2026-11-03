@@ -5,7 +5,7 @@
 set -euo pipefail
 
 EXPECTED_GIT_NAME="Juan Gallo"
-EXPECTED_GIT_EMAIL="lloga29@gmail.com"
+EXPECTED_GIT_EMAIL="216342561+lloga29@users.noreply.github.com"
 
 fail() {
     echo "ERROR: $*" >&2

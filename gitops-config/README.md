@@ -65,7 +65,7 @@ The standard signer identity is inferred from `ghcr.io/<owner>/<repository>` and
 Git commits are refused unless Git is configured as:
 
 ```text
-Juan Gallo <lloga29@gmail.com>
+Juan Gallo <216342561+lloga29@users.noreply.github.com>
 ```
 
 ```bash
@@ -73,6 +73,8 @@ Juan Gallo <lloga29@gmail.com>
   payments payment-api dev staging \
   sha256:<64-hex-digest>
 ```
+
+The GitHub `noreply` address above is for commit attribution, not for receiving support requests. Configure the same identity for local promotion and rollback operations.
 
 Tags are not accepted as promotion authority. See [Promotion Guide](docs/PROMOTION_GUIDE.md) for trust and evidence boundaries.
 

@@ -35,6 +35,6 @@ jobs:
       - name: Verify documentation is committed
         run: |
           if ! git diff --exit-code; then
-            echo "Generated documentation is stale. Regenerate it locally and commit the changes as Juan Gallo <lloga29@gmail.com>."
+            echo "Generated documentation is stale. Regenerate it locally and commit the changes as Juan Gallo <216342561+lloga29@users.noreply.github.com>."
             exit 1
           fi

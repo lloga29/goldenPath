@@ -16,7 +16,7 @@ Use descriptive English titles and bodies. Keep changes focused and make validat
 
 ## Commits
 
-Use Conventional Commit-style messages where practical. Commits for this repository use the configured identity `Juan Gallo <lloga29@gmail.com>` and should not include AI tool co-author trailers.
+Use Conventional Commit-style messages where practical. Commits for this repository use the configured identity `Juan Gallo <216342561+lloga29@users.noreply.github.com>` and should not include AI tool co-author trailers.
 
 ## Releases
 
