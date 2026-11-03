@@ -40,7 +40,7 @@ Enforcement decisions should be proportionate to the behavior, documented where 
 
 ## Reporting
 
-If you experience or observe behavior that violates this Code of Conduct, report it privately to the repository maintainer at **lloga29@gmail.com**. Reports will be reviewed as promptly and discreetly as practical.
+To report behavior that violates this Code of Conduct, use an established private channel to contact a repository maintainer. For abuse occurring on GitHub when no private maintainer channel is available, follow [GitHub's abuse reporting guidance](https://docs.github.com/en/communities/maintaining-your-safety-on-github/reporting-abuse-or-spam). Do not disclose sensitive information in public issues or pull requests.
 
 For security vulnerabilities, use the process in [SECURITY.md](SECURITY.md) instead.
 

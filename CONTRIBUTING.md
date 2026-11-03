@@ -25,14 +25,16 @@ Do not use agent or tool names as branch prefixes.
 All commits created for this repository must use:
 
 ```text
-Juan Gallo <lloga29@gmail.com>
+Juan Gallo <216342561+lloga29@users.noreply.github.com>
 ```
 
 When a sign-off trailer is used, it must be:
 
 ```text
-Signed-off-by: Juan Gallo <lloga29@gmail.com>
+Signed-off-by: Juan Gallo <216342561+lloga29@users.noreply.github.com>
 ```
+
+This GitHub-provided `noreply` address is for commit attribution only; it does not accept messages. Configure the same address in local Git, enable GitHub email privacy settings, and never use a personal inbox as the public commit identity.
 
 Do not add AI tool, automation agent, or assistant co-author trailers.
 

@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           git config user.name "Juan Gallo"
-          git config user.email "lloga29@gmail.com"
+          git config user.email "216342561+lloga29@users.noreply.github.com"
 
       - name: Promote immutable image and open pull request
         shell: bash

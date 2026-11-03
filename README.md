@@ -291,6 +291,6 @@ Licensed under the [Apache License 2.0](LICENSE). The license permits use, modif
 
 ## Ownership
 
-Repository owner and commit identity: **Juan Gallo <lloga29@gmail.com>**.
+Repository owner and commit identity: **Juan Gallo <216342561+lloga29@users.noreply.github.com>**.
 
 Repository documentation and contributions use English as the working language, and CI enforces that repository convention. Significant platform decisions should be recorded as ADRs, and operationally significant controls should have both documentation and validation evidence.

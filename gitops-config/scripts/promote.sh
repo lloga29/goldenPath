@@ -11,7 +11,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 EXPECTED_GIT_NAME="Juan Gallo"
-EXPECTED_GIT_EMAIL="lloga29@gmail.com"
+EXPECTED_GIT_EMAIL="216342561+lloga29@users.noreply.github.com"
 DEFAULT_OIDC_ISSUER="https://token.actions.githubusercontent.com"
 
 fail() {
